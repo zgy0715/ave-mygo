@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+__pycache__/
+*.egg-info/
+
+# 构建产物
+dist/
+build/
+target/
+.vite/
+
+# 环境与敏感信息
+.env
+.env.local
+*.pem
+*.key
+
+# IDE / 系统
+.idea/
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+logs/
+
+# 数据库本地数据
+*.sql.bak
+mysql-data/
