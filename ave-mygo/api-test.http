@@ -1,0 +1,17 @@
+### 正常注册
+POST http://localhost:8080/api/v1/auth/register
+Content-Type: application/json
+
+{"username": "tomori_fan", "password": "abc12345", "nickname": "灯厨"}
+
+### 重复注册（再发一次同样的请求）
+POST http://localhost:8080/api/v1/auth/register
+Content-Type: application/json
+
+{"username": "tomori_fan", "password": "abc12345"}
+
+### 弱密码（应报 40001）
+POST http://localhost:8080/api/v1/auth/register
+Content-Type: application/json
+
+{"username": "anon", "password": "123"}

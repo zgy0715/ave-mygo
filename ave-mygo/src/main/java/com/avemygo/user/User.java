@@ -45,9 +45,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private String role = "USER";
 
-    /** 1 正常 / 0 封禁 */
+    /** 1 正常 / 0 封禁 —— TINYINT 列必须用 Byte 映射，validate 模式严格校验类型 */
     @Column(nullable = false)
-    private Integer status = 1;
+    private Byte status = (byte) 1;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
@@ -61,5 +61,5 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Column(name = "is_deleted", nullable = false)
-    private Integer isDeleted = 0;
+    private Byte isDeleted = (byte) 0;
 }
