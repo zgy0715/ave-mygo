@@ -1,18 +1,21 @@
 package com.avemygo.config;
 
+import com.avemygo.auth.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * 安全配置。
- * M1 阶段全部放行，保证端到端链路先通；M2 用户体系时改为：
- * 放行 /api/v1/auth/**、/api/v1/health，其余要求认证，/api/v1/admin/** 要求 ADMIN 角色。
+ * 安全配置（M2 收紧版）。
+ * 规则：auth/** 与 health 公开；admin/** 需 ADMIN 角色；其余必须登录。
+ * JWT 无状态：完全不创建 session。
  */
 @Configuration
 @EnableWebSecurity
@@ -25,12 +28,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)   // 前后端分离 + JWT，无 session，无需 CSRF
+                .csrf(AbstractHttpConfigurer::disable)                 // 前后端分离 + token，无 CSRF 风险
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()        // TODO(M2): 收紧为 authenticated()
-                );
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()                  // 其余：必须登录
+                )
+                .exceptionHandling(e -> e.authenticationEntryPoint((request, response, ex) -> {
+                    // 未盖章的请求访问受保护路径：401 + 统一错误码
+                    response.setStatus(401);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getOutputStream().write(
+                            "{\"code\":40101,\"message\":\"未登录或登录已过期\",\"data\":null}"
+                                    .getBytes());
+                }))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

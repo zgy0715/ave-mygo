@@ -1,5 +1,7 @@
 package com.avemygo.auth;
 
+import com.avemygo.auth.dto.LoginRequest;
+import com.avemygo.auth.dto.LoginResponse;
 import com.avemygo.auth.dto.RegisterRequest;
 import com.avemygo.common.BizException;
 import com.avemygo.user.User;
@@ -18,6 +20,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     /** 注册：查重 → 加密 → 落库，返回新建用户 id */
     public Long register(RegisterRequest req) {
@@ -35,5 +38,23 @@ public class AuthService {
 
         // 3. 落库
         return userRepository.save(user).getId();
+    }
+
+    /** 登录：查用户 → 验密码 → 查封禁 → 签发 token */
+    public LoginResponse login(LoginRequest req) {
+        User user = userRepository.findByUsername(req.username()).orElse(null);
+
+        // 安全细节：用户不存在 和 密码错误 返回同一句话，不给撞库者提示
+        if (user == null || !passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+            throw new BizException(40101, "用户名或密码错误");
+        }
+        if (user.getStatus() == 0) {
+            throw new BizException(40301, "账号已被封禁");
+        }
+
+        String token = jwtService.generate(user.getId(), user.getRole());
+        return new LoginResponse(token, 24 * 3600,
+                new LoginResponse.UserBrief(user.getId(), user.getUsername(),
+                        user.getNickname(), user.getRole()));
     }
 }
