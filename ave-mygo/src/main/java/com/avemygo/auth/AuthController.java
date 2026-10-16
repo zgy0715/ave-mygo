@@ -4,9 +4,11 @@ import com.avemygo.auth.dto.LoginRequest;
 import com.avemygo.auth.dto.LoginResponse;
 import com.avemygo.auth.dto.RegisterRequest;
 import com.avemygo.common.ApiResponse;
+import com.avemygo.common.BizException;
 import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,9 +40,12 @@ public class AuthController {
         return ApiResponse.ok(authService.login(req));
     }
 
-    /** 身份验证演示接口：能带有效 token 访问到这，说明 JWT 链路通 */
+    /** 身份验证演示接口：带有效 token 访问返回身份；匿名访问返回 40101 */
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me(Authentication authentication) {
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new BizException(40101, "未登录或登录已过期");
+        }
         return ApiResponse.ok(Map.of(
                 "userId", authentication.getName(),
                 "authorities", authentication.getAuthorities().toString()
