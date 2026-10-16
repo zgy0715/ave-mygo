@@ -1,6 +1,7 @@
 package com.avemygo.config;
 
 import com.avemygo.auth.JwtAuthFilter;
+import com.avemygo.auth.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,7 +29,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)                 // 前后端分离 + token，无 CSRF 风险
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -45,7 +46,7 @@ public class SecurityConfig {
                             "{\"code\":40101,\"message\":\"未登录或登录已过期\",\"data\":null}"
                                     .getBytes());
                 }))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
