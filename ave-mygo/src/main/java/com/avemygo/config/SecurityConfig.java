@@ -2,6 +2,7 @@ package com.avemygo.config;
 
 import com.avemygo.auth.JwtAuthFilter;
 import com.avemygo.auth.JwtService;
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
