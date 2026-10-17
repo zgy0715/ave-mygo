@@ -43,7 +43,7 @@ function buy(tt) {
 
 <template>
   <div v-if="event" class="wrap py-8">
-    <RouterLink to="/events" class="mb-6 inline-block text-sm text-dim hover:text-primary">← 返回演出列表</RouterLink>
+    <RouterLink to="/events" class="mb-6 inline-block text-sm text-dim transition hover:text-primary">← 返回演出列表</RouterLink>
 
     <!-- 头部：海报 + 信息 -->
     <div class="grid gap-6 md:grid-cols-[280px_1fr]">
@@ -79,7 +79,7 @@ function buy(tt) {
           v-for="s in event.sessions"
           :key="s.id"
           class="rounded-lg border px-4 py-2 text-sm transition"
-          :class="activeSession === s.id ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-line bg-surface text-dim hover:border-line-strong'"
+          :class="activeSession === s.id ? 'border-primary text-primary' : 'border-line bg-transparent text-dim hover:border-line-strong'"
           @click="activeSession = s.id"
         >
           {{ s.name }}<span class="tabular ml-1.5 text-xs text-faint">{{ s.startTime }}</span>

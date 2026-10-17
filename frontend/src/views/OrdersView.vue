@@ -48,7 +48,7 @@ function countdown(o) {
         v-for="t in TABS"
         :key="t.id"
         class="rounded-full border px-3.5 py-1.5 text-sm transition"
-        :class="tab === t.id ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-dim hover:border-line-strong'"
+        :class="tab === t.id ? 'border-primary bg-primary !text-[11px] text-white' : 'border-line bg-transparent text-dim hover:border-line-strong'"
         @click="tab = t.id"
       >
         {{ t.label }}
@@ -71,7 +71,7 @@ function countdown(o) {
         <!-- 金额 + 倒计时 -->
         <div class="text-right">
           <p class="tabular font-bold">{{ fmtPrice(o.amount) }}</p>
-          <p v-if="o.status === 'PENDING'" class="tabular mt-0.5 text-xs" :class="countdown(o) === '已超时' ? 'text-faint' : 'text-red-500'">
+          <p v-if="o.status === 'PENDING'" class="tabular mt-0.5 text-xs" :class="countdown(o) === '已超时' ? 'text-faint' : 'text-pink'">
             {{ countdown(o) === '已超时' ? '支付已超时' : `剩余 ${countdown(o)}` }}
           </p>
           <p v-else class="mt-0.5 text-xs text-faint">{{ o.createdAt }}</p>

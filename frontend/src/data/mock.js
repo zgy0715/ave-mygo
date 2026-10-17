@@ -13,7 +13,7 @@ export const bands = [
     color: '#2c7da0',
     soft: '#e3f0f7',
     intro: '五个迷路的孩子，即使迷失也要继续前行。2023 年出道的五人乐队，以「迷子でもいい、迷子でも進む」为信条。',
-    gradient: 'linear-gradient(135deg, #2c7da0 0%, #56a3c6 60%, #a7d3e8 100%)',
+    gradient: 'linear-gradient(120deg, #0e2230 0%, #287aac 55%, #7bd 125%)',
   },
   {
     id: 'mujica',
@@ -22,7 +22,7 @@ export const bands = [
     color: '#6b4fa3',
     soft: '#efeaf7',
     intro: '戴上面具，成为人偶。以华丽哥特视觉与完美舞台表演著称的神秘乐队。',
-    gradient: 'linear-gradient(135deg, #3b2a63 0%, #6b4fa3 60%, #b9a5e0 100%)',
+    gradient: 'linear-gradient(120deg, #17020c 0%, #5d1031 40%, #aa1656 75%, #b95 125%)',
   },
 ]
 

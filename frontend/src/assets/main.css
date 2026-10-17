@@ -1,19 +1,19 @@
 @import 'tailwindcss';
 
 /* =========================================================
- * Bandori Live · 设计系统 v2
- * 定调：产品优先的浅色系票务/音乐平台。
- * - 白底 + 墨色文字，信息层级靠字重/字号/留白，不靠装饰
- * - 双主色：MyGO 蓝为主操作色，Ave Mujica 紫为乐队识别色
- * - 细线边框 + 微投影，卡片语言全站统一
+ * Bandori Live · 设计系统 v3.1「prima aurora · 亮色版」
+ * 配色：回到 v2 浅色系（白底 + MyGO 蓝主色 + 粉/紫点缀）
+ * 排版：保留官网级高级感——衬线展示字 + mono 双语微标签 + 编号系统
+ * 字体配方：个人站（IBM Plex Sans SC / Bebas Neue）× Mujica 官网（Cormorant Infant / Noto Serif JP）
  * ======================================================= */
 @theme {
   /* 中性色 */
   --color-base: #f7f7f8;        /* 页面底 */
   --color-surface: #ffffff;     /* 卡片面 */
+  --color-elevated: #eff0f3;    /* 悬停面 */
   --color-ink: #1a1a1f;         /* 主文字 */
   --color-dim: #70707a;         /* 次文字 */
-  --color-faint: #a3a3ad;       /* 弱文字/占位 */
+  --color-faint: #a3a3ad;       /* 弱文字 */
   --color-line: #e6e6ea;        /* 分隔线 */
   --color-line-strong: #d4d4da;
 
@@ -22,17 +22,15 @@
   --color-primary-strong: #1f6485;
   --color-primary-soft: #e3f0f7;
 
-  /* 乐队识别色 */
-  --color-mygo: #2c7da0;
+  /* 乐队/点缀色 */
+  --color-pink: #e8618c;
   --color-mujica: #6b4fa3;
-  --color-mujica-soft: #efeaf7;
+  --color-wine: #aa1656;
 
-  /* 状态色（票务语义） */
-  --color-live: #e8618c;        /* 销售中 */
-  --color-warn: #d97706;        /* 余票紧张 */
-  --color-ok: #15803d;          /* 充足/已支付 */
-
-  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif: 'Cormorant Infant', 'Noto Serif JP', 'Songti SC', serif;
+  --font-display: 'Bebas Neue', 'Noto Serif JP', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 body {
@@ -40,124 +38,97 @@ body {
   font-family: var(--font-sans);
 }
 
-/* ---- 通用小工具 ---- */
+/* ---- 字体角色 ---- */
+.serif { font-family: var(--font-serif); }
+.display { font-family: var(--font-display); letter-spacing: 0.04em; }
+.mono { font-family: var(--font-mono); }
 .tabular { font-variant-numeric: tabular-nums; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-/* ---- 高级感配方 v2.1（zgy0715/anontokyo 提取，纯 CSS 实现）---- */
-
-/* 展示字体：Bebas Neue——品牌名、编号、巨型水印 */
-.font-display {
-  font-family: 'Bebas Neue', var(--font-sans);
-  letter-spacing: 0.04em;
+/* mono 微标签：全站统一的「档案感」小字 */
+.micro {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-faint);
 }
-
-/* 逐字母 blur 入场（letter-in 同参）：字符 span 化 + 逐个 delay */
-.letter-in span {
-  opacity: 0;
-  display: inline-block;
-  animation: 0.7s forwards letter-in;
-}
-@keyframes letter-in {
-  0% { opacity: 0; filter: blur(12px); transform: translateY(0.12em); }
-  100% { opacity: 1; filter: blur(0); transform: none; }
+.micro-accent {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-primary);
 }
 
-/* hero-sub：9px mono + .5em 字距 */
-.hero-sub {
-  font: 9px var(--font-mono);
-  letter-spacing: 0.5em;
-}
-
-/* 跑马灯：正/反向双速 */
-@keyframes marquee-move {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.marquee { overflow: hidden; }
-.marquee-track {
-  width: max-content;
-  display: flex;
-  animation: 30s linear infinite marquee-move;
-}
-.marquee.reverse .marquee-track {
-  animation-duration: 36s;
-  animation-direction: reverse;
-}
-
-/* aurora 光斑：blur(90px) + 低透明度 + 交替漂移（hero 白底粉蓝） */
-.aurora {
-  position: absolute;
-  aspect-ratio: 1;
-  width: 55vmax;
-  border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.13;
-  pointer-events: none;
-}
-.aurora-blue {
-  background: var(--color-primary);
-  top: -18%;
-  left: -12%;
-  animation: 16s ease-in-out infinite alternate drift;
-}
-.aurora-pink {
-  background: var(--color-live);
-  bottom: -22%;
-  right: -10%;
-  animation: 20s ease-in-out infinite alternate-reverse drift;
-}
-@keyframes drift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(6vw, 5vh) scale(1.12); }
-}
-
-/* 渐变文字（blue-light→pink→gold 流动） */
+/* 渐变文字：个人站同款 蓝→粉→金（Hero 大标题可用） */
 .grad-text {
-  background-image: linear-gradient(90deg, var(--color-primary), var(--color-live), var(--color-gold, #b95), var(--color-live), var(--color-primary));
+  background-image: linear-gradient(90deg, #7bd, #f89, #b95, #f89, #7bd);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: grad-flow 6s linear infinite;
-}
-@keyframes grad-flow {
-  to { background-position: 200% 0; }
 }
 
-/* 档案式小标签：mono + .2em */
-.tag-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--color-dim);
-}
-
-/* 页面容器：全站统一宽度 */
+/* 页面容器 */
 .wrap { @apply mx-auto w-full max-w-6xl px-4 sm:px-6; }
 
-/* 区块标题：全站统一 */
+/* 区块标题：编号 + 双语，全站统一 */
 .section-head {
-  @apply mb-5 flex items-baseline justify-between;
+  @apply mb-6 flex items-baseline justify-between border-b border-line pb-4;
 }
 
-/* 复用按钮（TW4 的 @apply 不能引用自定义类，用共享选择器替代） */
-.btn, .btn-primary, .btn-ghost, .btn-danger {
-  @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition select-none disabled:cursor-not-allowed disabled:opacity-40;
+/* ---- 按钮 ---- */
+.btn, .btn-primary, .btn-ghost {
+  @apply inline-flex cursor-pointer items-center justify-center gap-1.5 px-5 py-2 text-sm font-medium transition select-none disabled:cursor-not-allowed disabled:opacity-40;
 }
 .btn-primary { @apply bg-primary text-white hover:bg-primary-strong; }
 .btn-ghost { @apply border border-line bg-surface text-ink hover:border-line-strong; }
-.btn-danger { @apply border border-red-200 bg-white text-red-600 hover:bg-red-50; }
 
 /* 复用输入控件 */
 .input {
-  @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-primary;
+  @apply w-full bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-faint;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  transition: border-color .2s;
+}
+.input:focus { border-color: var(--color-primary); }
+
+/* 卡片：细线 + 直角微圆 */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  transition: border-color .25s, transform .25s, box-shadow .25s;
+}
+.card:hover { border-color: var(--color-line-strong); }
+
+/* 噪点纹理：浅底上极淡，加纸感 */
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* 卡片：全站统一语言 */
-.card {
-  @apply rounded-xl border border-line bg-surface transition;
+/* 跑马灯 */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
+.animate-marquee { animation: marquee 40s linear infinite; }
+
+/* 入场浮现 */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise .7s ease both; }
+.rise-1 { animation-delay: .08s; }
+.rise-2 { animation-delay: .16s; }
+.rise-3 { animation-delay: .24s; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #d4d4da; border-radius: 4px; }

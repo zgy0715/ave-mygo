@@ -27,7 +27,7 @@ const filtered = computed(() => (tab.value === 'ALL' ? events : events.filter((e
         v-for="t in TABS"
         :key="t.id"
         class="rounded-full border px-3.5 py-1.5 text-sm transition"
-        :class="tab === t.id ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-dim hover:border-line-strong'"
+        :class="tab === t.id ? 'border-primary bg-primary !text-[11px] text-white' : 'border-line bg-transparent text-dim hover:border-line-strong'"
         @click="tab = t.id"
       >
         {{ t.label }}

@@ -50,7 +50,7 @@ function onPlay(song) {
         v-for="b in [{ id: 'all', name: '全部' }, ...bands]"
         :key="b.id"
         class="rounded-full border px-3.5 py-1.5 text-sm transition"
-        :class="bandFilter === b.id ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-dim hover:border-line-strong'"
+        :class="bandFilter === b.id ? 'border-primary bg-primary text-white' : 'border-line bg-transparent text-dim hover:border-line-strong'"
         @click="bandFilter = b.id"
       >
         {{ b.name }}
@@ -63,7 +63,7 @@ function onPlay(song) {
       <div
         v-for="s in filtered"
         :key="s.id"
-        class="group flex items-center gap-3 p-3 transition hover:bg-base sm:gap-4 sm:px-4"
+        class="group flex items-center gap-3 p-3 transition hover:bg-elevated sm:gap-4 sm:px-4"
       >
         <button
           class="relative shrink-0"

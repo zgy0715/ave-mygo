@@ -1,5 +1,5 @@
 <script setup>
-/** 状态徽标：演出/场次/订单状态 → 文案与配色，全站只此一处映射 */
+/** 状态徽标：演出/场次/订单状态 → 文案与配色，全站只此一处映射（浅色系） */
 const props = defineProps({
   status: { type: String, required: true },
 })

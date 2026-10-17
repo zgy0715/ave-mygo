@@ -12,7 +12,7 @@ const myOrderCount = orders.length
     <h1 class="mb-6 text-2xl font-black">个人中心</h1>
 
     <div class="card flex items-center gap-4 p-6">
-      <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
+      <div class="flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 text-xl font-semibold text-primary">
         {{ auth.nickname.slice(0, 1).toUpperCase() }}
       </div>
       <div>
@@ -23,11 +23,11 @@ const myOrderCount = orders.length
 
     <div class="mt-5 grid gap-4 sm:grid-cols-3">
       <RouterLink v-if="false" to="/favorites" class="card p-5 hover:shadow-md">
-        <p class="text-2xl font-black text-primary">0</p>
+        <p class="text-2xl font-semibold text-primary">0</p>
         <p class="mt-1 text-sm text-dim">我的收藏</p>
       </RouterLink>
       <RouterLink to="/orders" class="card p-5 hover:shadow-md">
-        <p class="text-2xl font-black text-primary tabular">{{ myOrderCount }}</p>
+        <p class="text-2xl font-semibold text-primary tabular">{{ myOrderCount }}</p>
         <p class="mt-1 text-sm text-dim">我的订单</p>
       </RouterLink>
       <div class="card p-5 opacity-60">

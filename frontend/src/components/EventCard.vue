@@ -14,7 +14,7 @@ const band = bandById(props.event.band)
     <div class="relative flex h-40 flex-col justify-between p-4 text-white" :style="{ background: band?.gradient }">
       <div class="absolute inset-0 opacity-20" style="background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.6) 45%, transparent 60%)" />
       <span class="mono relative text-[11px] tracking-[0.2em] opacity-80">{{ event.date }} · {{ event.openTime }} OPEN</span>
-      <p class="relative text-lg leading-snug font-bold" style="text-shadow: 0 1px 8px rgba(0,0,0,.3)">
+      <p class="serif relative text-xl leading-snug font-semibold" style="text-shadow: 0 1px 10px rgba(0,0,0,.4)">
         {{ event.title }}
       </p>
     </div>
@@ -22,7 +22,7 @@ const band = bandById(props.event.band)
     <div class="flex flex-1 items-center justify-between gap-2 p-3">
       <div class="min-w-0">
         <p class="text-sm text-dim"><span class="inline-block h-1.5 w-1.5 rounded-full align-middle" :style="{ background: band?.color }" /> {{ band?.name }}</p>
-        <p class="mt-0.5 truncate text-xs text-faint">📍 {{ event.venue }}</p>
+        <p class="mt-0.5 truncate text-xs text-faint">{{ event.venue }}</p>
       </div>
       <StatusBadge :status="event.status" />
     </div>

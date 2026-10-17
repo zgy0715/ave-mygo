@@ -2,20 +2,18 @@
 import { ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerStore } from '@/stores/player'
 
-/** 顶部导航：桌面横向菜单 + 移动端抽屉；登录态切换右侧操作区 */
+/** 顶部导航：黑金编辑风。当前项用金色下划线而非色块，保持克制 */
 const auth = useAuthStore()
-const player = usePlayerStore()
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
 
 const links = [
-  { to: '/', label: '首页' },
-  { to: '/songs', label: '歌曲库' },
-  { to: '/events', label: '演出' },
-  { to: '/bands', label: '乐队' },
+  { to: '/', label: '首页', en: 'TOP' },
+  { to: '/songs', label: '歌曲库', en: 'SONGS' },
+  { to: '/events', label: '演出', en: 'LIVE' },
+  { to: '/bands', label: '乐队', en: 'BANDS' },
 ]
 
 const isActive = (to) => (to === '/' ? route.path === '/' : route.path.startsWith(to))
@@ -28,69 +26,68 @@ function logout() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
-    <nav class="wrap flex h-14 items-center justify-between gap-4">
-      <!-- Logo：Bebas Neue 展示字体 -->
-      <RouterLink to="/" class="font-display flex items-baseline gap-1 text-2xl" @click="mobileOpen = false">
-        <span class="text-primary">BANDORI</span>
-        <span class="text-dim">/</span>
-        <span>LIVE</span>
+  <header class="sticky top-0 z-40 border-b border-line bg-base/85 backdrop-blur-md">
+    <nav class="wrap flex h-16 items-center justify-between gap-4">
+      <!-- Logo：衬线 + mono 双层 -->
+      <RouterLink to="/" class="flex items-baseline gap-2" @click="mobileOpen = false">
+        <span class="serif text-xl font-semibold tracking-wide text-ink">Bandori</span>
+        <span class="micro-accent">/ LIVE</span>
       </RouterLink>
 
-      <!-- 桌面菜单 -->
-      <div class="hidden items-center gap-1 md:flex">
+      <!-- 桌面菜单：mono 大写 + 金色下划线态 -->
+      <div class="hidden items-center gap-8 md:flex">
         <RouterLink
           v-for="l in links"
           :key="l.to"
           :to="l.to"
-          class="rounded-lg px-3 py-1.5 text-sm transition"
-          :class="isActive(l.to) ? 'bg-primary-soft font-semibold text-primary' : 'text-dim hover:bg-base hover:text-ink'"
+          class="micro relative py-1 transition hover:text-ink"
+          :class="isActive(l.to) && 'text-primary after:absolute after:-bottom-1.5 after:left-1/2 after:h-px after:w-5 after:-translate-x-1/2 after:bg-primary'"
         >
-          {{ l.label }}
+          {{ l.label }} <span class="ml-1 opacity-60">{{ l.en }}</span>
         </RouterLink>
       </div>
 
       <!-- 右侧：登录态 -->
-      <div class="hidden items-center gap-2 md:flex">
+      <div class="hidden items-center gap-3 md:flex">
         <template v-if="auth.isLogin">
-          <RouterLink to="/orders" class="rounded-lg px-3 py-1.5 text-sm text-dim transition hover:text-ink">我的订单</RouterLink>
+          <RouterLink to="/orders" class="micro py-1 transition hover:text-primary">我的订单 ORDERS</RouterLink>
           <RouterLink
             to="/profile"
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-white"
+            class="flex h-8 w-8 items-center justify-center border border-primary/40 text-sm font-semibold text-primary transition hover:bg-primary-soft"
             :title="auth.nickname"
           >
             {{ auth.nickname.slice(0, 1).toUpperCase() }}
           </RouterLink>
-          <button class="text-xs text-faint hover:text-dim" @click="logout">退出</button>
         </template>
         <template v-else>
-          <RouterLink to="/login" class="btn-ghost">登录</RouterLink>
-          <RouterLink to="/login?mode=register" class="btn-primary">注册</RouterLink>
+          <RouterLink to="/login" class="micro py-1 transition hover:text-primary">登录 LOGIN</RouterLink>
+          <RouterLink to="/login?mode=register" class="btn-ghost !px-4 !py-1.5">注册</RouterLink>
         </template>
       </div>
 
       <!-- 移动端汉堡 -->
       <button class="p-2 md:hidden" aria-label="菜单" @click="mobileOpen = !mobileOpen">
         <div class="space-y-1.5">
-          <span class="block h-0.5 w-5 bg-ink" :class="mobileOpen && 'translate-y-2 rotate-45 transition'" />
-          <span class="block h-0.5 w-5 bg-ink" :class="mobileOpen && 'opacity-0 transition'" />
-          <span class="block h-0.5 w-5 bg-ink" :class="mobileOpen && '-translate-y-2 -rotate-45 transition'" />
+          <span class="block h-px w-6 bg-ink transition" :class="mobileOpen && 'translate-y-[7px] rotate-45'" />
+          <span class="block h-px w-6 bg-ink transition" :class="mobileOpen && 'opacity-0'" />
+          <span class="block h-px w-6 bg-ink transition" :class="mobileOpen && '-translate-y-[7px] -rotate-45'" />
         </div>
       </button>
     </nav>
 
     <!-- 移动端抽屉 -->
-    <div v-if="mobileOpen" class="border-t border-line bg-surface px-4 py-3 md:hidden">
-      <div class="flex flex-col">
-        <RouterLink v-for="l in links" :key="l.to" :to="l.to" class="rounded-lg px-2 py-2.5 text-sm" :class="isActive(l.to) ? 'font-semibold text-primary' : 'text-dim'" @click="mobileOpen = false">
-          {{ l.label }}
+    <div v-if="mobileOpen" class="border-t border-line bg-surface px-4 py-4 md:hidden">
+      <div class="flex flex-col gap-1">
+        <RouterLink v-for="l in links" :key="l.to" :to="l.to" class="flex items-baseline justify-between px-2 py-3" :class="isActive(l.to) ? 'text-primary' : 'text-dim'" @click="mobileOpen = false">
+          <span class="text-sm">{{ l.label }}</span>
+          <span class="micro">{{ l.en }}</span>
         </RouterLink>
         <hr class="my-2 border-line">
         <template v-if="auth.isLogin">
-          <RouterLink to="/orders" class="rounded-lg px-2 py-2.5 text-sm text-dim" @click="mobileOpen = false">我的订单</RouterLink>
-          <button class="rounded-lg px-2 py-2.5 text-left text-sm text-red-500" @click="logout">退出登录</button>
+          <RouterLink to="/orders" class="px-2 py-3 text-sm text-dim" @click="mobileOpen = false">我的订单</RouterLink>
+          <button class="px-2 py-3 text-left text-sm text-wine" @click="logout">退出登录</button>
         </template>
-        <RouterLink v-else to="/login" class="btn-primary mt-1" @click="mobileOpen = false">登录 / 注册</RouterLink>
+        <RouterLink v-else to="/login" class="btn-primary mt-2" @click="mobileOpen = false">登录 / 注册</RouterLink>
       </div>
     </div>
   </header>
