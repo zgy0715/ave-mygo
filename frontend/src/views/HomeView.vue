@@ -1,21 +1,55 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listEvents } from '@/api/event'
-import { listSongs } from '@/api/song'
+import { listSongs, listBands } from '@/api/song'
 import { usePlayerStore } from '@/stores/player'
 
+gsap.registerPlugin(ScrollTrigger)
 const player = usePlayerStore()
+
 const events = ref([])
 const songs = ref([])
+const bands = ref([])
 
 const MARQUEE = ['MYGO!!!!!', 'AVE MUJICA', 'CRYCHIC', 'LIVE HOUSE', '迷星叫', '春日影', '壱雫空', '黒のバースデイ']
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 onMounted(async () => {
   try {
-    const [ev, so] = await Promise.all([listEvents({ page: 1, pageSize: 4 }), listSongs({ page: 1, pageSize: 8 })])
+    const [ev, so, bd] = await Promise.all([
+      listEvents({ page: 1, pageSize: 4 }),
+      listSongs({ page: 1, pageSize: 6 }),
+      listBands(),
+    ])
     events.value = ev.content
     songs.value = so.content
-  } catch { /* 静默：首页各区块独立降级 */ }
+    bands.value = bd
+  } catch { /* 各区块独立降级 */ }
+
+  // ===== GSAP 入场编排 =====
+  if (reducedMotion) return
+
+  // Hero：标题逐行上浮 + 元素错落（stagger 200ms 级）
+  gsap.from('.hero-line', { yPercent: 120, opacity: 0, duration: 1.1, ease: 'power4.out', stagger: 0.12, delay: 0.15 })
+  gsap.from('.hero-fade', { y: 24, opacity: 0, duration: 0.9, ease: 'power3.out', stagger: 0.18, delay: 0.7 })
+
+  // 滚动浮现：所有 .reveal 区块进入视口时上浮
+  document.querySelectorAll('.reveal').forEach((el) => {
+    gsap.from(el, {
+      y: 48, opacity: 0, duration: 1, ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 85%' },
+    })
+  })
+
+  // Hero 背景光斑缓慢漂移
+  gsap.to('.aurora-1', { xPercent: 18, yPercent: 12, duration: 14, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  gsap.to('.aurora-2', { xPercent: -14, yPercent: -16, duration: 18, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+})
+
+onBeforeUnmount(() => {
+  ScrollTrigger.getAll().forEach((t) => t.kill())
 })
 
 function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
@@ -23,24 +57,31 @@ function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
 
 <template>
   <main>
-    <!-- ===== HERO：全屏大字排印 ===== -->
-    <section class="relative flex h-[70vh] min-h-[420px] flex-col justify-center overflow-hidden border-b border-line">
-      <!-- 背景网格装饰 -->
-      <div class="absolute inset-0 opacity-[0.06]" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 64px 64px;"></div>
+    <!-- ===== HERO：光斑 + 巨字逐行入场 ===== -->
+    <section class="relative flex h-[78vh] min-h-[460px] flex-col justify-center overflow-hidden border-b border-line">
+      <!-- 舞台光斑（aurora）：模糊渐变缓慢漂移 -->
+      <div class="pointer-events-none absolute inset-0">
+        <div class="aurora-1 absolute -top-32 left-[10%] h-96 w-96 rounded-full bg-violet-600/25 blur-[120px]"></div>
+        <div class="aurora-2 absolute bottom-0 right-[15%] h-80 w-80 rounded-full bg-pink-600/20 blur-[110px]"></div>
+        <div class="absolute inset-0 opacity-[0.05]" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 72px 72px;"></div>
+      </div>
+
       <div class="relative mx-auto w-full max-w-6xl px-4">
-        <p class="mono mb-4 text-xs text-primary">BANG DREAM! FAN PROJECT — 2026</p>
-        <h1 class="hero-type">BANDORI<br /><span class="text-primary">/</span>LIVE</h1>
-        <p class="mt-6 max-w-md text-sm leading-6 text-gray-400">
-          失物乐团与面具人偶的舞台档案。歌曲、成员、演出与门票 ——<br />
-          迷茫也没关系，向前走就好。
-        </p>
-        <div class="mono mt-8 flex gap-6 text-xs">
-          <RouterLink to="/songs" class="border-b border-white pb-1 text-white hover:border-primary hover:text-primary">浏览曲库 ↓</RouterLink>
-          <RouterLink to="/events" class="text-dim hover:text-white">购票 LIVE →</RouterLink>
+        <p class="hero-fade mono mb-5 text-xs text-primary">BANG DREAM! FAN PROJECT — 2026</p>
+        <h1 class="overflow-hidden">
+          <span class="hero-line block text-[clamp(3rem,11vw,8.5rem)] font-black leading-[0.95] tracking-tight text-white">迷子でも、</span>
+          <span class="hero-line block text-[clamp(3rem,11vw,8.5rem)] font-black leading-[0.95] tracking-tight text-white">進んでいく <span class="text-primary">/</span></span>
+          <span class="hero-line block text-[clamp(1.2rem,3vw,2rem)] font-bold text-gray-400">就算迷路，也要前进 —— MyGO!!!!! × Ave Mujica 档案</span>
+        </h1>
+        <div class="hero-fade mono mt-10 flex flex-wrap gap-6 text-xs">
+          <RouterLink to="/songs" class="border-b border-white pb-1 text-white transition hover:border-primary hover:text-primary">浏览曲库 SONGS ↓</RouterLink>
+          <RouterLink to="/events" class="text-dim transition hover:text-white">购票 LIVE →</RouterLink>
+          <RouterLink to="/bands/1" class="text-dim transition hover:text-white">MyGO!!!!! 成员 →</RouterLink>
         </div>
       </div>
-      <!-- 底部跑马灯 -->
-      <div class="absolute bottom-0 left-0 w-full overflow-hidden border-t border-line py-2">
+
+      <!-- 跑马灯 -->
+      <div class="absolute bottom-0 left-0 w-full overflow-hidden border-t border-line py-2.5">
         <div class="animate-marquee flex w-max gap-8 whitespace-nowrap">
           <span v-for="i in 2" :key="i" class="mono text-xs text-dim">
             <template v-for="w in MARQUEE" :key="w">{{ w }}&nbsp;&nbsp;✳&nbsp;&nbsp;</template>
@@ -49,39 +90,52 @@ function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
       </div>
     </section>
 
-    <!-- ===== _01_ 乐队 ===== -->
-    <section class="mx-auto max-w-6xl px-4 py-16">
+    <!-- ===== 数据条：编辑排版 ===== -->
+    <section class="reveal border-b border-line">
+      <div class="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-line px-4 md:grid-cols-4">
+        <div class="p-6"><p class="tabular text-3xl font-black text-white">02</p><p class="mono mt-1 text-[10px] text-dim">BANDS / 乐队</p></div>
+        <div class="p-6"><p class="tabular text-3xl font-black text-white">10</p><p class="mono mt-1 text-[10px] text-dim">MEMBERS / 成员</p></div>
+        <div class="p-6"><p class="tabular text-3xl font-black text-white">09</p><p class="mono mt-1 text-[10px] text-dim">SONGS / 收录曲目</p></div>
+        <div class="p-6"><p class="tabular text-3xl font-black text-white">01</p><p class="mono mt-1 text-[10px] text-dim">LIVE ON SALE / 售票中</p></div>
+      </div>
+    </section>
+
+    <!-- ===== 乐队 ===== -->
+    <section class="reveal mx-auto max-w-6xl px-4 py-20">
       <div class="section-head">
         <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_01_</span>乐队 <span class="mono ml-2 text-[10px] text-dim">BANDS</span></h2>
       </div>
       <div class="grid gap-4 md:grid-cols-2">
-        <RouterLink to="/bands/1" class="group relative overflow-hidden rounded-xl border border-line p-8 transition hover:border-primary/60">
-          <p class="mono text-[10px] text-dim">BAND / 01 — GO !!!! まで、進め。</p>
-          <h3 class="mt-3 text-3xl font-black text-white group-hover:text-primary">MyGO!!!!!</h3>
-          <p class="mt-3 text-sm leading-6 text-gray-500">失落与寻找的乐团。五个人，五份迷茫，在舞台上第一次坦诚相对。</p>
-          <span class="mono absolute bottom-6 right-6 text-xs text-dim transition group-hover:text-primary">MEMBERS →</span>
-        </RouterLink>
-        <RouterLink to="/bands/2" class="group relative overflow-hidden rounded-xl border border-line p-8 transition hover:border-accent/60">
-          <p class="mono text-[10px] text-dim">BAND / 02 — mask · masquerade</p>
-          <h3 class="mt-3 text-3xl font-black text-white group-hover:text-accent">Ave Mujica</h3>
-          <p class="mt-3 text-sm leading-6 text-gray-500">面具下的人偶剧团。完美的演出背后，是被拆散又重组的命运。</p>
-          <span class="mono absolute bottom-6 right-6 text-xs text-dim transition group-hover:text-accent">MEMBERS →</span>
+        <RouterLink
+          v-for="(b, i) in bands" :key="b.id"
+          :to="`/bands/${b.id}`"
+          class="group relative flex min-h-[240px] flex-col justify-end overflow-hidden rounded-2xl border border-line p-8 transition"
+          :class="i === 0 ? 'bg-gradient-to-br from-sky-950/60 to-surface' : 'bg-gradient-to-br from-red-950/60 to-surface'"
+        >
+          <div class="absolute -right-10 -top-10 select-none text-[10rem] font-black leading-none opacity-[0.07] transition group-hover:opacity-[0.14]">
+            {{ String(i + 1).padStart(2, '0') }}
+          </div>
+          <p class="mono text-[10px] text-dim">{{ i === 0 ? 'GO !!!! まで、進め。' : 'mask · masquerade' }}</p>
+          <h3 class="mt-3 text-4xl font-black text-white transition group-hover:translate-x-1" :class="i === 0 ? 'group-hover:text-sky-300' : 'group-hover:text-accent'">{{ b.name }}</h3>
+          <p class="mt-3 max-w-sm text-sm leading-6 text-gray-500">{{ b.description }}</p>
+          <span class="mono mt-4 text-xs text-dim transition group-hover:text-white">MEMBERS & DISCOGRAPHY →</span>
         </RouterLink>
       </div>
     </section>
 
-    <!-- ===== _02_ 演出预告 ===== -->
-    <section class="border-y border-line bg-surface/50 py-16">
+    <!-- ===== 演出时间线 ===== -->
+    <section class="reveal border-y border-line bg-surface/40 py-20">
       <div class="mx-auto max-w-6xl px-4">
         <div class="section-head">
           <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_02_</span>演出预告 <span class="mono ml-2 text-[10px] text-dim">LIVE SCHEDULE</span></h2>
           <RouterLink to="/events" class="mono text-xs text-dim hover:text-white">ALL →</RouterLink>
         </div>
         <div v-for="e in events" :key="e.id">
-          <RouterLink :to="`/events/${e.id}`" class="group flex items-baseline justify-between border-b border-line py-4 transition hover:bg-elevated/50">
-            <div class="flex items-baseline gap-4">
-              <span class="tabular mono text-xs text-dim">{{ fmt(e.nextSessionTime) }}</span>
-              <span class="font-semibold text-white group-hover:text-primary">{{ e.title }}</span>
+          <RouterLink :to="`/events/${e.id}`" class="group flex flex-wrap items-baseline justify-between gap-2 border-b border-line py-5 transition hover:bg-elevated/50">
+            <div class="flex flex-wrap items-baseline gap-4">
+              <span class="tabular mono text-xs text-primary">{{ fmt(e.nextSessionTime) }}</span>
+              <span class="text-lg font-bold text-white group-hover:translate-x-1 group-hover:text-primary transition">{{ e.title }}</span>
+              <span class="text-xs text-accent"><span v-if="e.minPrice != null" class="tabular">¥{{ e.minPrice }} 起</span></span>
             </div>
             <span class="mono text-xs text-dim">{{ e.venue }}</span>
           </RouterLink>
@@ -90,8 +144,8 @@ function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
       </div>
     </section>
 
-    <!-- ===== _03_ 收录歌曲 ===== -->
-    <section class="mx-auto max-w-6xl px-4 py-16">
+    <!-- ===== 歌曲 ===== -->
+    <section class="reveal mx-auto max-w-6xl px-4 py-20">
       <div class="section-head">
         <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_03_</span>收录歌曲 <span class="mono ml-2 text-[10px] text-dim">SONGS</span></h2>
         <RouterLink to="/songs" class="mono text-xs text-dim hover:text-white">ALL →</RouterLink>
@@ -99,13 +153,13 @@ function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
       <div class="grid gap-2">
         <div
           v-for="(s, i) in songs" :key="s.id"
-          class="group flex cursor-pointer items-center gap-4 border-b border-line px-2 py-3 transition hover:bg-elevated/60"
+          class="group flex cursor-pointer items-center gap-4 border-b border-line px-2 py-3.5 transition hover:bg-elevated/60"
           @click="player.play(s)"
         >
           <span class="mono w-8 text-xs text-dim">{{ String(i + 1).padStart(2, '0') }}</span>
           <span class="flex-1 truncate text-sm text-gray-200 group-hover:text-white">{{ s.title }}</span>
           <span class="hidden text-xs text-dim md:inline">{{ s.bandName }}</span>
-          <span class="mono w-16 text-right text-xs text-dim">{{ player.current?.id === s.id && player.isPlaying ? '▶ PLAYING' : '' }}</span>
+          <span class="mono w-20 text-right text-xs text-primary">{{ player.current?.id === s.id && player.isPlaying ? '▶ NOW PLAYING' : '▶' }}</span>
         </div>
       </div>
     </section>
