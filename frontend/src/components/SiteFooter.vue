@@ -33,7 +33,7 @@ const externalLinks = [
   { label: 'Ave Mujica 官网', href: 'https://avemujica.bang-dream.com/', icon: 'mujica' },
   { label: '劇場版 prima aurora', href: 'https://avemujica-movie.bang-dream.com/', icon: 'movie' },
   { label: 'Bestdori!', href: 'https://bestdori.com/', icon: 'bestdori' },
-  { label: '站长个人站 ZGY0715', href: 'https://zgy0715.github.io/', icon: 'author' },
+  { label: '站长 GITHUB · ZGY0715', href: 'https://github.com/zgy0715', icon: 'author' },
 ]
 </script>
 
