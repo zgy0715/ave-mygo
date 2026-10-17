@@ -36,7 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 公开区：认证 + 健康检查 + 内容浏览（游客可看，登录才能操作）
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health",
-                                "/api/v1/songs/**", "/api/v1/albums/**").permitAll()
+                                "/api/v1/songs/**", "/api/v1/albums/**",
+                                "/api/v1/events/**", "/api/v1/setlists/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()                  // 其余：必须登录
                 )
