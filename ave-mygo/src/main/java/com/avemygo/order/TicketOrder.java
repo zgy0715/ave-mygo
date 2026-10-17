@@ -47,8 +47,9 @@ public class TicketOrder {
     @Column(name = "ticket_type_id", nullable = false)
     private Long ticketTypeId;
 
+    /** TINYINT UNSIGNED → Byte；业务上限 10（docs/05 §3.9） */
     @Column(nullable = false)
-    private Integer quantity;
+    private Byte quantity;
 
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
