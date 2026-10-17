@@ -152,6 +152,11 @@ body {
 .page-enter-from { opacity: 0; transform: translateY(14px); }
 .page-leave-to { opacity: 0; }
 
+/* 侧滑菜单：面板平移 + 链接交错浮现（.menu-item 配合 --d 延迟） */
+.menu-enter-active, .menu-leave-active { transition: transform .5s var(--ease-apple); }
+.menu-enter-from, .menu-leave-to { transform: translateX(100%); }
+.menu-item { animation: rise .55s var(--ease-apple) both; animation-delay: var(--d, 0ms); }
+
 /* 外部链接：↗ 图标随 hover 向右上方探出（anontokyo 系外链语言） */
 .link-ext {
   @apply inline-flex items-center gap-1.5 font-medium text-dim;

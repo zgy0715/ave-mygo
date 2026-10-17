@@ -5,6 +5,7 @@
  * - RouterView 包 <Transition name="page">：路由切换淡入上移
  */
 import NavBar from '@/components/NavBar.vue'
+import SideMenu from '@/components/SideMenu.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import PlayerBar from '@/components/PlayerBar.vue'
 </script>
@@ -12,6 +13,7 @@ import PlayerBar from '@/components/PlayerBar.vue'
 <template>
   <div class="grain flex min-h-screen flex-col">
     <NavBar />
+    <SideMenu />
     <!-- pb-28 给底部播放条留位，避免遮内容 -->
     <main class="flex-1 pb-28">
       <RouterView v-slot="{ Component }">
