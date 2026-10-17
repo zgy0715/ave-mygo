@@ -1,6 +1,8 @@
 package com.avemygo.order;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,4 +20,9 @@ public interface TicketOrderRepository extends JpaRepository<TicketOrder, Long> 
 
     /** 我的订单列表（按创建时间倒序） */
     List<TicketOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    Optional<TicketOrder> findByOrderNo(String orderNo);
+
+    /** 超时任务扫描：待支付且已过支付截止时间 */
+    List<TicketOrder> findByStatusAndPayDeadlineBefore(String status, LocalDateTime deadline);
 }

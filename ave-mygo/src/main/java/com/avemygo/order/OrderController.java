@@ -3,9 +3,14 @@ package com.avemygo.order;
 import com.avemygo.common.ApiResponse;
 import com.avemygo.order.dto.OrderDtos.CreateOrderRequest;
 import com.avemygo.order.dto.OrderDtos.OrderCreated;
+import com.avemygo.order.dto.OrderDtos.OrderView;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,5 +32,26 @@ public class OrderController {
                                             Authentication authentication) {
         Long userId = Long.valueOf(authentication.getName());   // JWT subject = userId
         return ApiResponse.ok(orderService.create(userId, req));
+    }
+
+    /** 我的订单列表 */
+    @GetMapping("/my")
+    public ApiResponse<List<OrderView>> my(Authentication authentication) {
+        Long userId = Long.valueOf(authentication.getName());
+        return ApiResponse.ok(orderService.myOrders(userId));
+    }
+
+    /** 模拟支付（幂等：重复调用返回同一结果） */
+    @PostMapping("/{orderNo}/pay")
+    public ApiResponse<OrderView> pay(@PathVariable String orderNo, Authentication authentication) {
+        Long userId = Long.valueOf(authentication.getName());
+        return ApiResponse.ok(orderService.pay(orderNo, userId));
+    }
+
+    /** 用户取消订单（回滚库存） */
+    @PatchMapping("/{orderNo}/cancel")
+    public ApiResponse<OrderView> cancel(@PathVariable String orderNo, Authentication authentication) {
+        Long userId = Long.valueOf(authentication.getName());
+        return ApiResponse.ok(orderService.cancel(orderNo, userId));
     }
 }

@@ -28,4 +28,14 @@ public class OrderDtos {
             LocalDateTime payDeadline
     ) {
     }
+
+    /** 订单视图（列表/详情/支付/取消通用） */
+    public record OrderView(
+            String orderNo, String status,
+            Integer quantity, BigDecimal unitPrice, BigDecimal totalAmount,
+            LocalDateTime payDeadline, LocalDateTime paidAt,
+            LocalDateTime cancelledAt, LocalDateTime refundedAt, String refundReason,
+            LocalDateTime createdAt
+    ) {
+    }
 }
