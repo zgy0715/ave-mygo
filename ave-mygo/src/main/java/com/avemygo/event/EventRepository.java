@@ -1,0 +1,22 @@
+package com.avemygo.event;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+/** 演出数据访问。DRAFT 永远不出现在前台查询结果里。 */
+public interface EventRepository extends JpaRepository<LiveEvent, Long> {
+
+    /** 前台演出列表：状态/乐队可选筛选 + 分页 */
+    @Query("""
+            SELECT e FROM LiveEvent e
+            WHERE e.status <> 'DRAFT'
+              AND (:status IS NULL OR e.status = :status)
+              AND (:bandId IS NULL OR e.bandId = :bandId)
+            """)
+    Page<LiveEvent> search(@Param("status") String status,
+                           @Param("bandId") Short bandId,
+                           Pageable pageable);
+}
