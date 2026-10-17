@@ -1,59 +1,77 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventCard from '@/components/EventCard.vue'
 import SongCard from '@/components/SongCard.vue'
 import { events, songs, bands, members } from '@/data/mock'
 
 /**
- * 首页 v3.1：官网级编辑排版（浅色版）。
- * Hero（衬线大标题 + mono 微标签）→ 跑马灯 → 编号区块（01 演出 / 02 新曲 / 03 乐队）。
+ * 首页 v4：anontokyo 式满屏视频 Hero。
+ * 视频约定路径 /assets/hero.mp4（本地版权素材，仅限学习、不随公开部署分发）；
+ * 文件缺失 → @error 降级为 aurora 流光兜底，两种形态都保持中央字标构图。
  */
+const videoOk = ref(true)
+
 const onSale = computed(() => events.filter((e) => e.status === 'ONSALE'))
 const featured = onSale.value[0] || events[0]
 const upcoming = computed(() => events.filter((e) => e.status !== 'ENDED').slice(0, 3))
 const newSongs = songs.slice(0, 8)
 const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANDORI / LIVE']
+
+/** 「8.12 Sat.」式日期：官网情报区同款格式 */
+const shortDate = computed(() => {
+  const d = new Date(featured.date + 'T12:00:00')
+  const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]
+  return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${wd}.`
+})
 </script>
 
 <template>
-  <!-- Hero：主打在售演出 -->
-  <section class="relative overflow-hidden border-b border-line">
-    <!-- 底部蓝雾光：个人站 aurora 同源 -->
-    <div class="pointer-events-none absolute -bottom-40 left-1/2 h-96 w-[60rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl" style="background: radial-gradient(ellipse, #7bd, transparent 70%)" />
+  <!-- Hero：满屏视频 + 中央字标（anontokyo 构图） -->
+  <section class="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden">
+    <!-- 视频层：缓慢推近；缺失时 aurora 兜底 -->
+    <video
+      v-if="videoOk"
+      class="animate-kenburns absolute inset-0 h-full w-full object-cover"
+      :src="'/assets/hero.mp4'"
+      autoplay muted loop playsinline
+      @error="videoOk = false"
+    />
+    <div v-else class="absolute inset-0 overflow-hidden bg-base" aria-hidden="true">
+      <div class="animate-drift absolute -left-1/4 top-[-25%] h-[85vmax] w-[85vmax] rounded-full opacity-25 blur-3xl" style="background: radial-gradient(circle, #7bd, transparent 62%)" />
+      <div class="animate-drift-slow absolute -right-1/4 bottom-[-30%] h-[75vmax] w-[75vmax] rounded-full opacity-20 blur-3xl" style="background: radial-gradient(circle, #f89, transparent 62%)" />
+    </div>
 
-    <div class="wrap relative py-16 sm:py-24">
-      <div class="grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-center">
-        <div v-reveal>
-          <p class="micro-accent mb-5">NOW ON SALE ✳ {{ onSale.length }} CONCERTS</p>
-          <h1 class="serif text-4xl leading-tight font-semibold sm:text-5xl lg:text-6xl">
-            {{ featured.title }}
-          </h1>
-          <p class="mt-5 text-dim">
-            {{ featured.venue }} <span class="mx-2 text-faint">✳</span>
-            <span class="tabular">{{ featured.date }}</span>
-            <span class="mx-2 text-faint">✳</span> {{ featured.startTime }} 开演
-          </p>
-          <div class="mt-8 flex flex-wrap gap-3">
-            <RouterLink :to="`/events/${featured.id}`" class="btn-primary">立即购票 TICKETS</RouterLink>
-            <RouterLink to="/events" class="btn-ghost">全部演出 ALL LIVE</RouterLink>
-          </div>
-        </div>
+    <!-- 洗白雾面：压住视频对比度，保中央黑字可读（官网同款处理） -->
+    <div class="absolute inset-0 bg-gradient-to-b from-base/70 via-base/45 to-base" />
 
-        <!-- 演出概览卡 -->
-        <RouterLink :to="`/events/${featured.id}`" class="card group overflow-hidden" v-reveal="120">
-          <div class="shine relative flex h-48 flex-col justify-between overflow-hidden p-6 sm:h-56" :style="{ background: bands.find((b) => b.id === featured.band)?.gradient }">
-            <span class="mono relative text-[11px] tracking-[0.25em] text-white/75">{{ featured.date }} {{ featured.openTime }} OPEN</span>
-            <p class="serif relative text-2xl font-semibold text-white" style="text-shadow: 0 1px 14px rgba(0,0,0,.5)">{{ featured.venue }}</p>
-          </div>
-          <div class="flex items-center justify-between p-4">
-            <p class="micro">{{ onSale.length }} 场演出正在售票</p>
-            <span class="text-sm text-primary transition-transform duration-300 group-hover:translate-x-1.5" style="transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1)">→</span>
-          </div>
-        </RouterLink>
-      </div>
-      <!-- 下滚引导：个人站同款 Scroll down -->
-      <p class="micro mt-14 text-center">往下滚动 SCROLL DOWN ↓</p>
+    <!-- 右缘竖排装饰 -->
+    <p class="vertical-rl mono absolute right-5 top-1/2 hidden -translate-y-1/2 text-[10px] tracking-[0.35em] text-faint lg:block" aria-hidden="true">
+      迷子でもいい、迷子でも進む — MYGO!!!!! ✳ AVE MUJICA
+    </p>
+
+    <!-- 中央字标 -->
+    <div class="relative flex flex-1 flex-col items-center justify-center px-4 text-center">
+      <p class="micro-accent mb-4" v-reveal>BAN!DREAM! FAN PROJECT — 2026</p>
+      <h1 class="display text-[15vw] leading-[0.95] text-ink sm:text-[8.5rem]" v-reveal="120">
+        BANDORI<span class="mx-1 align-top text-[0.4em] text-primary">✳</span>LIVE
+      </h1>
+      <p class="mono mt-4 text-sm tracking-[0.45em] text-dim" v-reveal="240">MYGO!!!!! ✳ AVE MUJICA</p>
+    </div>
+
+    <!-- 底部情报带：SCROLL DOWN 居中 + 右下最新演出（官网情报区语言） -->
+    <div class="relative flex items-end justify-between gap-6 px-6 pb-7 sm:px-10">
+      <p class="micro hidden sm:block">FAN PROJECT ✳ NOT OFFICIAL</p>
+
+      <p class="micro animate-scroll-hint absolute left-1/2 hidden -translate-x-1/2 sm:block">SCROLL DOWN ↓</p>
+
+      <RouterLink :to="`/events/${featured.id}`" class="group ml-auto text-right">
+        <p class="mono text-sm font-medium text-primary tabular">{{ shortDate }} @{{ featured.venue }}</p>
+        <p class="mt-1 text-sm font-bold sm:text-base">{{ featured.title }}</p>
+        <p class="micro mt-1.5 transition-colors duration-300 group-hover:!text-primary">
+          TICKET ON SALE — 立即购票 ↗
+        </p>
+      </RouterLink>
     </div>
   </section>
 

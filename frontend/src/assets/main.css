@@ -209,5 +209,30 @@ body {
 .rise-2 { animation-delay: .16s; }
 .rise-3 { animation-delay: .24s; }
 
+/* ---- 满屏 Hero 专用动效 ----
+ * scroll-hint：SCROLL DOWN 呼吸下探
+ * kenburns：视频缓慢推近（希区柯克感）
+ * drift：aurora 光斑漂移（无视频时的兜底背景） */
+@keyframes scroll-hint {
+  0%, 100% { transform: translate(-50%, 0); opacity: 1; }
+  55% { transform: translate(-50%, 8px); opacity: .45; }
+}
+.animate-scroll-hint { animation: scroll-hint 2.4s var(--ease-apple) infinite; }
+
+@keyframes kenburns {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.12); }
+}
+.animate-kenburns { animation: kenburns 22s ease-in-out infinite alternate; }
+
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(5vw, 4vh) scale(1.18); }
+}
+.animate-drift { animation: drift 16s ease-in-out infinite alternate; }
+.animate-drift-slow { animation: drift 24s ease-in-out infinite alternate-reverse; }
+
+.vertical-rl { writing-mode: vertical-rl; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #d4d4da; border-radius: 4px; }
