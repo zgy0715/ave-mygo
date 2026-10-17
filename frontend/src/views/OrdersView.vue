@@ -1,61 +1,97 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { myOrders, cancelOrder } from '@/api/order'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import StatusBadge from '@/components/StatusBadge.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import { orders, eventById } from '@/data/mock'
 
-const orders = ref([])
-const loading = ref(true)
-const errMsg = ref('')
+/**
+ * 我的订单（需求 3.5 简化版）：状态 Tab + 卡片列表。
+ * 待支付订单带支付倒计时（以 payDeadline 为准，走查缺口④）。
+ * 后端就绪后：GET /orders/my + 支付/取消接口。
+ */
+const route = useRoute()
+const TABS = [
+  { id: 'ALL', label: '全部' },
+  { id: 'PENDING', label: '待支付' },
+  { id: 'PAID', label: '已支付' },
+  { id: 'CANCELLED', label: '已取消' },
+]
+const tab = ref('ALL')
+const filtered = computed(() => (tab.value === 'ALL' ? orders : orders.filter((o) => o.status === tab.value)))
 
-const STATUS_STYLE = {
-  PENDING_PAYMENT: 'bg-yellow-500/15 text-yellow-400',
-  PAID: 'bg-green-500/15 text-green-400',
-  CANCELLED: 'bg-gray-500/15 text-gray-500',
-  EXPIRED: 'bg-red-500/15 text-red-400',
-  REFUNDED: 'bg-blue-500/15 text-blue-400',
+const fmtPrice = (fen) => `¥${(fen / 100).toFixed(0)}`
+
+/** 倒计时：1s tick 一次，算 payDeadline 的剩余时间 */
+const now = ref(Date.now())
+let timer
+onMounted(() => { timer = setInterval(() => (now.value = Date.now()), 1000) })
+onUnmounted(() => clearInterval(timer))
+
+function countdown(o) {
+  const deadline = new Date(o.payDeadline.replace(' ', 'T')).getTime()
+  const left = Math.max(0, Math.floor((deadline - now.value) / 1000))
+  const m = String(Math.floor(left / 60)).padStart(2, '0')
+  const s = String(left % 60).padStart(2, '0')
+  return left > 0 ? `${m}:${s}` : '已超时'
 }
-const STATUS_LABEL = { PENDING_PAYMENT: '待支付', PAID: '已支付', CANCELLED: '已取消', EXPIRED: '已超时', REFUNDED: '已退款' }
-
-async function load() {
-  loading.value = true
-  try { orders.value = await myOrders() } catch (e) { errMsg.value = e.message } finally { loading.value = false }
-}
-onMounted(load)
-
-async function cancel(orderNo) {
-  await cancelOrder(orderNo)
-  await load()
-}
-
-function fmt(t) { return t ? t.replace('T', ' ').slice(0, 19) : '' }
 </script>
 
 <template>
-  <main class="mx-auto max-w-3xl px-4 pb-24 pt-8">
-    <h1 class="mb-6 text-2xl font-bold">我的订单</h1>
+  <div class="wrap py-8">
+    <div class="section-head">
+      <h1 class="text-2xl font-black">我的订单</h1>
+    </div>
 
-    <div v-if="loading" class="h-32 animate-pulse rounded-xl bg-surface"></div>
-    <div v-else-if="errMsg" class="rounded-lg bg-red-950/50 p-4 text-sm text-red-400">{{ errMsg }}</div>
-    <div v-else-if="orders.length === 0" class="py-20 text-center text-gray-600">还没有订单，去看演出吧 🎤</div>
+    <div class="mb-5 flex gap-2">
+      <button
+        v-for="t in TABS"
+        :key="t.id"
+        class="rounded-full border px-3.5 py-1.5 text-sm transition"
+        :class="tab === t.id ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-dim hover:border-line-strong'"
+        @click="tab = t.id"
+      >
+        {{ t.label }}
+      </button>
+    </div>
 
-    <div v-else class="space-y-3">
-      <div v-for="o in orders" :key="o.orderNo" class="rounded-xl border border-line bg-surface p-4">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-gray-600">{{ o.orderNo }}</span>
-          <span class="rounded px-2 py-0.5 text-[10px]" :class="STATUS_STYLE[o.status]">{{ STATUS_LABEL[o.status] }}</span>
-        </div>
-        <div class="mt-2 flex items-center justify-between">
-          <div class="text-sm">
-            <span class="text-gray-600">{{ o.quantity }} 张 · </span>
-            <span class="tabular font-bold text-accent">¥{{ Number(o.totalAmount).toFixed(2) }}</span>
+    <div v-if="filtered.length" class="space-y-3">
+      <div v-for="o in filtered" :key="o.id" class="card flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
+        <!-- 演出信息 -->
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <p class="truncate font-semibold">{{ eventById(o.eventId)?.title }}</p>
+            <StatusBadge :status="o.status" />
           </div>
-          <button
-            v-if="o.status === 'PENDING_PAYMENT'"
-            class="rounded-lg border border-line px-3 py-1.5 text-xs text-gray-600 hover:border-accent hover:text-accent"
-            @click="cancel(o.orderNo)"
-          >取消订单</button>
+          <p class="mt-1 text-xs text-faint">
+            {{ o.orderNo }} · {{ eventById(o.eventId)?.venue }} · {{ o.quantity }} 张
+          </p>
         </div>
-        <p class="mt-2 text-[10px] text-gray-700">创建于 {{ fmt(o.createdAt) }}</p>
+
+        <!-- 金额 + 倒计时 -->
+        <div class="text-right">
+          <p class="tabular font-bold">{{ fmtPrice(o.amount) }}</p>
+          <p v-if="o.status === 'PENDING'" class="tabular mt-0.5 text-xs" :class="countdown(o) === '已超时' ? 'text-faint' : 'text-red-500'">
+            {{ countdown(o) === '已超时' ? '支付已超时' : `剩余 ${countdown(o)}` }}
+          </p>
+          <p v-else class="mt-0.5 text-xs text-faint">{{ o.createdAt }}</p>
+        </div>
+
+        <!-- 操作 -->
+        <div class="flex gap-2">
+          <button v-if="o.status === 'PENDING' && countdown(o) !== '已超时'" class="btn-primary">去支付</button>
+          <button v-if="o.status === 'PENDING'" class="btn-ghost">取消</button>
+        </div>
       </div>
     </div>
-  </main>
+
+    <EmptyState
+      v-else
+      icon="🎫"
+      text="这里还没有订单"
+      hint="去看一场喜欢的 LIVE 吧"
+      action-text="浏览演出"
+      @action="$router.push('/events')"
+    />
+  </div>
 </template>
