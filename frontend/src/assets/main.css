@@ -1,69 +1,97 @@
 @import 'tailwindcss';
 @import './components.css';
 
-/* ===== 设计定调 v3：Ave Mujica 官网实测配方 =====
- * 底色 深板岩灰 #32373c（不是纯黑）
- * 衬线显示字体 Cormorant Infant + Noto Serif JP
- * 标志渐变 #881144 → #aa1656（深梅红）
- * 全站噪点纹理（胶片颗粒）
- * anontokyo 点缀：鲑鱼粉 #ff8899 / 浅蓝 #77bbdd
+/* ===== 设计定调 v5：zgy0715.github.io 配方（变量级复刻） =====
+ * --black #0a0a0a / 白系边框 / IBM Plex Sans SC
+ * Hero 白屏开场 2.6s → 渐变入黑；蓝粉 aurora 白底先行
+ * mono 标签字距 .2em；渐变文字 blue→pink→gold
  */
 @theme {
-  --color-base: #32373c;
-  --color-surface: #3a4046;
-  --color-elevated: #444b52;
-  --color-line: #525a61;
-  --color-dim: #9aa3ab;
-  --color-plum: #aa1656;
-  --color-plum-deep: #881144;
-  --color-salmon: #ff8899;
-  --color-steel: #77bbdd;
-  /* 旧 token 别名 → 新配色（songs/events 等页面自动跟随新皮肤） */
-  --color-primary: #ff8899;
-  --color-accent: #d4407e;
-  --font-serif-jp: 'Cormorant Infant', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --color-base: #0a0a0a;
+  --color-surface: #101214;
+  --color-elevated: #15181d;
+  --color-line: #ffffff26;          /* 白 15% —— 分隔线全部用白系 */
+  --color-line-strong: #ffffff59;   /* 白 35% */
+  --color-dim: #ffffff9c;
+  --color-primary: #38b;            /* --blue */
+  --color-blue-dark: #287aac;
+  --color-blue-light: #7bd;
+  --color-pink: #f89;
+  --color-gold: #b95;
+  --color-accent: #f89;
+  --font-sans-sc: 'IBM Plex Sans SC', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 body {
-  @apply bg-base text-gray-100 antialiased;
-  font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', 'PingFang SC', 'Microsoft YaHei', serif;
-}
-
-/* 衬线显示标题 */
-.font-display {
-  font-family: var(--font-serif-jp);
-}
-
-/* 全站噪点：SVG feTurbulence 生成胶片颗粒（官网站用 webp，我们用等价方案） */
-.noise::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* 梅红渐变条 */
-.grad-plum {
-  background: linear-gradient(to right, #881144 0%, #aa1656 50%, #881144 100%);
-}
-.grad-plum-text {
-  background: linear-gradient(120deg, #d4407e, #ff8899);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  @apply bg-base text-white antialiased;
+  font-family: var(--font-sans-sc);
 }
 
 .mono {
   font-family: var(--font-mono);
-  letter-spacing: 0.08em;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* ===== Hero 白屏开场（zgy0715 同款时序）===== */
+.hero-splash {
+  background: #fff;
+  animation: 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s forwards hero-bg;
+}
+@keyframes hero-bg {
+  to { background: #0a0a0a; }
+}
+/* 文字同步黑白反转 */
+.splash-ink {
+  color: #0a0a0a;
+  transition: color 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s;
+}
+.splash-ink-soft {
+  color: #0a0a0acc;
+  transition: color 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s;
+}
+
+/* ===== Aurora 光斑（.hero:before/after 同参复刻）===== */
+.aurora {
+  position: absolute;
+  aspect-ratio: 1;
+  width: 55vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.14;
+  pointer-events: none;
+}
+.aurora-1 {
+  background: var(--color-primary);
+  top: -18%;
+  left: -12%;
+  animation: 16s ease-in-out infinite alternate drift;
+}
+.aurora-2 {
+  background: var(--color-pink);
+  bottom: -22%;
+  right: -10%;
+  animation: 20s ease-in-out infinite alternate-reverse drift;
+}
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(6vw, 5vh) scale(1.12); }
+}
+
+/* ===== 渐变文字（scroll-down 同款）===== */
+.grad-text {
+  background-image: linear-gradient(90deg, var(--color-blue-light), var(--color-pink), var(--color-gold), var(--color-pink), var(--color-blue-light));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: grad-flow 6s linear infinite;
+}
+@keyframes grad-flow {
+  to { background-position: 200% 0; }
 }
 
 @keyframes marquee {
@@ -74,9 +102,17 @@ body {
   animation: marquee 30s linear infinite;
 }
 
+/* 档案式小标签：mono + .2em 字距（slide-link 同参） */
+.tag-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-dim);
+}
+
 .section-head {
-  @apply mb-8 flex items-end justify-between border-b border-line pb-3;
+  @apply mb-8 flex items-end justify-between border-b border-line-strong pb-3;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #525a61; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #ffffff33; border-radius: 4px; }
