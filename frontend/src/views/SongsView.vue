@@ -40,7 +40,10 @@ function onPlay(song) {
 <template>
   <div class="wrap py-8">
     <div class="section-head">
-      <h1 class="text-2xl font-black">歌曲库</h1>
+      <div>
+        <p class="micro-accent mb-1.5">SONGS — LIBRARY</p>
+        <h1 class="serif text-2xl font-semibold">歌曲库</h1>
+      </div>
       <p class="text-sm text-faint tabular">{{ filtered.length }} 首</p>
     </div>
 

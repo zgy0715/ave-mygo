@@ -9,7 +9,12 @@ const myOrderCount = orders.length
 
 <template>
   <div class="wrap py-8">
-    <h1 class="mb-6 text-2xl font-black">个人中心</h1>
+    <div class="section-head">
+      <div>
+        <p class="micro-accent mb-1.5">MY — PROFILE</p>
+        <h1 class="serif text-2xl font-semibold">个人中心</h1>
+      </div>
+    </div>
 
     <div class="card flex items-center gap-4 p-6">
       <div class="flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 text-xl font-semibold text-primary">

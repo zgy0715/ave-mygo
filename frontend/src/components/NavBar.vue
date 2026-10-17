@@ -34,14 +34,14 @@ function logout() {
         <span class="micro-accent">/ LIVE</span>
       </RouterLink>
 
-      <!-- 桌面菜单：mono 大写 + 金色下划线态 -->
+      <!-- 桌面菜单：mono 大写 + 金线生长（.nav-link 下划线动画见 main.css） -->
       <div class="hidden items-center gap-8 md:flex">
         <RouterLink
           v-for="l in links"
           :key="l.to"
           :to="l.to"
-          class="micro relative py-1 transition hover:text-ink"
-          :class="isActive(l.to) && 'text-primary after:absolute after:-bottom-1.5 after:left-1/2 after:h-px after:w-5 after:-translate-x-1/2 after:bg-primary'"
+          class="micro nav-link py-1 transition-colors duration-300 hover:text-primary"
+          :class="isActive(l.to) && 'is-active text-primary'"
         >
           {{ l.label }} <span class="ml-1 opacity-60">{{ l.en }}</span>
         </RouterLink>

@@ -18,7 +18,10 @@ const filtered = computed(() => (tab.value === 'ALL' ? events : events.filter((e
 <template>
   <div class="wrap py-8">
     <div class="section-head">
-      <h1 class="text-2xl font-black">演出日程</h1>
+      <div>
+        <p class="micro-accent mb-1.5">LIVE — SCHEDULE</p>
+        <h1 class="serif text-2xl font-semibold">演出日程</h1>
+      </div>
       <p class="text-sm text-faint tabular">{{ filtered.length }} 场</p>
     </div>
 
@@ -35,7 +38,7 @@ const filtered = computed(() => (tab.value === 'ALL' ? events : events.filter((e
     </div>
 
     <div v-if="filtered.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <EventCard v-for="e in filtered" :key="e.id" :event="e" />
+      <EventCard v-for="(e, i) in filtered" :key="e.id" :event="e" v-reveal="(i % 3) * 80" />
     </div>
     <EmptyState v-else icon="🎫" text="该状态下暂无演出" action-text="查看全部" @action="tab = 'ALL'" />
   </div>

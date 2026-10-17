@@ -57,7 +57,7 @@ function buy(tt) {
           <span class="rounded px-2 py-0.5 text-xs font-medium" :style="{ background: band?.soft, color: band?.color }">{{ band?.name }}</span>
           <StatusBadge :status="event.status" />
         </div>
-        <h1 class="mt-3 text-3xl font-black">{{ event.title }}</h1>
+        <h1 class="serif mt-3 text-3xl font-semibold sm:text-4xl">{{ event.title }}</h1>
         <dl class="mt-5 grid grid-cols-2 gap-y-2 text-sm">
           <div><dt class="text-faint">会场</dt><dd class="mt-0.5 font-medium">{{ event.venue }}</dd></div>
           <div><dt class="text-faint">日期</dt><dd class="tabular mt-0.5 font-medium">{{ event.date }}</dd></div>

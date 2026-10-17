@@ -23,8 +23,8 @@ function onPlay() {
 <template>
   <div class="card group relative overflow-hidden p-3 hover:shadow-md">
     <RouterLink :to="`/songs/${song.id}`" class="block">
-      <div class="relative">
-        <CoverArt :title="song.title" :band="song.band" class="aspect-square w-full" rounded="rounded-lg" />
+      <div class="relative overflow-hidden rounded-lg">
+        <CoverArt :title="song.title" :band="song.band" class="zoomable aspect-square w-full" rounded="rounded-lg" />
         <span class="tabular absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] text-white">
           {{ Math.floor(song.duration / 60) }}:{{ String(song.duration % 60).padStart(2, '0') }}
         </span>
@@ -34,8 +34,9 @@ function onPlay() {
     </RouterLink>
 
     <button
-      class="absolute right-4 top-[7.25rem] flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white opacity-0 shadow-lg transition group-hover:opacity-100"
-      :class="player.current?.id === song.id && player.isPlaying && 'opacity-100'"
+      class="absolute right-4 top-[7.25rem] flex h-9 w-9 scale-75 items-center justify-center rounded-full bg-primary text-white opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100"
+      :class="player.current?.id === song.id && player.isPlaying && '!scale-100 !opacity-100'"
+      style="transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1)"
       aria-label="播放"
       @click="onPlay"
     >

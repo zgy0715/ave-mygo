@@ -43,7 +43,7 @@ function onPlay() {
       <!-- 右：元信息 -->
       <div>
         <span class="rounded px-2 py-0.5 text-xs font-medium" :style="{ background: band?.soft, color: band?.color }">{{ band?.name }}</span>
-        <h1 class="mt-3 text-3xl font-black sm:text-4xl">{{ song.title }}</h1>
+        <h1 class="serif mt-3 text-3xl font-semibold sm:text-4xl">{{ song.title }}</h1>
         <p class="mt-2 text-dim">{{ song.album }}</p>
 
         <dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">

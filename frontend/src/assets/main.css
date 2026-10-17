@@ -38,6 +38,14 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ---- 动效 token：Apple 式缓动，全站统一 ----
+ * --ease-apple：先急后缓无过冲，iOS 系统动画同族曲线
+ * 短时长（0.25s 内）用于微交互，长时长（0.6-0.9s）用于入场 */
+:root {
+  --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* ---- 字体角色 ---- */
 .serif { font-family: var(--font-serif); }
 .display { font-family: var(--font-display); letter-spacing: 0.04em; }
@@ -80,8 +88,14 @@ body {
 /* ---- 按钮 ---- */
 .btn, .btn-primary, .btn-ghost {
   @apply inline-flex cursor-pointer items-center justify-center gap-1.5 px-5 py-2 text-sm font-medium transition select-none disabled:cursor-not-allowed disabled:opacity-40;
+  transition-property: background-color, border-color, color, transform, box-shadow;
+  transition-duration: .3s;
+  transition-timing-function: var(--ease-apple);
 }
+/* 微交互：按下轻微回缩（iOS 物理感） */
+.btn:active, .btn-primary:active, .btn-ghost:active { transform: scale(.96); }
 .btn-primary { @apply bg-primary text-white hover:bg-primary-strong; }
+.btn-primary:hover { box-shadow: 0 8px 20px -8px rgba(44, 125, 160, .55); }
 .btn-ghost { @apply border border-line bg-surface text-ink hover:border-line-strong; }
 
 /* 复用输入控件 */
@@ -93,14 +107,79 @@ body {
 }
 .input:focus { border-color: var(--color-primary); }
 
-/* 卡片：细线 + 直角微圆 */
+/* 卡片：细线 + 直角微圆；hover 上浮 + 柔影（iOS 卡片按压的镜像语言） */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 6px;
-  transition: border-color .25s, transform .25s, box-shadow .25s;
+  transition: border-color .35s var(--ease-apple), transform .35s var(--ease-apple), box-shadow .35s var(--ease-apple);
 }
-.card:hover { border-color: var(--color-line-strong); }
+.card:hover {
+  border-color: var(--color-line-strong);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px -16px rgba(26, 26, 31, .16);
+}
+
+/* 卡内图片/封面 hover 微缩放（配合父级 overflow-hidden） */
+.zoomable { transition: transform .6s var(--ease-apple); }
+.group:hover .zoomable { transform: scale(1.045); }
+
+/* 扫光：Mujica 官网 .shine 同款，hover 一次高光扫过 */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.35) 48%, transparent 62%);
+  transform: translateX(-120%);
+  transition: transform .9s var(--ease-apple);
+  pointer-events: none;
+}
+.group:hover .shine::after, .shine:hover::after { transform: translateX(120%); }
+
+/* v-reveal：滚动入场（配合 main.js 指令），模糊→清晰 + 上浮 */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .8s var(--ease-apple), transform .8s var(--ease-apple);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-inview { opacity: 1; transform: none; }
+
+/* 路由页面过渡：轻快淡入上移 */
+.page-enter-active { transition: opacity .3s var(--ease-apple), transform .3s var(--ease-apple); }
+.page-leave-active { transition: opacity .18s ease; }
+.page-enter-from { opacity: 0; transform: translateY(14px); }
+.page-leave-to { opacity: 0; }
+
+/* 外部链接：↗ 图标随 hover 向右上方探出（anontokyo 系外链语言） */
+.link-ext {
+  @apply inline-flex items-center gap-1.5 font-medium text-dim;
+  transition: color .3s var(--ease-apple);
+}
+.link-ext .arrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .85em;
+  transition: transform .3s var(--ease-apple);
+}
+.link-ext:hover { color: var(--color-primary); }
+.link-ext:hover .arrow { transform: translate(2px, -2px); }
+
+/* 导航链接下划线生长动画 */
+.nav-link { position: relative; }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 20px;
+  height: 1px;
+  background: var(--color-primary);
+  transform: translateX(-50%) scaleX(0);
+  transition: transform .35s var(--ease-apple);
+}
+.nav-link.is-active::after, .nav-link:hover::after { transform: translateX(-50%) scaleX(1); }
 
 /* 噪点纹理：浅底上极淡，加纸感 */
 .grain::before {
