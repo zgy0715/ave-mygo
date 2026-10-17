@@ -12,7 +12,7 @@ const route = useRoute()
 
 <template>
   <header class="sticky top-0 z-30 border-b border-line bg-base/85 backdrop-blur-md">
-    <nav class="wrap flex h-16 items-center justify-between gap-4 pr-16 sm:pr-20">
+    <nav class="wrap flex h-16 items-center justify-between gap-4 !pr-16 sm:!pr-24">
       <!-- Logo：衬线 + mono 双层（给右缘 MENU 页签留出位置） -->
       <RouterLink to="/" class="flex items-baseline gap-2">
         <span class="serif text-xl font-semibold tracking-wide text-ink">Bandori</span>

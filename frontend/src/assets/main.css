@@ -77,8 +77,10 @@ body {
   color: transparent;
 }
 
-/* 页面容器 */
-.wrap { @apply mx-auto w-full max-w-6xl px-4 sm:px-6; }
+/* 页面容器：放进 components 层，让工具类（如 pr-16）能正常覆盖它 */
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-6xl px-4 sm:px-6; }
+}
 
 /* 区块标题：编号 + 双语，全站统一 */
 .section-head {

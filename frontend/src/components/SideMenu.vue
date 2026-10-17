@@ -33,9 +33,9 @@ function logout() {
 </script>
 
 <template>
-  <!-- 右缘页签：开合同钮 -->
+  <!-- 右缘页签：只留图标，干净利落 -->
   <button
-    class="fixed right-0 top-0 z-50 flex h-16 w-14 cursor-pointer flex-col items-center justify-center bg-primary text-white transition-colors duration-300 hover:bg-primary-strong"
+    class="fixed right-0 top-0 z-50 flex h-16 w-12 cursor-pointer flex-col items-center justify-center bg-primary text-white transition-colors duration-300 hover:bg-primary-strong sm:w-14"
     :aria-expanded="open"
     aria-label="菜单开关"
     @click="open = !open"
@@ -46,9 +46,6 @@ function logout() {
       <span class="block h-[2px] w-3.5 bg-white" />
     </span>
     <span v-else class="text-lg leading-none">✕</span>
-    <span class="vertical-rl mono mt-2.5 text-[9px] tracking-[0.3em] text-white/85">
-      {{ open ? 'CLOSE' : 'MENU' }}
-    </span>
   </button>
 
   <!-- 侧滑面板 -->
