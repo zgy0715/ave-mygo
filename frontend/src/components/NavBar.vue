@@ -30,10 +30,11 @@ function logout() {
 <template>
   <header class="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
     <nav class="wrap flex h-14 items-center justify-between gap-4">
-      <!-- Logo -->
-      <RouterLink to="/" class="flex items-baseline gap-1.5 font-black tracking-tight" @click="mobileOpen = false">
-        <span class="text-lg text-primary">BANDORI</span>
-        <span class="mono text-[11px] tracking-[0.25em] text-dim">/ LIVE</span>
+      <!-- Logo：Bebas Neue 展示字体 -->
+      <RouterLink to="/" class="font-display flex items-baseline gap-1 text-2xl" @click="mobileOpen = false">
+        <span class="text-primary">BANDORI</span>
+        <span class="text-dim">/</span>
+        <span>LIVE</span>
       </RouterLink>
 
       <!-- 桌面菜单 -->

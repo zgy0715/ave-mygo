@@ -44,6 +44,95 @@ body {
 .tabular { font-variant-numeric: tabular-nums; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
+/* ---- 高级感配方 v2.1（zgy0715/anontokyo 提取，纯 CSS 实现）---- */
+
+/* 展示字体：Bebas Neue——品牌名、编号、巨型水印 */
+.font-display {
+  font-family: 'Bebas Neue', var(--font-sans);
+  letter-spacing: 0.04em;
+}
+
+/* 逐字母 blur 入场（letter-in 同参）：字符 span 化 + 逐个 delay */
+.letter-in span {
+  opacity: 0;
+  display: inline-block;
+  animation: 0.7s forwards letter-in;
+}
+@keyframes letter-in {
+  0% { opacity: 0; filter: blur(12px); transform: translateY(0.12em); }
+  100% { opacity: 1; filter: blur(0); transform: none; }
+}
+
+/* hero-sub：9px mono + .5em 字距 */
+.hero-sub {
+  font: 9px var(--font-mono);
+  letter-spacing: 0.5em;
+}
+
+/* 跑马灯：正/反向双速 */
+@keyframes marquee-move {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee { overflow: hidden; }
+.marquee-track {
+  width: max-content;
+  display: flex;
+  animation: 30s linear infinite marquee-move;
+}
+.marquee.reverse .marquee-track {
+  animation-duration: 36s;
+  animation-direction: reverse;
+}
+
+/* aurora 光斑：blur(90px) + 低透明度 + 交替漂移（hero 白底粉蓝） */
+.aurora {
+  position: absolute;
+  aspect-ratio: 1;
+  width: 55vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.13;
+  pointer-events: none;
+}
+.aurora-blue {
+  background: var(--color-primary);
+  top: -18%;
+  left: -12%;
+  animation: 16s ease-in-out infinite alternate drift;
+}
+.aurora-pink {
+  background: var(--color-live);
+  bottom: -22%;
+  right: -10%;
+  animation: 20s ease-in-out infinite alternate-reverse drift;
+}
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(6vw, 5vh) scale(1.12); }
+}
+
+/* 渐变文字（blue-light→pink→gold 流动） */
+.grad-text {
+  background-image: linear-gradient(90deg, var(--color-primary), var(--color-live), var(--color-gold, #b95), var(--color-live), var(--color-primary));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: grad-flow 6s linear infinite;
+}
+@keyframes grad-flow {
+  to { background-position: 200% 0; }
+}
+
+/* 档案式小标签：mono + .2em */
+.tag-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-dim);
+}
+
 /* 页面容器：全站统一宽度 */
 .wrap { @apply mx-auto w-full max-w-6xl px-4 sm:px-6; }
 
