@@ -1,89 +1,129 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { listSongs } from '@/api/song'
+import { onMounted, reactive, ref, watch } from 'vue'
+import { listBands, listSongs } from '@/api/song'
+import { usePlayerStore } from '@/stores/player'
 
-// 响应式状态：改 .value，页面自动更新
+const player = usePlayerStore()
+
+// ===== 筛选状态 =====
+const filters = reactive({ bandId: '', keyword: '', tag: '', sort: 'release_desc' })
+const page = ref(1)
+const pageSize = 12
+
+const bands = ref([])
+const TAGS = ['燃', '治愈', '暗', '催泪', '主题曲']
+
+// ===== 列表状态（四态） =====
 const songs = ref([])
-const total = ref(0)
+const totalElements = ref(0)
+const totalPages = ref(0)
 const loading = ref(true)
-const error = ref('')
+const errMsg = ref('')
 
 async function load() {
   loading.value = true
-  error.value = ''
+  errMsg.value = ''
   try {
-    const data = await listSongs({ page: 1, pageSize: 12 })   // request.js 已剥壳，直接拿 data
+    const data = await listSongs({
+      bandId: filters.bandId || undefined,
+      keyword: filters.keyword || undefined,
+      tag: filters.tag || undefined,
+      sort: filters.sort,
+      page: page.value,
+      pageSize,
+    })
     songs.value = data.content
-    total.value = data.totalElements
+    totalElements.value = data.totalElements
+    totalPages.value = data.totalPages
   } catch (e) {
-    error.value = e.message
+    errMsg.value = e.message
   } finally {
     loading.value = false
   }
 }
 
-// 页面挂载后自动加载
-onMounted(load)
+// 任一筛选条件变化 → 回到第 1 页重新查
+watch(filters, () => { page.value = 1; load() })
+watch(page, load)
 
-// "燃,夜勤" → ['燃','夜勤']
-function tagList(tags) {
-  return (tags || '').split(',').filter(Boolean)
-}
-
-function formatDuration(sec) {
-  if (!sec) return '—'
-  return `${Math.floor(sec / 60)}分${sec % 60}秒`
-}
+onMounted(async () => {
+  load()
+  try { bands.value = await listBands() } catch { /* 乐队下拉失败不阻塞页面 */ }
+})
 </script>
 
 <template>
-  <main class="mx-auto max-w-6xl px-4 py-8">
-    <h1 class="mb-6 text-2xl font-bold">
-      歌曲库
-      <span class="ml-2 text-sm font-normal text-gray-500">共 {{ total }} 首</span>
-    </h1>
+  <main class="mx-auto max-w-6xl px-4 pb-24 pt-8">
+    <!-- Hero 横幅 -->
+    <section class="mb-8 overflow-hidden rounded-2xl border border-line bg-gradient-to-r from-violet-900/60 via-surface to-surface p-8">
+      <h1 class="text-2xl font-bold text-white">用歌声，找回前进的理由</h1>
+      <p class="mt-2 text-sm text-gray-400">MyGO!!!! 与 Ave Mujica 的歌曲库与演出票务平台 —— 一切从《春日影》之后开始。</p>
+    </section>
 
-    <!-- 加载态：骨架屏 -->
+    <!-- 筛选栏 -->
+    <section class="mb-6 flex flex-wrap items-center gap-3">
+      <select v-model="filters.bandId" class="input-select">
+        <option value="">全部乐队</option>
+        <option v-for="b in bands" :key="b.id" :value="b.id">{{ b.name }}</option>
+      </select>
+      <input v-model.trim="filters.keyword" placeholder="搜索歌名…" class="input-field w-44" />
+      <div class="flex gap-1.5">
+        <button
+          v-for="t in TAGS" :key="t"
+          class="rounded-full border px-3 py-1 text-xs transition"
+          :class="filters.tag === t ? 'border-primary bg-primary/20 text-primary' : 'border-line text-gray-400 hover:text-gray-200'"
+          @click="filters.tag = filters.tag === t ? '' : t"
+        >{{ t }}</button>
+      </div>
+      <select v-model="filters.sort" class="input-select ml-auto">
+        <option value="release_desc">最新发行</option>
+        <option value="release_asc">最早发行</option>
+        <option value="title_asc">按标题</option>
+      </select>
+    </section>
+
+    <!-- 四态 -->
     <div v-if="loading" class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div v-for="i in 4" :key="i" class="h-44 animate-pulse rounded-lg bg-gray-200"></div>
+      <div v-for="i in 4" :key="i" class="h-48 animate-pulse rounded-xl bg-surface"></div>
     </div>
-
-    <!-- 错误态：提示 + 重试 -->
-    <div v-else-if="error" class="rounded-lg bg-red-50 p-4 text-red-600">
-      {{ error }}
-      <button class="ml-3 underline" @click="load">重试</button>
+    <div v-else-if="errMsg" class="rounded-lg bg-red-950/50 p-4 text-sm text-red-400">
+      {{ errMsg }} <button class="ml-2 underline" @click="load">重试</button>
     </div>
+    <div v-else-if="songs.length === 0" class="py-20 text-center text-gray-500">没有符合条件的歌曲 🎸</div>
 
-    <!-- 空态 -->
-    <div v-else-if="songs.length === 0" class="py-16 text-center text-gray-500">
-      曲库空空如也，去添加第一首歌吧 🎸
-    </div>
-
-    <!-- 成功态：歌曲卡片网格 -->
+    <!-- 歌曲网格 -->
     <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-4">
       <div
-        v-for="s in songs"
-        :key="s.id"
-        class="rounded-lg border border-gray-200 p-3 transition hover:shadow-md"
+        v-for="s in songs" :key="s.id"
+        class="group cursor-pointer overflow-hidden rounded-xl border border-line bg-surface transition hover:border-primary/50 hover:shadow-[0_0_24px_rgba(139,92,246,0.25)]"
+        @click="player.play(s)"
       >
-        <!-- 封面占位（无图时用渐变色块） -->
-        <div
-          class="mb-2 flex h-28 items-center justify-center rounded bg-gradient-to-br from-indigo-200 to-pink-200 text-3xl"
-        >
+        <div class="relative flex h-36 items-center justify-center bg-gradient-to-br from-violet-800/40 to-pink-800/30 text-3xl">
           🎵
-        </div>
-        <p class="truncate font-semibold">{{ s.title }}</p>
-        <p class="text-xs text-gray-500">{{ s.bandName }} · {{ formatDuration(s.duration) }}</p>
-        <div class="mt-1 flex flex-wrap gap-1">
-          <span
-            v-for="t in tagList(s.tags)"
-            :key="t"
-            class="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] text-indigo-600"
-          >
-            {{ t }}
+          <!-- 悬停播放按钮 -->
+          <span class="absolute inset-0 flex items-center justify-center bg-black/40 text-4xl opacity-0 transition group-hover:opacity-100">
+            {{ player.current?.id === s.id && player.isPlaying ? '⏸' : '▶' }}
           </span>
         </div>
+        <div class="p-3">
+          <p class="truncate font-semibold text-white">{{ s.title }}</p>
+          <p class="mt-0.5 text-xs text-gray-500">
+            {{ s.bandName }}
+            <span v-if="s.albumName" class="ml-1">· {{ s.albumName }}</span>
+          </p>
+          <div class="mt-1.5 flex flex-wrap gap-1">
+            <span v-for="t in (s.tags || '').split(',').filter(Boolean)" :key="t"
+              class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{{ t }}</span>
+          </div>
+        </div>
       </div>
+    </div>
+
+    <!-- 分页 -->
+    <div v-if="totalPages > 1" class="mt-8 flex items-center justify-center gap-3 text-sm">
+      <button class="page-btn" :disabled="page <= 1" @click="page--">上一页</button>
+      <span class="tabular text-gray-400">{{ page }} / {{ totalPages }}（共 {{ totalElements }} 首）</span>
+      <button class="page-btn" :disabled="page >= totalPages" @click="page++">下一页</button>
     </div>
   </main>
 </template>

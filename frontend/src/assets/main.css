@@ -1,1 +1,26 @@
 @import 'tailwindcss';
+@import './components.css';
+
+/* ===== 设计定调：深色音乐站 ===== */
+@theme {
+  --color-base: #0f1115;        /* 页面底色 */
+  --color-surface: #161a22;     /* 卡片面 */
+  --color-elevated: #1e2430;    /* 浮层 */
+  --color-line: #2a3040;        /* 分隔线 */
+  --color-primary: #8b5cf6;     /* 电光紫 */
+  --color-accent: #f472b6;      /* 粉橙强调 */
+}
+
+body {
+  @apply bg-base text-gray-200 antialiased;
+  font-family: ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 价格/倒计时等数字用等宽，跳动时不抖 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 滚动条配色（Chromium） */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 4px; }

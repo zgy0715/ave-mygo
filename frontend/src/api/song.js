@@ -4,3 +4,6 @@ import request from './request'
 export const listSongs = (params) => request.get('/songs', { params })
 export const getSong = (id) => request.get(`/songs/${id}`)
 export const listAlbums = (bandId) => request.get('/albums', { params: { bandId } })
+
+/** 乐队接口（对应后端 BandController） */
+export const listBands = () => request.get('/bands')
