@@ -34,7 +34,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)                 // 前后端分离 + token，无 CSRF 风险
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
+                        // 公开区：认证 + 健康检查 + 内容浏览（游客可看，登录才能操作）
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/health",
+                                "/api/v1/songs/**", "/api/v1/albums/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()                  // 其余：必须登录
                 )
