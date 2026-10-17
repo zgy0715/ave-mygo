@@ -42,7 +42,7 @@ function fmt(t) {
       <div v-for="i in 2" :key="i" class="h-36 animate-pulse rounded-xl bg-surface"></div>
     </div>
     <div v-else-if="errMsg" class="rounded-lg bg-red-950/50 p-4 text-sm text-red-400">{{ errMsg }}</div>
-    <div v-else-if="events.length === 0" class="py-20 text-center text-gray-500">暂时没有演出</div>
+    <div v-else-if="events.length === 0" class="py-20 text-center text-gray-600">暂时没有演出</div>
 
     <div v-else class="grid gap-4 md:grid-cols-2">
       <RouterLink
@@ -50,17 +50,17 @@ function fmt(t) {
         :to="`/events/${e.id}`"
         class="flex gap-4 rounded-xl border border-line bg-surface p-4 transition hover:border-primary/50"
       >
-        <div class="flex h-28 w-40 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-800/40 to-pink-800/30 text-3xl">🎤</div>
+        <div class="flex h-28 w-40 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-pink-500/10 text-3xl">🎤</div>
         <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-2">
-            <p class="truncate font-semibold text-white">{{ e.title }}</p>
+            <p class="truncate font-semibold text-gray-900">{{ e.title }}</p>
             <span class="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-[10px] text-primary">{{ STATUS_LABEL[e.status] || e.status }}</span>
           </div>
-          <p class="mt-1 text-xs text-gray-500">{{ e.bandName }} · {{ e.venue }}</p>
-          <p class="mt-2 text-xs text-gray-400">最近场次：{{ fmt(e.nextSessionTime) }}</p>
+          <p class="mt-1 text-xs text-gray-600">{{ e.bandName }} · {{ e.venue }}</p>
+          <p class="mt-2 text-xs text-gray-500">最近场次：{{ fmt(e.nextSessionTime) }}</p>
           <p class="mt-1 text-sm font-semibold text-accent">
             <span v-if="e.minPrice != null" class="tabular">¥{{ e.minPrice }} 起</span>
-            <span v-else class="text-xs text-gray-500">暂无票档</span>
+            <span v-else class="text-xs text-gray-600">暂无票档</span>
           </p>
         </div>
       </RouterLink>

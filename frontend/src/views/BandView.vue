@@ -39,21 +39,21 @@ onMounted(async () => {
       <!-- 乐队头部 -->
       <p class="mono mb-3 text-xs text-primary">BAND / {{ String(band.id).padStart(2, '0') }}</p>
       <h1 class="hero-type !text-5xl md:!text-7xl">{{ band.name }}</h1>
-      <p class="mt-6 max-w-2xl text-sm leading-7 text-gray-400">{{ band.description }}</p>
+      <p class="mt-6 max-w-2xl text-sm leading-7 text-gray-500">{{ band.description }}</p>
 
       <!-- 成员 -->
       <section class="mt-16">
         <div class="section-head">
-          <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_M1_</span>成员 <span class="mono ml-2 text-[10px] text-dim">MEMBERS</span></h2>
+          <h2 class="text-lg font-bold text-gray-900"><span class="mono mr-2 text-xs text-primary">_M1_</span>成员 <span class="mono ml-2 text-[10px] text-dim">MEMBERS</span></h2>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div v-for="m in members" :key="m.id" class="group rounded-xl border border-line bg-surface p-5 transition hover:border-primary/50">
-            <div class="mb-4 flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-violet-900/30 to-transparent text-3xl group-hover:scale-105 transition">👤</div>
+            <div class="mb-4 flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-transparent text-3xl group-hover:scale-105 transition">👤</div>
             <p class="mono text-[10px] text-primary">{{ m.position }}</p>
-            <p class="mt-1 text-lg font-bold text-white">{{ m.nameJa }}</p>
+            <p class="mt-1 text-lg font-bold text-gray-900">{{ m.nameJa }}</p>
             <p class="mono text-[10px] text-dim">{{ m.nameRomaji }}</p>
-            <p class="mt-2 text-xs text-gray-400">CV. {{ m.cv }}</p>
-            <p class="mt-2 text-xs leading-5 text-gray-500">{{ m.intro }}</p>
+            <p class="mt-2 text-xs text-gray-500">CV. {{ m.cv }}</p>
+            <p class="mt-2 text-xs leading-5 text-gray-600">{{ m.intro }}</p>
           </div>
         </div>
       </section>
@@ -61,12 +61,12 @@ onMounted(async () => {
       <!-- 专辑 -->
       <section class="mt-16">
         <div class="section-head">
-          <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_M2_</span>作品 <span class="mono ml-2 text-[10px] text-dim">DISCOGRAPHY</span></h2>
+          <h2 class="text-lg font-bold text-gray-900"><span class="mono mr-2 text-xs text-primary">_M2_</span>作品 <span class="mono ml-2 text-[10px] text-dim">DISCOGRAPHY</span></h2>
         </div>
         <div class="grid gap-4 sm:grid-cols-3">
           <div v-for="a in albums" :key="a.id" class="rounded-xl border border-line bg-surface p-5">
             <div class="mb-3 flex h-28 items-center justify-center rounded-lg bg-gradient-to-br from-violet-900/40 to-transparent text-3xl">💿</div>
-            <p class="font-semibold text-white">{{ a.name }}</p>
+            <p class="font-semibold text-gray-900">{{ a.name }}</p>
             <p class="mono mt-1 text-[10px] text-dim">{{ a.type }} · {{ a.releaseDate || 'TBD' }}</p>
           </div>
         </div>
@@ -75,7 +75,7 @@ onMounted(async () => {
       <!-- 歌曲 -->
       <section class="mt-16">
         <div class="section-head">
-          <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_M3_</span>歌曲 <span class="mono ml-2 text-[10px] text-dim">SONGS</span></h2>
+          <h2 class="text-lg font-bold text-gray-900"><span class="mono mr-2 text-xs text-primary">_M3_</span>歌曲 <span class="mono ml-2 text-[10px] text-dim">SONGS</span></h2>
         </div>
         <div class="grid gap-2">
           <div
@@ -84,7 +84,7 @@ onMounted(async () => {
             @click="player.play(s)"
           >
             <span class="mono w-8 text-xs text-dim">{{ String(i + 1).padStart(2, '0') }}</span>
-            <span class="flex-1 truncate text-sm text-gray-200 group-hover:text-white">{{ s.title }}</span>
+            <span class="flex-1 truncate text-sm text-gray-900 group-hover:text-gray-900">{{ s.title }}</span>
             <span class="hidden text-xs text-dim md:inline" v-if="s.albumName">{{ s.albumName }}</span>
             <span class="mono w-16 text-right text-xs text-primary">{{ player.current?.id === s.id && player.isPlaying ? '▶ PLAYING' : '' }}</span>
           </div>

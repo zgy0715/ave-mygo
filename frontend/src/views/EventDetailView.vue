@@ -110,11 +110,11 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
     <template v-else-if="event">
       <!-- 演出头部 -->
       <section class="flex gap-5 rounded-2xl border border-line bg-surface p-6">
-        <div class="flex h-36 w-56 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-800/40 to-pink-800/30 text-5xl">🎤</div>
+        <div class="flex h-36 w-56 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-pink-500/10 text-5xl">🎤</div>
         <div>
-          <h1 class="text-xl font-bold text-white">{{ event.title }}</h1>
-          <p class="mt-1 text-sm text-gray-500">{{ event.bandName }} · {{ event.venue }}</p>
-          <p class="mt-3 text-sm leading-6 text-gray-400">{{ event.description }}</p>
+          <h1 class="text-xl font-bold text-gray-900">{{ event.title }}</h1>
+          <p class="mt-1 text-sm text-gray-600">{{ event.bandName }} · {{ event.venue }}</p>
+          <p class="mt-3 text-sm leading-6 text-gray-500">{{ event.description }}</p>
         </div>
       </section>
 
@@ -123,17 +123,17 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
         <button
           v-for="(s, i) in sessions" :key="s.id"
           class="rounded-lg border px-4 py-2 text-sm transition"
-          :class="i === activeSessionIdx ? 'border-primary bg-primary/15 text-white' : 'border-line text-gray-400 hover:text-gray-200'"
+          :class="i === activeSessionIdx ? 'border-primary bg-primary/15 text-primary' : 'border-line text-gray-500 hover:text-gray-900'"
           @click="activeSessionIdx = i; selectedType = null"
         >
           {{ s.name }}
-          <span class="ml-1 text-xs text-gray-500">{{ fmt(s.startTime) }}</span>
+          <span class="ml-1 text-xs text-gray-600">{{ fmt(s.startTime) }}</span>
         </button>
       </div>
 
       <!-- 票档 -->
       <section v-if="activeSession" class="mt-4 space-y-3">
-        <p class="text-xs text-gray-500">开售时间：{{ fmt(activeSession.saleStartTime) }}</p>
+        <p class="text-xs text-gray-600">开售时间：{{ fmt(activeSession.saleStartTime) }}</p>
         <div
           v-for="t in activeSession.ticketTypes" :key="t.id"
           class="flex cursor-pointer items-center justify-between rounded-xl border p-4 transition"
@@ -144,10 +144,10 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
           @click="selectType(t)"
         >
           <div>
-            <p class="font-semibold text-white">{{ t.name }}</p>
-            <p class="mt-0.5 text-xs text-gray-500">
+            <p class="font-semibold text-gray-900">{{ t.name }}</p>
+            <p class="mt-0.5 text-xs text-gray-600">
               每人限购 {{ t.maxPerUser }} 张 · 余票
-              <span class="tabular" :class="t.availableStock === 0 ? 'text-red-400' : 'text-gray-300'">
+              <span class="tabular" :class="t.availableStock === 0 ? 'text-red-400' : 'text-gray-600'">
                 {{ t.availableStock === 0 ? '售罄' : t.availableStock }}
               </span>
             </p>
@@ -158,7 +158,7 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
         <!-- 下单操作区 -->
         <div v-if="selectedType" class="flex items-center justify-between rounded-xl border border-line bg-elevated p-4">
           <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-400">数量</span>
+            <span class="text-sm text-gray-500">数量</span>
             <button class="qty-btn" @click="quantity > 1 && quantity--">−</button>
             <span class="tabular w-8 text-center font-bold">{{ quantity }}</span>
             <button
@@ -169,7 +169,7 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
               ¥{{ fmtPrice(selectedType.price * quantity) }}
             </span>
           </div>
-          <button class="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-violet-500" @click="submitOrder">
+          <button class="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/85" @click="submitOrder">
             {{ auth.isLogin ? '立即购票' : '登录后购票' }}
           </button>
         </div>
@@ -181,24 +181,24 @@ function fmtPrice(p) { return p != null ? Number(p).toFixed(2) : '—' }
       <div class="w-96 rounded-2xl border border-line bg-elevated p-6">
         <template v-if="orderInfo.status === 'PAID'">
           <p class="text-center text-4xl">🎉</p>
-          <h3 class="mt-2 text-center font-bold text-white">购票成功！</h3>
-          <p class="mt-2 text-center text-sm text-gray-400">{{ orderInfo.quantity }} 张 · ¥{{ fmtPrice(orderInfo.totalAmount) }}</p>
+          <h3 class="mt-2 text-center font-bold text-gray-900">购票成功！</h3>
+          <p class="mt-2 text-center text-sm text-gray-500">{{ orderInfo.quantity }} 张 · ¥{{ fmtPrice(orderInfo.totalAmount) }}</p>
           <button class="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white" @click="closeOrderModal">完成</button>
         </template>
 
         <template v-else>
-          <h3 class="text-center font-bold text-white">订单已创建</h3>
-          <p class="mt-1 text-center text-xs text-gray-500">单号 {{ orderInfo.orderNo }}</p>
+          <h3 class="text-center font-bold text-gray-900">订单已创建</h3>
+          <p class="mt-1 text-center text-xs text-gray-600">单号 {{ orderInfo.orderNo }}</p>
           <div class="my-5 text-center">
-            <p class="tabular text-4xl font-bold text-white">{{ countdownText }}</p>
-            <p class="mt-1 text-xs text-gray-500">内完成支付，逾期订单自动取消</p>
+            <p class="tabular text-4xl font-bold text-gray-900">{{ countdownText }}</p>
+            <p class="mt-1 text-xs text-gray-600">内完成支付，逾期订单自动取消</p>
             <p class="tabular mt-3 text-2xl font-bold text-accent">¥{{ fmtPrice(orderInfo.totalAmount) }}</p>
           </div>
           <p v-if="orderErr" class="mb-3 text-center text-sm text-accent">{{ orderErr }}</p>
-          <button class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-violet-500" @click="pay">
+          <button class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/85" @click="pay">
             模拟支付
           </button>
-          <button class="mt-2 w-full rounded-lg border border-line py-2.5 text-sm text-gray-400 hover:text-gray-200" @click="cancel">
+          <button class="mt-2 w-full rounded-lg border border-line py-2.5 text-sm text-gray-500 hover:text-gray-900" @click="cancel">
             取消订单
           </button>
         </template>

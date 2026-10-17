@@ -20,15 +20,15 @@ function logout() {
 
 <template>
   <!-- 顶部信息条：mono + 宽字距 -->
-  <div class="border-b border-line bg-elevated">
+  <div class="border-b border-line bg-white">
     <p class="mono mx-auto max-w-6xl px-4 py-1.5 text-center text-[10px] tracking-[0.2em] text-dim">
       PERSONAL LIVE ARCHIVE — BUILT ON EARTH · FOUND ONLINE — 2026
     </p>
   </div>
 
-  <header class="sticky top-0 z-10 border-b border-line bg-base/85 backdrop-blur">
+  <header class="sticky top-0 z-10 border-b border-line bg-white/85 backdrop-blur">
     <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4">
-      <RouterLink to="/" class="mono text-sm font-bold tracking-[0.18em] text-white">
+      <RouterLink to="/" class="mono text-sm font-bold tracking-[0.18em] text-gray-900">
         BANDORI<span class="text-primary">/</span>LIVE
       </RouterLink>
 
@@ -37,8 +37,8 @@ function logout() {
           v-for="item in navItems.filter(i => !i.needAuth || auth.isLogin)"
           :key="item.to"
           :to="item.to"
-          class="flex items-baseline gap-1.5 text-sm text-dim transition hover:text-white"
-          active-class="text-white"
+          class="flex items-baseline gap-1.5 text-sm text-dim transition hover:text-gray-900"
+          active-class="text-gray-900"
         >
           <span class="mono text-[10px] text-primary">{{ item.no }}</span>
           <span>{{ item.zh }}</span>
@@ -48,12 +48,12 @@ function logout() {
 
       <div class="ml-auto flex items-center gap-3">
         <template v-if="auth.isLogin">
-          <span class="text-sm text-gray-200">{{ auth.nickname }}</span>
-          <button class="mono text-xs text-dim hover:text-white" @click="logout">LOGOUT</button>
+          <span class="text-sm text-gray-900">{{ auth.nickname }}</span>
+          <button class="mono text-xs text-dim hover:text-gray-900" @click="logout">LOGOUT</button>
         </template>
         <RouterLink
           v-else to="/login"
-          class="mono rounded-none border border-line-strong px-4 py-1.5 text-[10px] tracking-[0.2em] text-white transition hover:border-primary hover:text-primary"
+          class="mono rounded-none border border-line-strong px-4 py-1.5 text-[10px] tracking-[0.2em] text-gray-900 transition hover:border-primary hover:text-primary"
         >
           LOGIN / 登录
         </RouterLink>

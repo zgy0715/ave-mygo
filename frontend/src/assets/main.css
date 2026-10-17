@@ -7,24 +7,25 @@
  * mono 标签字距 .2em；渐变文字 blue→pink→gold
  */
 @theme {
-  --color-base: #0a0a0a;
-  --color-surface: #101214;
-  --color-elevated: #15181d;
-  --color-line: #ffffff26;          /* 白 15% —— 分隔线全部用白系 */
-  --color-line-strong: #ffffff59;   /* 白 35% */
-  --color-dim: #ffffff9c;
-  --color-primary: #38b;            /* --blue */
+  --color-base: #fdfdfe;          /* 页面底：近白 */
+  --color-surface: #f4f5f7;       /* 卡片面 */
+  --color-elevated: #ffffff;      /* 浮层 */
+  --color-line: #0a0a0a14;        /* 黑 8% —— 分隔线 */
+  --color-line-strong: #0a0a0a45; /* 黑 27% */
+  --color-dim: #0a0a0a8c;
+  --color-ink: #0a0a0a;
+  --color-primary: #287aac;       /* 钢青蓝 */
   --color-blue-dark: #287aac;
   --color-blue-light: #7bd;
-  --color-pink: #f89;
+  --color-pink: #ff8899;          /* 鲑鱼粉 */
   --color-gold: #b95;
-  --color-accent: #f89;
+  --color-accent: #e05c7e;
   --font-sans-sc: 'IBM Plex Sans SC', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 body {
-  @apply bg-base text-white antialiased;
+  @apply bg-base text-ink antialiased;
   font-family: var(--font-sans-sc);
 }
 
@@ -36,32 +37,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== Hero 白屏开场（zgy0715 同款时序）===== */
-.hero-splash {
-  background: #fff;
-  animation: 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s forwards hero-bg;
-}
-@keyframes hero-bg {
-  to { background: #0a0a0a; }
-}
-/* 文字同步黑白反转 */
-.splash-ink {
-  color: #0a0a0a;
-  transition: color 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s;
-}
-.splash-ink-soft {
-  color: #0a0a0acc;
-  transition: color 1.5s cubic-bezier(0.6, 0, 0.2, 1) 2.6s;
-}
-
-/* ===== Aurora 光斑（.hero:before/after 同参复刻）===== */
+/* ===== Aurora 光斑：白底上的蓝粉柔光（zgy0715 hero 同参）===== */
 .aurora {
   position: absolute;
   aspect-ratio: 1;
   width: 55vmax;
   border-radius: 50%;
   filter: blur(90px);
-  opacity: 0.14;
+  opacity: 0.13;
   pointer-events: none;
 }
 .aurora-1 {
@@ -81,7 +64,7 @@ body {
   to { transform: translate(6vw, 5vh) scale(1.12); }
 }
 
-/* ===== 渐变文字（scroll-down 同款）===== */
+/* ===== 渐变文字 ===== */
 .grad-text {
   background-image: linear-gradient(90deg, var(--color-blue-light), var(--color-pink), var(--color-gold), var(--color-pink), var(--color-blue-light));
   background-size: 200% 100%;
@@ -102,7 +85,7 @@ body {
   animation: marquee 30s linear infinite;
 }
 
-/* 档案式小标签：mono + .2em 字距（slide-link 同参） */
+/* 档案式小标签 */
 .tag-mono {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -115,4 +98,4 @@ body {
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #ffffff33; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #0a0a0a26; border-radius: 4px; }

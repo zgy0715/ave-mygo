@@ -54,7 +54,7 @@ function tagList(tags) { return (tags || '').split(',').filter(Boolean) }
 <template>
   <main class="mx-auto max-w-6xl px-4 pb-24 pt-8">
     <div class="section-head">
-      <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_S_</span>歌曲库 <span class="mono ml-2 text-[10px] text-dim">SONG LIBRARY</span></h2>
+      <h2 class="text-lg font-bold text-gray-900"><span class="mono mr-2 text-xs text-primary">_S_</span>歌曲库 <span class="mono ml-2 text-[10px] text-dim">SONG LIBRARY</span></h2>
       <span class="mono text-xs text-dim">共 {{ totalElements }} 首</span>
     </div>
 
@@ -69,7 +69,7 @@ function tagList(tags) { return (tags || '').split(',').filter(Boolean) }
         <button
           v-for="t in TAGS" :key="t"
           class="mono rounded-full border px-3 py-1 text-xs transition"
-          :class="filters.tag === t ? 'border-primary text-primary' : 'border-line text-dim hover:text-gray-200'"
+          :class="filters.tag === t ? 'border-primary text-primary' : 'border-line text-dim hover:text-gray-900'"
           @click="filters.tag = filters.tag === t ? '' : t"
         >{{ t }}</button>
       </div>
@@ -96,15 +96,15 @@ function tagList(tags) { return (tags || '').split(',').filter(Boolean) }
         class="group cursor-pointer overflow-hidden rounded-xl border border-line bg-surface transition hover:border-primary/50"
         @click="player.play(s)"
       >
-        <div class="relative flex h-36 items-center justify-center bg-gradient-to-br from-violet-900/30 to-transparent text-3xl">
+        <div class="relative flex h-36 items-center justify-center bg-gradient-to-br from-primary/15 to-transparent text-3xl">
           🎵
           <span class="absolute inset-0 flex items-center justify-center bg-black/50 text-3xl opacity-0 transition group-hover:opacity-100">
             {{ player.current?.id === s.id && player.isPlaying ? '⏸' : '▶' }}
           </span>
         </div>
         <div class="p-3">
-          <p class="truncate font-semibold text-white">{{ s.title }}</p>
-          <p class="mt-0.5 text-xs text-gray-500">
+          <p class="truncate font-semibold text-gray-900">{{ s.title }}</p>
+          <p class="mt-0.5 text-xs text-gray-600">
             {{ s.bandName }}
             <span v-if="s.albumName" class="ml-1">· {{ s.albumName }}</span>
           </p>
