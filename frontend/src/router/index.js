@@ -5,6 +5,8 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
+    { path: '/songs', name: 'songs', component: () => import('@/views/SongsView.vue') },
+    { path: '/bands/:id', name: 'band', component: () => import('@/views/BandView.vue') },
     { path: '/events', name: 'events', component: () => import('@/views/EventView.vue') },
     { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue') },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
@@ -12,8 +14,7 @@ const router = createRouter({
       path: '/orders',
       name: 'orders',
       component: () => import('@/views/OrdersView.vue'),
-      // 登录守卫：未登录访问受保护页面 → 踢回登录页（前端侧的 anyRequest().authenticated()）
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true },   // 登录守卫：前端侧的 authenticated()
     },
   ],
 })

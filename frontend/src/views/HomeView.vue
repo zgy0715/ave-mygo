@@ -1,129 +1,113 @@
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
-import { listBands, listSongs } from '@/api/song'
+import { onMounted, ref } from 'vue'
+import { listEvents } from '@/api/event'
+import { listSongs } from '@/api/song'
 import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()
-
-// ===== 筛选状态 =====
-const filters = reactive({ bandId: '', keyword: '', tag: '', sort: 'release_desc' })
-const page = ref(1)
-const pageSize = 12
-
-const bands = ref([])
-const TAGS = ['燃', '治愈', '暗', '催泪', '主题曲']
-
-// ===== 列表状态（四态） =====
+const events = ref([])
 const songs = ref([])
-const totalElements = ref(0)
-const totalPages = ref(0)
-const loading = ref(true)
-const errMsg = ref('')
 
-async function load() {
-  loading.value = true
-  errMsg.value = ''
-  try {
-    const data = await listSongs({
-      bandId: filters.bandId || undefined,
-      keyword: filters.keyword || undefined,
-      tag: filters.tag || undefined,
-      sort: filters.sort,
-      page: page.value,
-      pageSize,
-    })
-    songs.value = data.content
-    totalElements.value = data.totalElements
-    totalPages.value = data.totalPages
-  } catch (e) {
-    errMsg.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-// 任一筛选条件变化 → 回到第 1 页重新查
-watch(filters, () => { page.value = 1; load() })
-watch(page, load)
+const MARQUEE = ['MYGO!!!!!', 'AVE MUJICA', 'CRYCHIC', 'LIVE HOUSE', '迷星叫', '春日影', '壱雫空', '黒のバースデイ']
 
 onMounted(async () => {
-  load()
-  try { bands.value = await listBands() } catch { /* 乐队下拉失败不阻塞页面 */ }
+  try {
+    const [ev, so] = await Promise.all([listEvents({ page: 1, pageSize: 4 }), listSongs({ page: 1, pageSize: 8 })])
+    events.value = ev.content
+    songs.value = so.content
+  } catch { /* 静默：首页各区块独立降级 */ }
 })
+
+function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
 </script>
 
 <template>
-  <main class="mx-auto max-w-6xl px-4 pb-24 pt-8">
-    <!-- Hero 横幅 -->
-    <section class="mb-8 overflow-hidden rounded-2xl border border-line bg-gradient-to-r from-violet-900/60 via-surface to-surface p-8">
-      <h1 class="text-2xl font-bold text-white">用歌声，找回前进的理由</h1>
-      <p class="mt-2 text-sm text-gray-400">MyGO!!!! 与 Ave Mujica 的歌曲库与演出票务平台 —— 一切从《春日影》之后开始。</p>
-    </section>
-
-    <!-- 筛选栏 -->
-    <section class="mb-6 flex flex-wrap items-center gap-3">
-      <select v-model="filters.bandId" class="input-select">
-        <option value="">全部乐队</option>
-        <option v-for="b in bands" :key="b.id" :value="b.id">{{ b.name }}</option>
-      </select>
-      <input v-model.trim="filters.keyword" placeholder="搜索歌名…" class="input-field w-44" />
-      <div class="flex gap-1.5">
-        <button
-          v-for="t in TAGS" :key="t"
-          class="rounded-full border px-3 py-1 text-xs transition"
-          :class="filters.tag === t ? 'border-primary bg-primary/20 text-primary' : 'border-line text-gray-400 hover:text-gray-200'"
-          @click="filters.tag = filters.tag === t ? '' : t"
-        >{{ t }}</button>
+  <main>
+    <!-- ===== HERO：全屏大字排印 ===== -->
+    <section class="relative flex h-[70vh] min-h-[420px] flex-col justify-center overflow-hidden border-b border-line">
+      <!-- 背景网格装饰 -->
+      <div class="absolute inset-0 opacity-[0.06]" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 64px 64px;"></div>
+      <div class="relative mx-auto w-full max-w-6xl px-4">
+        <p class="mono mb-4 text-xs text-primary">BANG DREAM! FAN PROJECT — 2026</p>
+        <h1 class="hero-type">BANDORI<br /><span class="text-primary">/</span>LIVE</h1>
+        <p class="mt-6 max-w-md text-sm leading-6 text-gray-400">
+          失物乐团与面具人偶的舞台档案。歌曲、成员、演出与门票 ——<br />
+          迷茫也没关系，向前走就好。
+        </p>
+        <div class="mono mt-8 flex gap-6 text-xs">
+          <RouterLink to="/songs" class="border-b border-white pb-1 text-white hover:border-primary hover:text-primary">浏览曲库 ↓</RouterLink>
+          <RouterLink to="/events" class="text-dim hover:text-white">购票 LIVE →</RouterLink>
+        </div>
       </div>
-      <select v-model="filters.sort" class="input-select ml-auto">
-        <option value="release_desc">最新发行</option>
-        <option value="release_asc">最早发行</option>
-        <option value="title_asc">按标题</option>
-      </select>
-    </section>
-
-    <!-- 四态 -->
-    <div v-if="loading" class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div v-for="i in 4" :key="i" class="h-48 animate-pulse rounded-xl bg-surface"></div>
-    </div>
-    <div v-else-if="errMsg" class="rounded-lg bg-red-950/50 p-4 text-sm text-red-400">
-      {{ errMsg }} <button class="ml-2 underline" @click="load">重试</button>
-    </div>
-    <div v-else-if="songs.length === 0" class="py-20 text-center text-gray-500">没有符合条件的歌曲 🎸</div>
-
-    <!-- 歌曲网格 -->
-    <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div
-        v-for="s in songs" :key="s.id"
-        class="group cursor-pointer overflow-hidden rounded-xl border border-line bg-surface transition hover:border-primary/50 hover:shadow-[0_0_24px_rgba(139,92,246,0.25)]"
-        @click="player.play(s)"
-      >
-        <div class="relative flex h-36 items-center justify-center bg-gradient-to-br from-violet-800/40 to-pink-800/30 text-3xl">
-          🎵
-          <!-- 悬停播放按钮 -->
-          <span class="absolute inset-0 flex items-center justify-center bg-black/40 text-4xl opacity-0 transition group-hover:opacity-100">
-            {{ player.current?.id === s.id && player.isPlaying ? '⏸' : '▶' }}
+      <!-- 底部跑马灯 -->
+      <div class="absolute bottom-0 left-0 w-full overflow-hidden border-t border-line py-2">
+        <div class="animate-marquee flex w-max gap-8 whitespace-nowrap">
+          <span v-for="i in 2" :key="i" class="mono text-xs text-dim">
+            <template v-for="w in MARQUEE" :key="w">{{ w }}&nbsp;&nbsp;✳&nbsp;&nbsp;</template>
           </span>
         </div>
-        <div class="p-3">
-          <p class="truncate font-semibold text-white">{{ s.title }}</p>
-          <p class="mt-0.5 text-xs text-gray-500">
-            {{ s.bandName }}
-            <span v-if="s.albumName" class="ml-1">· {{ s.albumName }}</span>
-          </p>
-          <div class="mt-1.5 flex flex-wrap gap-1">
-            <span v-for="t in (s.tags || '').split(',').filter(Boolean)" :key="t"
-              class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{{ t }}</span>
-          </div>
+      </div>
+    </section>
+
+    <!-- ===== _01_ 乐队 ===== -->
+    <section class="mx-auto max-w-6xl px-4 py-16">
+      <div class="section-head">
+        <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_01_</span>乐队 <span class="mono ml-2 text-[10px] text-dim">BANDS</span></h2>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <RouterLink to="/bands/1" class="group relative overflow-hidden rounded-xl border border-line p-8 transition hover:border-primary/60">
+          <p class="mono text-[10px] text-dim">BAND / 01 — GO !!!! まで、進め。</p>
+          <h3 class="mt-3 text-3xl font-black text-white group-hover:text-primary">MyGO!!!!!</h3>
+          <p class="mt-3 text-sm leading-6 text-gray-500">失落与寻找的乐团。五个人，五份迷茫，在舞台上第一次坦诚相对。</p>
+          <span class="mono absolute bottom-6 right-6 text-xs text-dim transition group-hover:text-primary">MEMBERS →</span>
+        </RouterLink>
+        <RouterLink to="/bands/2" class="group relative overflow-hidden rounded-xl border border-line p-8 transition hover:border-accent/60">
+          <p class="mono text-[10px] text-dim">BAND / 02 — mask · masquerade</p>
+          <h3 class="mt-3 text-3xl font-black text-white group-hover:text-accent">Ave Mujica</h3>
+          <p class="mt-3 text-sm leading-6 text-gray-500">面具下的人偶剧团。完美的演出背后，是被拆散又重组的命运。</p>
+          <span class="mono absolute bottom-6 right-6 text-xs text-dim transition group-hover:text-accent">MEMBERS →</span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <!-- ===== _02_ 演出预告 ===== -->
+    <section class="border-y border-line bg-surface/50 py-16">
+      <div class="mx-auto max-w-6xl px-4">
+        <div class="section-head">
+          <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_02_</span>演出预告 <span class="mono ml-2 text-[10px] text-dim">LIVE SCHEDULE</span></h2>
+          <RouterLink to="/events" class="mono text-xs text-dim hover:text-white">ALL →</RouterLink>
+        </div>
+        <div v-for="e in events" :key="e.id">
+          <RouterLink :to="`/events/${e.id}`" class="group flex items-baseline justify-between border-b border-line py-4 transition hover:bg-elevated/50">
+            <div class="flex items-baseline gap-4">
+              <span class="tabular mono text-xs text-dim">{{ fmt(e.nextSessionTime) }}</span>
+              <span class="font-semibold text-white group-hover:text-primary">{{ e.title }}</span>
+            </div>
+            <span class="mono text-xs text-dim">{{ e.venue }}</span>
+          </RouterLink>
+        </div>
+        <p v-if="events.length === 0" class="text-sm text-dim">暂无演出预告</p>
+      </div>
+    </section>
+
+    <!-- ===== _03_ 收录歌曲 ===== -->
+    <section class="mx-auto max-w-6xl px-4 py-16">
+      <div class="section-head">
+        <h2 class="text-lg font-bold text-white"><span class="mono mr-2 text-xs text-primary">_03_</span>收录歌曲 <span class="mono ml-2 text-[10px] text-dim">SONGS</span></h2>
+        <RouterLink to="/songs" class="mono text-xs text-dim hover:text-white">ALL →</RouterLink>
+      </div>
+      <div class="grid gap-2">
+        <div
+          v-for="(s, i) in songs" :key="s.id"
+          class="group flex cursor-pointer items-center gap-4 border-b border-line px-2 py-3 transition hover:bg-elevated/60"
+          @click="player.play(s)"
+        >
+          <span class="mono w-8 text-xs text-dim">{{ String(i + 1).padStart(2, '0') }}</span>
+          <span class="flex-1 truncate text-sm text-gray-200 group-hover:text-white">{{ s.title }}</span>
+          <span class="hidden text-xs text-dim md:inline">{{ s.bandName }}</span>
+          <span class="mono w-16 text-right text-xs text-dim">{{ player.current?.id === s.id && player.isPlaying ? '▶ PLAYING' : '' }}</span>
         </div>
       </div>
-    </div>
-
-    <!-- 分页 -->
-    <div v-if="totalPages > 1" class="mt-8 flex items-center justify-center gap-3 text-sm">
-      <button class="page-btn" :disabled="page <= 1" @click="page--">上一页</button>
-      <span class="tabular text-gray-400">{{ page }} / {{ totalPages }}（共 {{ totalElements }} 首）</span>
-      <button class="page-btn" :disabled="page >= totalPages" @click="page++">下一页</button>
-    </div>
+    </section>
   </main>
 </template>

@@ -1,14 +1,16 @@
 @import 'tailwindcss';
 @import './components.css';
 
-/* ===== 设计定调：深色音乐站 ===== */
+/* ===== 设计定调 v2：暗黑档案（anontokyo 系） ===== */
 @theme {
-  --color-base: #0f1115;        /* 页面底色 */
-  --color-surface: #161a22;     /* 卡片面 */
-  --color-elevated: #1e2430;    /* 浮层 */
-  --color-line: #2a3040;        /* 分隔线 */
-  --color-primary: #8b5cf6;     /* 电光紫 */
-  --color-accent: #f472b6;      /* 粉橙强调 */
+  --color-base: #0a0a0b;        /* 近黑底 */
+  --color-surface: #101012;     /* 卡片面 */
+  --color-elevated: #17171a;    /* 浮层 */
+  --color-line: #232326;        /* 细分割线 */
+  --color-dim: #7c7c85;         /* 弱化文字 */
+  --color-primary: #a78bfa;     /* 紫罗兰 */
+  --color-accent: #ff4d6d;      /* 绯红（Ave Mujica 血色） */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
@@ -16,11 +18,37 @@ body {
   font-family: ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-/* 价格/倒计时等数字用等宽，跳动时不抖 */
+/* 编号/标签/坐标——档案式小字统一用 mono */
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+/* 价格/倒计时数字等宽 */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* 滚动条配色（Chromium） */
+/* 跑马灯：无限循环 */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* 区块标题：编号 + 中英双语 */
+.section-head {
+  @apply mb-8 flex items-end justify-between border-b border-line pb-3;
+}
+
+/* Hero 大字排印 */
+.hero-type {
+  @apply font-black tracking-tight text-white;
+  font-size: clamp(3rem, 12vw, 9rem);
+  line-height: 0.95;
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #232326; border-radius: 4px; }

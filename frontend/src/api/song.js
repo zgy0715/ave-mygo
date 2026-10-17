@@ -7,3 +7,4 @@ export const listAlbums = (bandId) => request.get('/albums', { params: { bandId 
 
 /** 乐队接口（对应后端 BandController） */
 export const listBands = () => request.get('/bands')
+export const getBand = (id) => request.get(`/bands/${id}`)

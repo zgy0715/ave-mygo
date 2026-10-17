@@ -6,11 +6,11 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
-// 导航项集中定义：加页面 = 加一行
+// 档案式导航：编号 + 中英双语
 const navItems = [
-  { to: '/', label: '歌曲库' },
-  { to: '/events', label: '演出' },
-  { to: '/orders', label: '我的订单', needAuth: true },
+  { no: '01', to: '/songs', zh: '歌曲库', en: 'SONGS' },
+  { no: '02', to: '/events', zh: '演出', en: 'LIVE' },
+  { no: '03', to: '/orders', zh: '订单', en: 'ORDERS', needAuth: true },
 ]
 
 function logout() {
@@ -20,44 +20,55 @@ function logout() {
 </script>
 
 <template>
-  <!-- 全局导航：站点骨架，所有页面共用 -->
+  <!-- 顶部信息条 -->
+  <div class="border-b border-line bg-elevated">
+    <p class="mono mx-auto max-w-6xl px-4 py-1 text-center text-[10px] text-dim">
+      PERSONAL LIVE ARCHIVE — BUILT ON EARTH · FOUND ONLINE — 2026
+    </p>
+  </div>
+
+  <!-- 主导航 -->
   <header class="sticky top-0 z-10 border-b border-line bg-base/90 backdrop-blur">
-    <div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-      <RouterLink to="/" class="flex items-center gap-2 font-bold text-primary">
-        <span class="text-xl">🎸</span>
-        <span>Bandori Live</span>
+    <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4">
+      <RouterLink to="/" class="mono text-sm font-bold tracking-[0.2em] text-white">
+        BANDORI<span class="text-primary">/</span>LIVE
       </RouterLink>
 
-      <nav class="flex gap-1">
+      <nav class="flex gap-6">
         <RouterLink
           v-for="item in navItems.filter(i => !i.needAuth || auth.isLogin)"
           :key="item.to"
           :to="item.to"
-          class="rounded-md px-3 py-1.5 text-sm text-gray-400 hover:bg-elevated hover:text-gray-200"
-          active-class="bg-primary/15 text-primary"
+          class="group flex items-baseline gap-1.5 text-sm text-gray-400 transition hover:text-white"
+          active-class="text-white"
         >
-          {{ item.label }}
+          <span class="mono text-[10px] text-primary">{{ item.no }}</span>
+          <span>{{ item.zh }}</span>
+          <span class="mono hidden text-[10px] text-dim md:inline">{{ item.en }}</span>
         </RouterLink>
       </nav>
 
       <div class="ml-auto flex items-center gap-3">
         <template v-if="auth.isLogin">
-          <span class="text-sm text-gray-300">{{ auth.nickname }}</span>
-          <button class="text-xs text-gray-500 hover:text-gray-200" @click="logout">退出</button>
+          <span class="mono text-xs text-gray-300">{{ auth.nickname }}</span>
+          <button class="mono text-xs text-dim hover:text-gray-200" @click="logout">LOGOUT</button>
         </template>
         <RouterLink
           v-else to="/login"
-          class="rounded-md bg-primary px-3 py-1.5 text-sm text-white hover:bg-violet-500"
+          class="mono rounded-sm border border-primary px-4 py-1.5 text-xs tracking-widest text-primary transition hover:bg-primary hover:text-black"
         >
-          登录
+          LOGIN / 登录
         </RouterLink>
       </div>
     </div>
   </header>
 
-  <!-- 页面出口：路由匹配的组件渲染在这里 -->
   <RouterView />
 
-  <!-- 全局底部播放条 -->
   <PlayerBar />
+
+  <!-- 页脚 -->
+  <footer class="border-t border-line py-8">
+    <p class="mono text-center text-[10px] text-dim">© 2026 BANDORI/LIVE — FAN-MADE · NOT OFFICIAL · 建于地球 见于线上</p>
+  </footer>
 </template>
