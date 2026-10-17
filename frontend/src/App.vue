@@ -1,85 +1,46 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+
+// 导航项集中定义：加页面 = 加一行
+const navItems = [
+  { to: '/', label: '歌曲库' },
+  { to: '/events', label: '演出' },
+]
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <!-- 全局导航：站点骨架，所有页面共用 -->
+  <header class="sticky top-0 z-10 border-b border-gray-200 bg-white/90 backdrop-blur">
+    <div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
+      <RouterLink to="/" class="flex items-center gap-2 font-bold text-indigo-600">
+        <span class="text-xl">🎸</span>
+        <span>Bandori Live</span>
+      </RouterLink>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
+      <nav class="flex gap-1">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          class="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          active-class="bg-indigo-50 text-indigo-600"
+        >
+          {{ item.label }}
+        </RouterLink>
       </nav>
+
+      <!-- 登录入口占位：M4-② 接 authStore 后显示昵称/退出 -->
+      <div class="ml-auto">
+        <RouterLink
+          to="/login"
+          class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-500"
+        >
+          登录
+        </RouterLink>
+      </div>
     </div>
   </header>
 
+  <!-- 页面出口：路由匹配的组件渲染在这里 -->
   <RouterView />
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
-</style>
