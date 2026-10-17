@@ -19,7 +19,7 @@ const route = useRoute()
         <span class="micro-accent">/ LIVE</span>
       </RouterLink>
 
-      <!-- 右侧：登录态（醒目实心按钮） -->
+      <!-- 右侧：登录态。极简克制——mono 细字外链（避免与 MENU 页签抢位置/撞色） -->
       <div class="flex items-center gap-3">
         <template v-if="auth.isLogin">
           <RouterLink
@@ -38,11 +38,9 @@ const route = useRoute()
             {{ auth.nickname.slice(0, 1).toUpperCase() }}
           </RouterLink>
         </template>
-        <template v-else>
-          <RouterLink to="/login" class="btn-primary !px-5">
-            登录 / 注册
-          </RouterLink>
-        </template>
+        <RouterLink v-else to="/login" class="link-ext mono text-xs tracking-[0.2em] text-ink">
+          登录 LOGIN <span class="arrow">↗</span>
+        </RouterLink>
       </div>
     </nav>
   </header>
