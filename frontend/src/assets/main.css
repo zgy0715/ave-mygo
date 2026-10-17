@@ -173,6 +173,24 @@ body {
 .link-ext:hover { color: var(--color-primary); }
 .link-ext:hover .arrow { transform: translate(2px, -2px); }
 
+/* 外链芯片：页脚图标卡，hover 上浮 + 描边/图标变主色 */
+.link-chip {
+  @apply flex items-center gap-2.5 text-dim;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: color .3s var(--ease-apple), border-color .3s var(--ease-apple), transform .3s var(--ease-apple), box-shadow .3s var(--ease-apple);
+}
+.link-chip svg { width: 18px; height: 18px; flex: none; }
+.link-chip:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -10px rgba(44, 125, 160, .4);
+}
+.link-chip:hover .arrow { transform: translate(2px, -2px); color: var(--color-primary); }
+
 /* 导航链接下划线生长动画 */
 .nav-link { position: relative; }
 .nav-link::after {
