@@ -55,7 +55,7 @@ public class OrderService {
 
         // 3. 限购：本笔数量 + 该用户该场次活跃订单合计 不得超过 max_per_user
         int alreadyBought = orderRepository.sumActiveQuantity(userId, session.getId());
-        if (alreadyBought + qty > ticketType.getMaxPerUser()) {
+        if (alreadyBought + qty > ticketType.getMaxPerUser()) {   // Byte 参与算术自动提升为 int
             throw new BizException(40903, "超出限购数量：该场次最多购买 " + ticketType.getMaxPerUser() + " 张");
         }
 
@@ -71,14 +71,14 @@ public class OrderService {
         order.setSessionId(session.getId());
         order.setEventId(session.getEventId());
         order.setTicketTypeId(ticketType.getId());
-        order.setQuantity(qty);
+        order.setQuantity((byte) qty);
         order.setUnitPrice(ticketType.getPrice());
         order.setTotalAmount(ticketType.getPrice().multiply(BigDecimal.valueOf(qty)));
         order.setPayDeadline(LocalDateTime.now().plusMinutes(PAY_WINDOW_MINUTES));
         order = orderRepository.save(order);
 
         return new OrderCreated(order.getOrderNo(), order.getStatus(),
-                order.getUnitPrice(), order.getTotalAmount(), order.getQuantity(),
+                order.getUnitPrice(), order.getTotalAmount(), order.getQuantity().intValue(),
                 order.getPayDeadline());
     }
 
