@@ -1,35 +1,71 @@
 @import 'tailwindcss';
 @import './components.css';
 
-/* ===== 设计定调 v2：暗黑档案（anontokyo 系） ===== */
+/* ===== 设计定调 v3：Ave Mujica 官网实测配方 =====
+ * 底色 深板岩灰 #32373c（不是纯黑）
+ * 衬线显示字体 Cormorant Infant + Noto Serif JP
+ * 标志渐变 #881144 → #aa1656（深梅红）
+ * 全站噪点纹理（胶片颗粒）
+ * anontokyo 点缀：鲑鱼粉 #ff8899 / 浅蓝 #77bbdd
+ */
 @theme {
-  --color-base: #0a0a0b;        /* 近黑底 */
-  --color-surface: #101012;     /* 卡片面 */
-  --color-elevated: #17171a;    /* 浮层 */
-  --color-line: #232326;        /* 细分割线 */
-  --color-dim: #7c7c85;         /* 弱化文字 */
-  --color-primary: #a78bfa;     /* 紫罗兰 */
-  --color-accent: #ff4d6d;      /* 绯红（Ave Mujica 血色） */
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-base: #32373c;
+  --color-surface: #3a4046;
+  --color-elevated: #444b52;
+  --color-line: #525a61;
+  --color-dim: #9aa3ab;
+  --color-plum: #aa1656;
+  --color-plum-deep: #881144;
+  --color-salmon: #ff8899;
+  --color-steel: #77bbdd;
+  /* 旧 token 别名 → 新配色（songs/events 等页面自动跟随新皮肤） */
+  --color-primary: #ff8899;
+  --color-accent: #d4407e;
+  --font-serif-jp: 'Cormorant Infant', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
-  @apply bg-base text-gray-200 antialiased;
-  font-family: ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  @apply bg-base text-gray-100 antialiased;
+  font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', 'PingFang SC', 'Microsoft YaHei', serif;
 }
 
-/* 编号/标签/坐标——档案式小字统一用 mono */
+/* 衬线显示标题 */
+.font-display {
+  font-family: var(--font-serif-jp);
+}
+
+/* 全站噪点：SVG feTurbulence 生成胶片颗粒（官网站用 webp，我们用等价方案） */
+.noise::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* 梅红渐变条 */
+.grad-plum {
+  background: linear-gradient(to right, #881144 0%, #aa1656 50%, #881144 100%);
+}
+.grad-plum-text {
+  background: linear-gradient(120deg, #d4407e, #ff8899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .mono {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
 }
 
-/* 价格/倒计时数字等宽 */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* 跑马灯：无限循环 */
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -38,17 +74,9 @@ body {
   animation: marquee 30s linear infinite;
 }
 
-/* 区块标题：编号 + 中英双语 */
 .section-head {
   @apply mb-8 flex items-end justify-between border-b border-line pb-3;
 }
 
-/* Hero 大字排印 */
-.hero-type {
-  @apply font-black tracking-tight text-white;
-  font-size: clamp(3rem, 12vw, 9rem);
-  line-height: 0.95;
-}
-
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #232326; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #525a61; border-radius: 4px; }

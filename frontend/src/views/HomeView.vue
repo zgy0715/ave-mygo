@@ -59,22 +59,22 @@ function fmt(t) { return t ? t.replace('T', ' ').slice(0, 16) : '' }
   <main>
     <!-- ===== HERO：光斑 + 巨字逐行入场 ===== -->
     <section class="relative flex h-[78vh] min-h-[460px] flex-col justify-center overflow-hidden border-b border-line">
-      <!-- 舞台光斑（aurora）：模糊渐变缓慢漂移 -->
+      <!-- 舞台光斑（aurora）：梅红/鲑鱼粉缓慢漂移 -->
       <div class="pointer-events-none absolute inset-0">
-        <div class="aurora-1 absolute -top-32 left-[10%] h-96 w-96 rounded-full bg-violet-600/25 blur-[120px]"></div>
-        <div class="aurora-2 absolute bottom-0 right-[15%] h-80 w-80 rounded-full bg-pink-600/20 blur-[110px]"></div>
-        <div class="absolute inset-0 opacity-[0.05]" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 72px 72px;"></div>
+        <div class="aurora-1 absolute -top-32 left-[10%] h-96 w-96 rounded-full bg-plum/40 blur-[120px]"></div>
+        <div class="aurora-2 absolute bottom-0 right-[15%] h-80 w-80 rounded-full bg-salmon/20 blur-[110px]"></div>
+        <div class="absolute inset-0 opacity-[0.04]" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 72px 72px;"></div>
       </div>
 
       <div class="relative mx-auto w-full max-w-6xl px-4">
-        <p class="hero-fade mono mb-5 text-xs text-primary">BANG DREAM! FAN PROJECT — 2026</p>
+        <p class="hero-fade mono mb-5 text-xs text-salmon">BANG DREAM! FAN PROJECT — 2026</p>
         <h1 class="overflow-hidden">
-          <span class="hero-line block text-[clamp(3rem,11vw,8.5rem)] font-black leading-[0.95] tracking-tight text-white">迷子でも、</span>
-          <span class="hero-line block text-[clamp(3rem,11vw,8.5rem)] font-black leading-[0.95] tracking-tight text-white">進んでいく <span class="text-primary">/</span></span>
-          <span class="hero-line block text-[clamp(1.2rem,3vw,2rem)] font-bold text-gray-400">就算迷路，也要前进 —— MyGO!!!!! × Ave Mujica 档案</span>
+          <span class="hero-line font-display block text-[clamp(3rem,10vw,7.5rem)] font-bold leading-[1.02] text-white">迷子でも、</span>
+          <span class="hero-line font-display block text-[clamp(3rem,10vw,7.5rem)] font-bold leading-[1.02]">進んでいく <span class="italic grad-plum-text">Live</span></span>
+          <span class="hero-line font-display mt-4 block text-[clamp(1.1rem,2.6vw,1.6rem)] text-gray-300">就算迷路，也要前进 —— MyGO!!!!! × Ave Mujica 档案</span>
         </h1>
         <div class="hero-fade mono mt-10 flex flex-wrap gap-6 text-xs">
-          <RouterLink to="/songs" class="border-b border-white pb-1 text-white transition hover:border-primary hover:text-primary">浏览曲库 SONGS ↓</RouterLink>
+          <RouterLink to="/songs" class="border-b border-white pb-1 text-white transition hover:border-salmon hover:text-salmon">浏览曲库 SONGS ↓</RouterLink>
           <RouterLink to="/events" class="text-dim transition hover:text-white">购票 LIVE →</RouterLink>
           <RouterLink to="/bands/1" class="text-dim transition hover:text-white">MyGO!!!!! 成员 →</RouterLink>
         </div>

@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
-// 档案式导航：编号 + 中英双语
 const navItems = [
   { no: '01', to: '/songs', zh: '歌曲库', en: 'SONGS' },
   { no: '02', to: '/events', zh: '演出', en: 'LIVE' },
@@ -20,55 +19,49 @@ function logout() {
 </script>
 
 <template>
-  <!-- 顶部信息条 -->
-  <div class="border-b border-line bg-elevated">
-    <p class="mono mx-auto max-w-6xl px-4 py-1 text-center text-[10px] text-dim">
-      PERSONAL LIVE ARCHIVE — BUILT ON EARTH · FOUND ONLINE — 2026
-    </p>
-  </div>
+  <!-- 顶部梅红渐变条：官网同款 signature -->
+  <div class="grad-plum h-[3px] w-full"></div>
 
-  <!-- 主导航 -->
-  <header class="sticky top-0 z-10 border-b border-line bg-base/90 backdrop-blur">
-    <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4">
-      <RouterLink to="/" class="mono text-sm font-bold tracking-[0.2em] text-white">
-        BANDORI<span class="text-primary">/</span>LIVE
-      </RouterLink>
-
-      <nav class="flex gap-6">
-        <RouterLink
-          v-for="item in navItems.filter(i => !i.needAuth || auth.isLogin)"
-          :key="item.to"
-          :to="item.to"
-          class="group flex items-baseline gap-1.5 text-sm text-gray-400 transition hover:text-white"
-          active-class="text-white"
-        >
-          <span class="mono text-[10px] text-primary">{{ item.no }}</span>
-          <span>{{ item.zh }}</span>
-          <span class="mono hidden text-[10px] text-dim md:inline">{{ item.en }}</span>
+  <div class="noise relative">
+    <header class="sticky top-0 z-10 border-b border-line bg-base/85 backdrop-blur">
+      <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4">
+        <RouterLink to="/" class="font-display text-lg font-bold tracking-wide text-white">
+          Bandori <span class="italic text-salmon">Live</span>
         </RouterLink>
-      </nav>
 
-      <div class="ml-auto flex items-center gap-3">
-        <template v-if="auth.isLogin">
-          <span class="mono text-xs text-gray-300">{{ auth.nickname }}</span>
-          <button class="mono text-xs text-dim hover:text-gray-200" @click="logout">LOGOUT</button>
-        </template>
-        <RouterLink
-          v-else to="/login"
-          class="mono rounded-sm border border-primary px-4 py-1.5 text-xs tracking-widest text-primary transition hover:bg-primary hover:text-black"
-        >
-          LOGIN / 登录
-        </RouterLink>
+        <nav class="flex gap-6">
+          <RouterLink
+            v-for="item in navItems.filter(i => !i.needAuth || auth.isLogin)"
+            :key="item.to"
+            :to="item.to"
+            class="font-display text-sm text-gray-300 transition hover:text-salmon"
+            active-class="text-salmon"
+          >
+            {{ item.zh }}
+          </RouterLink>
+        </nav>
+
+        <div class="ml-auto flex items-center gap-3">
+          <template v-if="auth.isLogin">
+            <span class="font-display text-sm text-gray-200">{{ auth.nickname }}</span>
+            <button class="mono text-xs text-dim hover:text-gray-100" @click="logout">LOGOUT</button>
+          </template>
+          <RouterLink
+            v-else to="/login"
+            class="font-display rounded-none border border-salmon px-4 py-1 text-sm tracking-widest text-salmon transition hover:bg-salmon hover:text-base"
+          >
+            LOGIN
+          </RouterLink>
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <RouterView />
+    <RouterView />
+    <PlayerBar />
 
-  <PlayerBar />
-
-  <!-- 页脚 -->
-  <footer class="border-t border-line py-8">
-    <p class="mono text-center text-[10px] text-dim">© 2026 BANDORI/LIVE — FAN-MADE · NOT OFFICIAL · 建于地球 见于线上</p>
-  </footer>
+    <footer class="border-t border-line py-10">
+      <p class="font-display text-center text-sm italic text-dim">BanG Dream! fan archive — built with love & noise</p>
+      <p class="mono mt-2 text-center text-[10px] text-dim">© 2026 BANDORI/LIVE · NOT OFFICIAL</p>
+    </footer>
+  </div>
 </template>
