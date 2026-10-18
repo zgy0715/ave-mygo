@@ -33,9 +33,9 @@ const failed = ref(false)   // 封面 404 → 回退程序化渐变
 
 <template>
   <div
-    class="relative flex items-center justify-center overflow-hidden bg-surface text-white select-none"
+    class="relative flex items-center justify-center overflow-hidden text-white select-none"
     :class="rounded"
-    :style="coverUrl ? {} : { background: band.gradient }"
+    :style="{ background: band.gradient }"
   >
     <!-- 封面图（404 自动回退渐变） -->
     <img v-if="coverUrl && !failed" :src="coverUrl" :alt="title" class="absolute inset-0 h-full w-full object-cover" loading="lazy" @error="failed = true">
