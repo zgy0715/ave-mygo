@@ -12,6 +12,12 @@ const props = defineProps({
 
 import { computed } from 'vue'
 
+const props = defineProps({
+  title: { type: String, required: true },
+  band: { type: String, default: 'mygo' },   // 传 band slug
+  rounded: { type: String, default: 'rounded-lg' },
+})
+
 // 乐队视觉 token：slug → 渐变/强调色/浅底（v2.1 从 mock 解耦，视觉内聚到组件）
 const BAND_VISUALS = {
   mygo: {
@@ -25,12 +31,6 @@ const BAND_VISUALS = {
     soft: '#efeaf7',
   },
 }
-
-const props = defineProps({
-  title: { type: String, required: true },
-  band: { type: String, default: 'mygo' },   // 传 band slug
-  rounded: { type: String, default: 'rounded-lg' },
-})
 
 const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)
 </script>
