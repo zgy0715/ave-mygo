@@ -6,7 +6,7 @@
 
 -- ---------- sumimi 乐队 ----------
 INSERT INTO band (`id`, `name`, `slug`, `description`) VALUES
-(3, 'sumimi', 'sumimi', '祐天寺にゃむ × 三角初華 的双人组合。流量与才华相互吸引，舞台上闪闪发光。');
+(3, 'sumimi', 'sumimi', '祐天寺にゃむ × 純田まな 的双人偶像组合。镜头前的闪闪发光，是两个人一起挣来的。');
 
 -- ---------- MyGO!!!!! 新增曲目 (band 1) ----------
 INSERT INTO song (`id`, `title`, `band_id`, `status`) VALUES
@@ -55,7 +55,7 @@ INSERT INTO song (`id`, `title`, `band_id`, `status`) VALUES
 (56, 'S The Way', 2, 1),
 (57, 'Completeness', 2, 1);
 
--- ---------- sumimi 成员（にゃむ × 初華，复用两人档案的引用语义为独立行） ----------
+-- ---------- sumimi 成员（にゃむ × 純田まな） ----------
 INSERT INTO member (`id`, `band_id`, `name_ja`, `name_romaji`, `cv`, `position`, `intro`, `sort`) VALUES
-(11, 3, '三角 初華',   'Misumi Uika',    '佐々木李子', 'Vo.',  'sumimi 的主唱。舞台上的完美偶像，舞台下背负着最重的心事。', 1),
-(12, 3, '祐天寺 にゃむ', 'Yutenji Nyamu', '米澤茜',     'Dj.',  'sumimi 的发起人。流量嗅觉一流，把组合当成通往顶点的跳板。', 2);
+(11, 3, '祐天寺 にゃむ', 'Yutenji Nyamu', '米澤茜', 'Perf.', 'sumimi 的发起人。把偶像活动当作自媒体流量的延长线。', 1),
+(12, 3, '純田 まな',   'Mana',          '反田叶月', 'Vo.',  'sumimi 的主唱。元气满满的偶像担当，永远站在镜头最前面。', 2);
