@@ -1,20 +1,28 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
-import { bandById } from '@/data/mock'
 
-/** 歌曲卡片：封面网格用（首页新曲推荐）。点击封面进详情，点击播放钮直接入队 */
+/** 歌曲卡片：封面网格用（真接口字段）。点击封面进详情，播放钮直接入队 */
 const props = defineProps({ song: { type: Object, required: true } })
 const player = usePlayerStore()
 const auth = useAuthStore()
 const router = useRouter()
-const band = bandById(props.song.band)
+
+const SLUG = { 'MyGO!!!!': 'mygo', 'Ave Mujica': 'ave-mujica' }
+const BAND_STYLE = {
+  mygo: { name: 'MyGO!!!!', color: '#2c7da0', soft: '#e3f0f7' },
+  'ave-mujica': { name: 'Ave Mujica', color: '#6b4fa3', soft: '#efeaf7' },
+}
+const slug = computed(() => SLUG[props.song.bandName] || 'mygo')
+const band = computed(() => BAND_STYLE[slug.value])
+const tags = computed(() => (props.song.tags || '').split(',').filter(Boolean))
 
 function onPlay() {
-  // 需求走查缺口①：游客点播放不 404，引导登录
+  // 需求走查缺口①：游客点播放引导登录而非报错
   if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: `/songs/${props.song.id}` } })
   player.play(props.song)
 }
@@ -24,13 +32,13 @@ function onPlay() {
   <div class="card group relative overflow-hidden p-3 hover:shadow-md">
     <RouterLink :to="`/songs/${song.id}`" class="block">
       <div class="relative overflow-hidden rounded-lg">
-        <CoverArt :title="song.title" :band="song.band" class="zoomable aspect-square w-full" rounded="rounded-lg" />
+        <CoverArt :title="song.title" :band="slug" class="zoomable aspect-square w-full" rounded="rounded-lg" />
         <span class="tabular absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] text-white">
           {{ Math.floor(song.duration / 60) }}:{{ String(song.duration % 60).padStart(2, '0') }}
         </span>
       </div>
       <p class="mt-2.5 truncate text-sm font-semibold" :title="song.title">{{ song.title }}</p>
-      <p class="mt-0.5 truncate text-xs text-dim">{{ song.album }}</p>
+      <p class="mt-0.5 truncate text-xs text-dim">{{ song.albumName || '未收录单曲' }}</p>
     </RouterLink>
 
     <button
@@ -44,10 +52,10 @@ function onPlay() {
     </button>
 
     <div class="mt-2 flex items-center gap-1.5">
-      <span class="rounded px-1.5 py-0.5 text-[11px] font-medium" :style="{ background: band?.soft, color: band?.color }">
-        {{ band?.name }}
+      <span class="rounded px-1.5 py-0.5 text-[11px] font-medium" :style="{ background: band.soft, color: band.color }">
+        {{ song.bandName }}
       </span>
-      <span v-for="t in song.tags.slice(0, 1)" :key="t" class="text-[11px] text-faint">#{{ t }}</span>
+      <span v-for="t in tags.slice(0, 1)" :key="t" class="text-[11px] text-faint">#{{ t }}</span>
     </div>
   </div>
 </template>

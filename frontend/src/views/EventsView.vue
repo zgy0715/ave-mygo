@@ -1,18 +1,36 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import EventCard from '@/components/EventCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { events } from '@/data/mock'
+import { listEvents } from '@/api/event'
 
-/** 演出列表（需求 3.4 上游）：状态 Tab 筛选 */
+/** 演出列表（需求 3.4 上游）：状态 Tab 筛选（真接口，状态为后端枚举） */
 const TABS = [
   { id: 'ALL', label: '全部' },
-  { id: 'ONSALE', label: '销售中' },
-  { id: 'NOT_OPEN', label: '即将开售' },
+  { id: 'PUBLISHED', label: '售票中' },
   { id: 'ENDED', label: '已结束' },
 ]
 const tab = ref('ALL')
-const filtered = computed(() => (tab.value === 'ALL' ? events : events.filter((e) => e.status === tab.value)))
+
+const events = ref([])
+const loading = ref(true)
+const errMsg = ref('')
+
+async function load() {
+  loading.value = true
+  errMsg.value = ''
+  try {
+    const data = await listEvents({ status: tab.value === 'ALL' ? undefined : tab.value })
+    events.value = data.content
+  } catch (e) {
+    errMsg.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
+
+const filtered = computed(() => events.value)
 </script>
 
 <template>
@@ -37,9 +55,22 @@ const filtered = computed(() => (tab.value === 'ALL' ? events : events.filter((e
       </button>
     </div>
 
-    <div v-if="filtered.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <EventCard v-for="(e, i) in filtered" :key="e.id" :event="e" v-reveal="(i % 3) * 80" />
+    <div v-if="loading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div v-for="i in 3" :key="i" class="h-64 animate-pulse rounded-xl bg-surface"></div>
     </div>
-    <EmptyState v-else icon="🎫" text="该状态下暂无演出" action-text="查看全部" @action="tab = 'ALL'" />
+    <div v-else-if="errMsg" class="card p-4 text-sm text-red-500">{{ errMsg }} <button class="ml-2 underline" @click="load">重试</button></div>
+
+    <div v-else-if="filtered.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <EventCard v-for="(e, i) in filtered" :key="e.id" :event="e" v-reveal="i * 90" />
+    </div>
+
+    <EmptyState
+      v-else
+      icon="🎤"
+      text="该状态下暂无演出"
+      hint="切换状态看看，或留意后续公告"
+      action-text="看全部"
+      @action="tab = 'ALL'"
+    />
   </div>
 </template>
