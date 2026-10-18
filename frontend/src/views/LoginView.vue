@@ -2,11 +2,13 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { register as apiRegister } from '@/api/auth'
 
 /**
- * 登录 / 注册（双 Tab 一页）。
- * - 支持登录后跳回来源页（走查缺口②）：?redirect=/xxx
- * - 后端未就绪：本地 mock 登录（任意非空输入即通过），接口就绪后换 authStore.login 真调用
+ * 登录 / 注册（双 Tab 一页）——真接口版。
+ * - 支持登录后跳回来源页：?redirect=/xxx
+ * - 后端契约：POST /auth/login → {token, expiresIn, user:{userId,username,nickname,role}}
+ *            POST /auth/register → 业务错误码经 request.js 统一转成 Error(message)
  */
 const route = useRoute()
 const router = useRouter()
@@ -17,19 +19,34 @@ const username = ref('')
 const password = ref('')
 const nickname = ref('')
 const error = ref('')
+const submitting = ref(false)
 
-function submit() {
+async function submit() {
   if (!username.value.trim() || !password.value.trim()) {
     error.value = '用户名和密码不能为空'
     return
   }
   error.value = ''
-  // mock：直接发 token；真实实现 = auth.login() 调 POST /auth/login
-  auth.token = 'mock-token-' + Date.now()
-  auth.user = { username: username.value.trim(), nickname: nickname.value.trim() || username.value.trim(), role: 'USER' }
-  sessionStorage.setItem('token', auth.token)
-  sessionStorage.setItem('user', JSON.stringify(auth.user))
-  router.push(route.query.redirect || '/')
+  submitting.value = true
+  try {
+    if (mode.value === 'login') {
+      await auth.login(username.value.trim(), password.value)
+    } else {
+      // 注册成功后自动登录（体验惯例，省一次输入）
+      await apiRegister({
+        username: username.value.trim(),
+        password: password.value,
+        nickname: nickname.value.trim() || undefined,
+      })
+      await auth.login(username.value.trim(), password.value)
+    }
+    router.push(route.query.redirect || '/')
+  } catch (e) {
+    // request.js 已把后端 message（如"用户名已存在"）转成可读 Error
+    error.value = e.message
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -45,7 +62,7 @@ function submit() {
       <form class="space-y-4" @submit.prevent="submit">
         <div>
           <label class="mb-1 block text-xs font-medium text-dim">用户名</label>
-          <input v-model="username" type="text" class="input" placeholder="字母 / 数字组合">
+          <input v-model="username" type="text" class="input" placeholder="3~32 位字母 / 数字 / 下划线">
         </div>
         <div v-if="mode === 'register'">
           <label class="mb-1 block text-xs font-medium text-dim">昵称</label>
@@ -53,15 +70,15 @@ function submit() {
         </div>
         <div>
           <label class="mb-1 block text-xs font-medium text-dim">密码</label>
-          <input v-model="password" type="password" class="input" placeholder="至少 8 位">
+          <input v-model="password" type="password" class="input" :placeholder="mode === 'register' ? '8~32 位，含字母和数字' : '至少 8 位'">
         </div>
         <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
-        <button type="submit" class="btn-primary w-full">
-          {{ mode === 'login' ? '登录' : '注册并登录' }}
+        <button type="submit" class="btn-primary w-full" :disabled="submitting">
+          {{ submitting ? '处理中…' : mode === 'login' ? '登录' : '注册并登录' }}
         </button>
       </form>
 
-      <p class="mt-4 text-center text-xs text-faint">演示环境：任意输入即可登录 · 后端就绪后接入 JWT</p>
+      <p class="mt-4 text-center text-xs text-faint">已接入 JWT 认证 · 游客可浏览，登录后可购票</p>
     </div>
   </div>
 </template>
