@@ -19,7 +19,10 @@ onMounted(async () => {
 })
 
 const gradientOf = (slug) =>
-  slug === 'ave-mujica' ? 'linear-gradient(135deg,#6b4fa3,#4a3573)' : 'linear-gradient(135deg,#2c7da0,#1f6485)'
+  ({
+    'ave-mujica': 'linear-gradient(135deg,#6b4fa3,#4a3573)',
+    sumimi: 'linear-gradient(135deg, #d4789f 0%, #b95 100%)',
+  }[slug] || 'linear-gradient(135deg,#2c7da0,#1f6485)')
 </script>
 
 <template>

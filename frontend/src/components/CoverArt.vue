@@ -25,6 +25,11 @@ const BAND_VISUALS = {
     color: '#6b4fa3',
     soft: '#efeaf7',
   },
+  sumimi: {
+    gradient: 'linear-gradient(135deg, #d4789f 0%, #b95 100%)',
+    color: '#d4789f',
+    soft: '#fbe9ef',
+  },
 }
 
 const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)

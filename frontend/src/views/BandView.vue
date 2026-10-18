@@ -93,11 +93,16 @@ onMounted(async () => {
 // 成员立牌首字：名最后的汉字（"高松 燈"→"燈"）
 const lastChar = (nameJa) => (nameJa || '').replace(/\s/g, '').slice(-1)
 
-const gradientOf = computed(() =>
-  band.value?.slug === 'ave-mujica' ? 'linear-gradient(135deg,#6b4fa3,#4a3573)' : 'linear-gradient(135deg,#2c7da0,#1f6485)',
-)
+const gradientOf = computed(() => {
+  const g = {
+    'ave-mujica': 'linear-gradient(135deg,#6b4fa3,#4a3573)',
+    sumimi: 'linear-gradient(135deg, #d4789f 0%, #b95 100%)',
+  }
+  return g[band.value?.slug] || 'linear-gradient(135deg,#2c7da0,#1f6485)'
+})
 
-const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
+// 乐队 id → 封面渐变 slug（sumimi=3，V11 起第三支乐队）
+const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'mygo')
 </script>
 
 <template>

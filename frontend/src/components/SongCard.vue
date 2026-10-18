@@ -12,10 +12,11 @@ const player = usePlayerStore()
 const auth = useAuthStore()
 const router = useRouter()
 
-const SLUG = { 'MyGO!!!!': 'mygo', 'Ave Mujica': 'ave-mujica' }
+const SLUG = { 'MyGO!!!!': 'mygo', 'Ave Mujica': 'ave-mujica', sumimi: 'sumimi' }
 const BAND_STYLE = {
   mygo: { name: 'MyGO!!!!', color: '#2c7da0', soft: '#e3f0f7' },
   'ave-mujica': { name: 'Ave Mujica', color: '#6b4fa3', soft: '#efeaf7' },
+  sumimi: { name: 'sumimi', color: '#d4789f', soft: '#fbe9ef' },
 }
 const slug = computed(() => SLUG[props.song.bandName] || 'mygo')
 const band = computed(() => BAND_STYLE[slug.value])

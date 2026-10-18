@@ -29,6 +29,7 @@ const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, 
 const BAND_THEME = {
   'MyGO!!!!': { color: '#2c7da0', soft: '#e3f0f7', slug: 'mygo' },
   'Ave Mujica': { color: '#6b4fa3', soft: '#efeaf7', slug: 'ave-mujica' },
+  sumimi: { color: '#d4789f', soft: '#fbe9ef', slug: 'sumimi' },
 }
 const band = computed(() => BAND_THEME[song.value?.bandName] || BAND_THEME['MyGO!!!!'])
 
