@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -11,6 +11,7 @@ import { listSongs } from '@/api/song'
  * 一排竖长立牌（约 1:2），衬线名字叠于立牌底部居中，职位标签在上，
  * 编号（01…）做档案感装饰，hover 触发扫光（.shine）。
  * 真接口版：GET /bands/{id} → {band, members, albums} + GET /songs?bandId=。
+ * 头图：滚动展开（Apple 式 zoom-out reveal）——初始放大裁切，下拉一屏逐渐完整呈现。
  */
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +22,36 @@ const albums = ref([])
 const songs = ref([])
 const loading = ref(true)
 const errMsg = ref('')
+
+// ===== 头图滚动展开 =====
+const heroWrap = ref(null)
+const progress = ref(0)             // 0 → 1：滚动进度
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function onScroll() {
+  const el = heroWrap.value
+  if (!el) return
+  const total = el.offsetHeight - window.innerHeight
+  progress.value = total > 0 ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total)) : 0
+}
+
+onMounted(() => {
+  if (!reducedMotion) window.addEventListener('scroll', onScroll, { passive: true })
+})
+onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+
+// 初始：scale 1.25 + 取景偏上（裁切态）；滚完：scale 1.0 + 居中（完整态）
+const heroImgStyle = computed(() => {
+  const p = reducedMotion ? 1 : progress.value
+  return {
+    transform: `scale(${1.25 - 0.25 * p})`,
+    objectPosition: `center ${25 + 15 * p}%`,
+  }
+})
+const heroTextStyle = computed(() => {
+  const p = reducedMotion ? 0 : progress.value
+  return { opacity: Math.max(0, 1 - p * 1.6), transform: `translateY(${p * 3}rem)` }
+})
 
 onMounted(async () => {
   try {
@@ -55,19 +86,28 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
   </div>
 
   <div v-else-if="band" class="wrap py-8">
-    <!-- 乐队头图：有 logo_url 用官方 KV，无则回退渐变 -->
-    <div class="shine relative flex h-80 flex-col justify-end overflow-hidden rounded-xl p-7 text-white md:h-[26rem]" :style="band.logoUrl ? {} : { background: gradientOf }">
-      <img
-        v-if="band.logoUrl"
-        :src="band.logoUrl"
-        :alt="band.name"
-        class="absolute inset-0 h-full w-full object-cover object-center"
-      >
-      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-      <div class="relative">
-        <p class="mono text-xs tracking-[0.25em] text-white/70">{{ band.slug.toUpperCase() }}</p>
-        <h1 class="mt-2 text-5xl tracking-wide sm:text-6xl" style="text-shadow: 0 2px 18px rgba(0,0,0,.45)">{{ band.name }}</h1>
+    <!-- 乐队头图：sticky 满屏画布，下拉一屏逐渐展开完整 KV -->
+    <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[170vh]">
+      <div class="sticky top-0 h-[100svh] overflow-hidden">
+        <img
+          :src="band.logoUrl"
+          :alt="band.name"
+          class="absolute inset-0 h-full w-full object-cover will-change-transform"
+          :style="heroImgStyle"
+        >
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" :style="{ opacity: 1 - progress * 0.4 }"></div>
+        <div class="absolute bottom-14 left-7 sm:bottom-20 sm:left-10" :style="heroTextStyle">
+          <p class="mono text-xs tracking-[0.25em] text-white/70 [text-shadow:0_1px_6px_rgba(0,0,0,.5)]">{{ band.slug.toUpperCase() }}</p>
+          <h1 class="mt-2 text-6xl tracking-wide sm:text-7xl" style="text-shadow: 0 2px 24px rgba(0,0,0,.55)">{{ band.name }}</h1>
+          <p class="mono mt-4 text-[10px] tracking-[0.3em] text-white/60">SCROLL — 継続表示 ↧</p>
+        </div>
       </div>
+    </div>
+
+    <!-- 无图回退：渐变头图（原样式） -->
+    <div v-else class="shine font-display relative flex h-80 flex-col justify-end overflow-hidden rounded-xl p-7 text-white md:h-[26rem]" :style="{ background: gradientOf }">
+      <p class="mono text-xs tracking-[0.25em] text-white/70">{{ band.slug.toUpperCase() }}</p>
+      <h1 class="mt-2 text-5xl tracking-wide sm:text-6xl" style="text-shadow: 0 2px 18px rgba(0,0,0,.45)">{{ band.name }}</h1>
     </div>
     <p class="mt-5 max-w-2xl text-sm leading-relaxed text-dim">{{ band.description }}</p>
 
