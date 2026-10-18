@@ -23,34 +23,56 @@ const songs = ref([])
 const loading = ref(true)
 const errMsg = ref('')
 
-// ===== 头图滚动展开 =====
+// ===== 头图滚动展开（丝滑版）：lerp 插值 + 纯 transform 合成 =====
 const heroWrap = ref(null)
-const progress = ref(0)             // 0 → 1：滚动进度
+const target = ref(0)               // 滚动目标进度（即时）
+const eased = ref(0)                // 渲染进度（向 target 缓动）
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-function onScroll() {
+function measure() {
   const el = heroWrap.value
   if (!el) return
   const total = el.offsetHeight - window.innerHeight
-  progress.value = total > 0 ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total)) : 0
+  target.value = total > 0 ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total)) : 0
 }
 
-onMounted(() => {
-  if (!reducedMotion) window.addEventListener('scroll', onScroll, { passive: true })
-})
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+let rafId = null
+function tick() {
+  // 每帧向目标靠近 9% —— 惯性"跟手但不生硬"的来源
+  eased.value += (target.value - eased.value) * 0.09
+  // smoothstep 缓动曲线：两端慢中间快，更有电影感
+  const p = eased.value * eased.value * (3 - 2 * eased.value)
+  const img = imgEl.value
+  if (img) {
+    img.style.transform = `translate3d(0, ${(1 - p) * -7}%, 0) scale(${1.28 - 0.28 * p})`
+    img.style.opacity = String(0.6 + 0.4 * p)
+  }
+  const txt = heroTextEl.value
+  if (txt) {
+    txt.style.opacity = String(Math.max(0, 1 - p * 1.8))
+    txt.style.transform = `translate3d(0, ${p * 3.5}rem, 0)`
+  }
+  const shade = shadeEl.value
+  if (shade) shade.style.opacity = String(1 - p * 0.4)
+  rafId = requestAnimationFrame(tick)
+}
 
-// 初始：scale 1.25 + 取景偏上（裁切态）；滚完：scale 1.0 + 居中（完整态）
-const heroImgStyle = computed(() => {
-  const p = reducedMotion ? 1 : progress.value
-  return {
-    transform: `scale(${1.25 - 0.25 * p})`,
-    objectPosition: `center ${25 + 15 * p}%`,
+const imgEl = ref(null)
+const heroTextEl = ref(null)
+const shadeEl = ref(null)
+
+onMounted(() => {
+  if (!reducedMotion) {
+    window.addEventListener('scroll', measure, { passive: true })
+    window.addEventListener('resize', measure)
+    measure()
+    rafId = requestAnimationFrame(tick)
   }
 })
-const heroTextStyle = computed(() => {
-  const p = reducedMotion ? 0 : progress.value
-  return { opacity: Math.max(0, 1 - p * 1.6), transform: `translateY(${p * 3}rem)` }
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', measure)
+  window.removeEventListener('resize', measure)
+  if (rafId) cancelAnimationFrame(rafId)
 })
 
 onMounted(async () => {
@@ -86,17 +108,17 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
   </div>
 
   <div v-else-if="band" class="wrap py-8">
-    <!-- 乐队头图：sticky 满屏画布，下拉一屏逐渐展开完整 KV -->
+    <!-- 乐队头图：sticky 满屏画布，lerp 缓动 + 纯 transform（合成层，不掉帧） -->
     <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[170vh]">
       <div class="sticky top-0 h-[100svh] overflow-hidden">
         <img
+          ref="imgEl"
           :src="band.logoUrl"
           :alt="band.name"
-          class="absolute inset-0 h-full w-full object-cover will-change-transform"
-          :style="heroImgStyle"
+          class="absolute inset-x-0 top-0 h-[118%] w-full object-cover will-change-transform"
         >
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" :style="{ opacity: 1 - progress * 0.4 }"></div>
-        <div class="absolute bottom-14 left-7 sm:bottom-20 sm:left-10" :style="heroTextStyle">
+        <div ref="shadeEl" class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
+        <div ref="heroTextEl" class="absolute bottom-14 left-7 will-change-transform sm:bottom-20 sm:left-10">
           <p class="mono text-xs tracking-[0.25em] text-white/70 [text-shadow:0_1px_6px_rgba(0,0,0,.5)]">{{ band.slug.toUpperCase() }}</p>
           <h1 class="mt-2 text-6xl tracking-wide sm:text-7xl" style="text-shadow: 0 2px 24px rgba(0,0,0,.55)">{{ band.name }}</h1>
           <p class="mono mt-4 text-[10px] tracking-[0.3em] text-white/60">SCROLL — 継続表示 ↧</p>
