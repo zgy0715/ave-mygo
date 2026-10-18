@@ -4,12 +4,6 @@
  * 用乐队渐变色 + 首字生成，视觉统一且零资源加载；
  * 后端有 cover_url 后换成 <img> 即可（组件对外接口不变）。
  */
-const props = defineProps({
-  title: { type: String, required: true },
-  band: { type: String, default: 'mygo' },
-  rounded: { type: String, default: 'rounded-lg' },
-})
-
 import { computed } from 'vue'
 
 const props = defineProps({
