@@ -1,8 +1,25 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { bands, members, songs } from '@/data/mock'
+import { listBands } from '@/api/song'
 
-/** 乐队总览：双乐队入口卡 */
+/** 乐队总览：双乐队入口卡（真接口版） */
+const bands = ref([])
+const loading = ref(true)
+const errMsg = ref('')
+
+onMounted(async () => {
+  try {
+    bands.value = await listBands()
+  } catch (e) {
+    errMsg.value = e.message
+  } finally {
+    loading.value = false
+  }
+})
+
+const gradientOf = (slug) =>
+  slug === 'ave-mujica' ? 'linear-gradient(135deg,#6b4fa3,#4a3573)' : 'linear-gradient(135deg,#2c7da0,#1f6485)'
 </script>
 
 <template>
@@ -10,19 +27,24 @@ import { bands, members, songs } from '@/data/mock'
     <div class="section-head">
       <h1 class="text-2xl font-black">乐队</h1>
     </div>
-    <div class="grid gap-6 md:grid-cols-2">
+
+    <div v-if="loading" class="grid gap-6 md:grid-cols-2">
+      <div v-for="i in 2" :key="i" class="h-56 animate-pulse rounded-xl bg-surface"></div>
+    </div>
+    <div v-else-if="errMsg" class="card p-4 text-sm text-red-500">{{ errMsg }} <button class="ml-2 underline" @click="load">重试</button></div>
+
+    <div v-else class="grid gap-6 md:grid-cols-2">
       <RouterLink
         v-for="b in bands"
         :key="b.id"
         :to="`/bands/${b.id}`"
         class="card group overflow-hidden hover:shadow-md"
       >
-        <div class="flex h-32 items-end p-5 text-white" :style="{ background: b.gradient }">
-          <p class="text-3xl font-black" style="text-shadow: 0 1px 8px rgba(0,0,0,.3)">{{ b.name }}</p>
+        <div class="font-display flex h-32 items-end p-5 text-white" :style="{ background: gradientOf(b.slug) }">
+          <p class="text-3xl tracking-wide" style="text-shadow: 0 1px 8px rgba(0,0,0,.3)">{{ b.name }}</p>
         </div>
         <div class="p-5">
-          <p class="text-sm leading-relaxed text-dim">{{ b.intro }}</p>
-          <p class="mt-3 text-xs text-faint">{{ members.filter((m) => m.band === b.id).length }} 名成员 · {{ songs.filter((s) => s.band === b.id).length }} 首收录歌曲</p>
+          <p class="text-sm leading-relaxed text-dim">{{ b.description }}</p>
         </div>
       </RouterLink>
     </div>
