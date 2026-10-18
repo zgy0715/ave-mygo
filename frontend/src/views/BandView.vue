@@ -109,7 +109,7 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
 
   <div v-else-if="band" class="wrap py-8">
     <!-- 乐队头图：sticky 满屏画布，lerp 缓动 + 纯 transform（合成层，不掉帧） -->
-    <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[170vh]">
+    <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[240vh]">
       <div class="sticky top-0 h-[100svh] overflow-hidden">
         <img
           ref="imgEl"
