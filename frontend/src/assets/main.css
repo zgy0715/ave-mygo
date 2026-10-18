@@ -127,7 +127,7 @@ body {
 .group:hover .zoomable { transform: scale(1.045); }
 
 /* 扫光：Mujica 官网 .shine 同款，hover 一次高光扫过 */
-.shine { position: relative; overflow: hidden; }
+.shine { overflow: hidden; }
 .shine::after {
   content: '';
   position: absolute;
