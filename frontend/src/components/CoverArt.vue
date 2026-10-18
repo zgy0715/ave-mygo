@@ -4,7 +4,7 @@
  * 用乐队渐变色 + 首字生成，视觉统一且零资源加载；
  * 后端有 cover_url 后换成 <img> 即可（组件对外接口不变）。
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -28,6 +28,7 @@ const BAND_VISUALS = {
 }
 
 const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)
+const failed = ref(false)   // 封面 404 → 回退程序化渐变
 </script>
 
 <template>
@@ -36,8 +37,8 @@ const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)
     :class="rounded"
     :style="coverUrl ? {} : { background: band.gradient }"
   >
-    <!-- 官方曲绘（有则优先） -->
-    <img v-if="coverUrl" :src="coverUrl" :alt="title" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
+    <!-- 封面图（404 自动回退渐变） -->
+    <img v-if="coverUrl && !failed" :src="coverUrl" :alt="title" class="absolute inset-0 h-full w-full object-cover" loading="lazy" @error="failed = true">
     <template v-else>
       <!-- 纹理：斜向高光，避免大面积纯色显得闷 -->
       <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.5) 45%, transparent 60%)" />
