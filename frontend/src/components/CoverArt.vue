@@ -10,8 +10,29 @@ const props = defineProps({
   rounded: { type: String, default: 'rounded-lg' },
 })
 
-import { bandById } from '@/data/mock'
-const band = bandById(props.band)
+import { computed } from 'vue'
+
+// 乐队视觉 token：slug → 渐变/强调色/浅底（v2.1 从 mock 解耦，视觉内聚到组件）
+const BAND_VISUALS = {
+  mygo: {
+    gradient: 'linear-gradient(135deg, #2c7da0 0%, #1f6485 100%)',
+    color: '#2c7da0',
+    soft: '#e3f0f7',
+  },
+  'ave-mujica': {
+    gradient: 'linear-gradient(135deg, #6b4fa3 0%, #4a3573 100%)',
+    color: '#6b4fa3',
+    soft: '#efeaf7',
+  },
+}
+
+const props = defineProps({
+  title: { type: String, required: true },
+  band: { type: String, default: 'mygo' },   // 传 band slug
+  rounded: { type: String, default: 'rounded-lg' },
+})
+
+const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)
 </script>
 
 <template>
