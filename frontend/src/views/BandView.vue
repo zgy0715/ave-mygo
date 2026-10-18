@@ -89,15 +89,15 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
           class="group relative overflow-hidden rounded-lg"
           style="aspect-ratio: 1 / 1.9"
         >
-          <!-- 立牌面：有 avatar_url 用官方立绘，无则回退渐变+首字 -->
-          <div class="shine absolute inset-0 flex flex-col" :style="m.avatarUrl ? {} : { background: gradientOf }">
+          <!-- 立牌面：渐变底永远渲染（官方立绘是透明底 PNG），立绘叠加其上 -->
+          <div class="shine absolute inset-0 flex flex-col" :style="{ background: gradientOf }">
             <img
               v-if="m.avatarUrl"
               :src="m.avatarUrl"
               :alt="m.nameJa"
-              class="absolute inset-0 h-full w-full object-cover object-top"
+              class="absolute inset-x-0 bottom-0 z-[1] h-[92%] w-full object-contain object-bottom"
             >
-            <template v-else>
+            <template v-if="!m.avatarUrl">
               <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
               <span class="serif relative mt-auto px-4 pb-24 text-7xl font-semibold text-white/90">
                 {{ lastChar(m.nameJa) }}

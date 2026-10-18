@@ -1,39 +1,75 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
-import { songById, songs, bandById } from '@/data/mock'
+import { getSong, listSongs } from '@/api/song'
 
 /**
- * 歌曲详情（需求 3.3）：大封面 + 元信息 + MV embed。
- * 兜底：无音源时播放钮降级为「观看 MV」；mvUrl 也为空则整块提示。
+ * 歌曲详情（需求 3.3）——真接口版。
+ * GET /songs/{id} → SongDetail；同专辑曲目用 GET /songs?bandId= 客户端过滤。
+ * 透明底问题同 CoverArt：tag 是后端逗号串 → 前端拆数组。
  */
 const route = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
 const auth = useAuthStore()
 
-const song = songById(route.params.id)
-const band = computed(() => song && bandById(song.band))
-const sameAlbum = computed(() => song ? songs.filter((s) => s.album === song.album && s.id !== song.id) : [])
+const song = ref(null)
+const sameAlbum = ref([])
+const loading = ref(true)
+const errMsg = ref('')
+
+const tags = computed(() => (song.value?.tags || '').split(',').filter(Boolean))
+const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+
+// 乐队徽标：详情里只有 bandName，按名字映射配色
+const BAND_THEME = {
+  'MyGO!!!!': { color: '#2c7da0', soft: '#e3f0f7', slug: 'mygo' },
+  'Ave Mujica': { color: '#6b4fa3', soft: '#efeaf7', slug: 'ave-mujica' },
+}
+const band = computed(() => BAND_THEME[song.value?.bandName] || BAND_THEME['MyGO!!!!'])
+
+async function load() {
+  loading.value = true
+  errMsg.value = ''
+  try {
+    song.value = await getSong(route.params.id)
+    // 同专辑曲目：同乐队列表里滤出专辑相同者（数据量小，够用）
+    if (song.value.albumId) {
+      const data = await listSongs({ bandId: song.value.bandId, pageSize: 50 })
+      sameAlbum.value = data.content.filter((s) => s.albumId === song.value.albumId && s.id !== song.value.id)
+    }
+  } catch (e) {
+    errMsg.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
 
 function onPlay() {
   if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: route.fullPath } })
-  player.play(song)
+  player.play(song.value)
 }
 </script>
 
 <template>
-  <div v-if="song" class="wrap py-8">
+  <div v-if="loading" class="wrap py-8"><div class="h-72 animate-pulse rounded-xl bg-surface"></div></div>
+
+  <div v-else-if="errMsg" class="wrap py-8">
+    <div class="card p-4 text-sm text-red-500">{{ errMsg }} <button class="ml-2 underline" @click="load">重试</button></div>
+  </div>
+
+  <div v-else-if="song" class="wrap py-8">
     <RouterLink to="/songs" class="mb-6 inline-block text-sm text-dim hover:text-primary">← 返回歌曲库</RouterLink>
 
     <div class="grid gap-8 md:grid-cols-[280px_1fr]">
       <!-- 左：封面 + 播放 -->
       <div>
-        <CoverArt :title="song.title" :band="song.band" class="aspect-square w-full shadow-md" rounded="rounded-xl" />
+        <CoverArt :title="song.title" :band="band.slug" class="aspect-square w-full shadow-md" rounded="rounded-xl" />
         <button class="btn-primary mt-4 w-full" @click="onPlay">
           ▶ {{ song.audioUrl ? '播放试听' : '播放（演示模式）' }}
         </button>
@@ -42,27 +78,30 @@ function onPlay() {
 
       <!-- 右：元信息 -->
       <div>
-        <span class="rounded px-2 py-0.5 text-xs font-medium" :style="{ background: band?.soft, color: band?.color }">{{ band?.name }}</span>
+        <span class="rounded px-2 py-0.5 text-xs font-medium" :style="{ background: band.soft, color: band.color }">{{ song.bandName }}</span>
         <h1 class="serif mt-3 text-3xl font-semibold sm:text-4xl">{{ song.title }}</h1>
-        <p class="mt-2 text-dim">{{ song.album }}</p>
+        <p class="mt-2 text-dim">{{ song.albumName || '未收录单曲' }}</p>
 
         <dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
           <div><dt class="text-faint">发行日期</dt><dd class="tabular mt-0.5 font-medium">{{ song.releaseDate }}</dd></div>
-          <div><dt class="text-faint">时长</dt><dd class="tabular mt-0.5 font-medium">{{ Math.floor(song.duration / 60) }}:{{ String(song.duration % 60).padStart(2, '0') }}</dd></div>
-          <div><dt class="text-faint">标签</dt><dd class="mt-0.5 font-medium">{{ song.tags.join(' / ') }}</dd></div>
+          <div><dt class="text-faint">时长</dt><dd class="tabular mt-0.5 font-medium">{{ fmtDur(song.duration) }}</dd></div>
+          <div><dt class="text-faint">标签</dt><dd class="mt-0.5 font-medium">{{ tags.join(' / ') || '—' }}</dd></div>
         </dl>
 
-        <!-- MV 区：有 mvUrl 渲染 B 站 iframe，否则外链兜底 -->
+        <!-- MV 区：B站/YouTube 按 mvPlatform 分流渲染 -->
         <div class="mt-8">
           <h2 class="mb-3 text-lg font-bold">MV</h2>
-          <div v-if="song.mvUrl" class="aspect-video overflow-hidden rounded-xl border border-line">
+          <div v-if="song.mvUrl && song.mvPlatform === 'BILIBILI'" class="aspect-video overflow-hidden rounded-xl border border-line">
             <iframe :src="song.mvUrl" class="h-full w-full" allowfullscreen scrolling="no" />
           </div>
+          <a v-else-if="song.mvUrl" :href="song.mvUrl" target="_blank" rel="noopener" class="btn-ghost inline-flex">
+            在 {{ song.mvPlatform === 'YOUTUBE' ? 'YouTube' : '外部' }} 观看 MV ↗
+          </a>
           <EmptyState
             v-else
             icon="📺"
             text="MV 外链待补充"
-            hint="后端就绪后在管理端维护 mv_url 字段即可"
+            hint="管理端维护 mv_url / mv_platform 字段即可"
           />
         </div>
 
@@ -73,7 +112,7 @@ function onPlay() {
             <li v-for="s in sameAlbum" :key="s.id">
               <RouterLink :to="`/songs/${s.id}`" class="flex items-center justify-between p-3 text-sm hover:bg-base">
                 <span class="font-medium">{{ s.title }}</span>
-                <span class="tabular text-xs text-faint">{{ Math.floor(s.duration / 60) }}:{{ String(s.duration % 60).padStart(2, '0') }}</span>
+                <span class="tabular text-xs text-faint">{{ fmtDur(s.duration) }}</span>
               </RouterLink>
             </li>
           </ul>
