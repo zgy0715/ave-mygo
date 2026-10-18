@@ -6,7 +6,7 @@
 
 -- ---------- sumimi 乐队 ----------
 INSERT INTO band (`id`, `name`, `slug`, `description`) VALUES
-(3, 'sumimi', 'sumimi', '祐天寺にゃむ × 純田まな 的双人偶像组合。镜头前的闪闪发光，是两个人一起挣来的。');
+(3, 'sumimi', 'sumimi', '三角初華 × 純田まな 的双人偶像组合。镜头前的闪闪发光，是两个人一起挣来的。');
 
 -- ---------- MyGO!!!!! 新增曲目 (band 1) ----------
 INSERT INTO song (`id`, `title`, `band_id`, `status`) VALUES
@@ -55,7 +55,7 @@ INSERT INTO song (`id`, `title`, `band_id`, `status`) VALUES
 (56, 'S The Way', 2, 1),
 (57, 'Completeness', 2, 1);
 
--- ---------- sumimi 成员（にゃむ × 純田まな） ----------
+-- ---------- sumimi 成员（初華 × まな，资料：官方角色列表） ----------
 INSERT INTO member (`id`, `band_id`, `name_ja`, `name_romaji`, `cv`, `position`, `intro`, `sort`) VALUES
-(11, 3, '祐天寺 にゃむ', 'Yutenji Nyamu', '米澤茜', 'Perf.', 'sumimi 的发起人。把偶像活动当作自媒体流量的延长线。', 1),
-(12, 3, '純田 まな',   'Mana',          '反田叶月', 'Vo.',  'sumimi 的主唱。元气满满的偶像担当，永远站在镜头最前面。', 2);
+(11, 3, '三角 初華', 'Misumi Uika', '佐々木李子', 'Vo./Gt.', 'sumimi 的主唱兼吉他手。同时也是 Ave Mujica 的 Doloris。', 1),
+(12, 3, '純田 まな', 'Sumita Mana', '反田叶月', 'Vo.',      'sumimi 的主唱。元气满满的偶像担当，永远站在镜头最前面。', 2);
