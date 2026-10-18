@@ -56,12 +56,12 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
 
   <div v-else-if="band" class="wrap py-8">
     <!-- 乐队头图：有 logo_url 用官方 KV，无则回退渐变 -->
-    <div class="shine relative flex h-52 flex-col justify-end overflow-hidden rounded-xl p-7 text-white sm:h-64" :style="band.logoUrl ? {} : { background: gradientOf }">
+    <div class="shine relative flex h-80 flex-col justify-end overflow-hidden rounded-xl p-7 text-white md:h-[26rem]" :style="band.logoUrl ? {} : { background: gradientOf }">
       <img
         v-if="band.logoUrl"
         :src="band.logoUrl"
         :alt="band.name"
-        class="absolute inset-0 h-full w-full object-cover object-[center_25%]"
+        class="absolute inset-0 h-full w-full object-cover object-center"
       >
       <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
       <div class="relative">
