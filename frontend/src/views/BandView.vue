@@ -55,10 +55,19 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
   </div>
 
   <div v-else-if="band" class="wrap py-8">
-    <!-- 乐队头图 -->
-    <div class="shine font-display flex h-52 flex-col justify-end rounded-xl p-7 text-white sm:h-64" :style="{ background: gradientOf }">
-      <p class="mono text-xs tracking-[0.25em] text-white/70">{{ band.slug.toUpperCase() }}</p>
-      <h1 class="mt-2 text-5xl tracking-wide sm:text-6xl" style="text-shadow: 0 2px 18px rgba(0,0,0,.45)">{{ band.name }}</h1>
+    <!-- 乐队头图：有 logo_url 用官方 KV，无则回退渐变 -->
+    <div class="shine relative flex h-52 flex-col justify-end overflow-hidden rounded-xl p-7 text-white sm:h-64" :style="band.logoUrl ? {} : { background: gradientOf }">
+      <img
+        v-if="band.logoUrl"
+        :src="band.logoUrl"
+        :alt="band.name"
+        class="absolute inset-0 h-full w-full object-cover object-[center_25%]"
+      >
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+      <div class="relative">
+        <p class="mono text-xs tracking-[0.25em] text-white/70">{{ band.slug.toUpperCase() }}</p>
+        <h1 class="mt-2 text-5xl tracking-wide sm:text-6xl" style="text-shadow: 0 2px 18px rgba(0,0,0,.45)">{{ band.name }}</h1>
+      </div>
     </div>
     <p class="mt-5 max-w-2xl text-sm leading-relaxed text-dim">{{ band.description }}</p>
 
@@ -80,14 +89,22 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
           class="group relative overflow-hidden rounded-lg"
           style="aspect-ratio: 1 / 1.9"
         >
-          <!-- 立牌面：乐队渐变 + 大衬线首字（有 avatar_url 后换 <img>） -->
-          <div class="shine absolute inset-0 flex flex-col" :style="{ background: gradientOf }">
-            <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
-            <span class="mono absolute left-3 top-3 text-[10px] tracking-[0.25em] text-white/55">
+          <!-- 立牌面：有 avatar_url 用官方立绘，无则回退渐变+首字 -->
+          <div class="shine absolute inset-0 flex flex-col" :style="m.avatarUrl ? {} : { background: gradientOf }">
+            <img
+              v-if="m.avatarUrl"
+              :src="m.avatarUrl"
+              :alt="m.nameJa"
+              class="absolute inset-0 h-full w-full object-cover object-top"
+            >
+            <template v-else>
+              <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
+              <span class="serif relative mt-auto px-4 pb-24 text-7xl font-semibold text-white/90">
+                {{ lastChar(m.nameJa) }}
+              </span>
+            </template>
+            <span class="mono absolute left-3 top-3 z-10 text-[10px] tracking-[0.25em] text-white/75 [text-shadow:0_1px_4px_rgba(0,0,0,.5)]">
               {{ String(i + 1).padStart(2, '0') }}
-            </span>
-            <span class="serif relative mt-auto px-4 pb-24 text-7xl font-semibold text-white/90">
-              {{ lastChar(m.nameJa) }}
             </span>
           </div>
 
