@@ -4,7 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
-import { getEvent, listBands } from '@/api/event'
+import { getEvent } from '@/api/event'
+import { listBands } from '@/api/song'
 import { createOrder, payOrder, cancelOrder } from '@/api/order'
 
 /**
