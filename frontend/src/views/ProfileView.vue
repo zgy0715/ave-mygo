@@ -1,10 +1,19 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { orders } from '@/data/mock'
+import { myOrders } from '@/api/order'
 
 /** 个人中心：用户信息卡 + 快捷入口（收藏/歌单为 P1，先占位） */
 const auth = useAuthStore()
-const myOrderCount = orders.length
+const orderCount = ref('…')
+
+onMounted(async () => {
+  try {
+    orderCount.value = (await myOrders()).length
+  } catch {
+    orderCount.value = '—'
+  }
+})
 </script>
 
 <template>
@@ -22,7 +31,7 @@ const myOrderCount = orders.length
       </div>
       <div>
         <p class="text-lg font-bold">{{ auth.nickname }}</p>
-        <p class="text-sm text-dim">@{{ auth.user?.username }} · 普通用户</p>
+        <p class="text-sm text-dim">@{{ auth.user?.username }} · {{ auth.user?.role === 'ADMIN' ? '管理员' : '普通用户' }}</p>
       </div>
     </div>
 
@@ -32,7 +41,7 @@ const myOrderCount = orders.length
         <p class="mt-1 text-sm text-dim">我的收藏</p>
       </RouterLink>
       <RouterLink to="/orders" class="card p-5 hover:shadow-md">
-        <p class="text-2xl font-semibold text-primary tabular">{{ myOrderCount }}</p>
+        <p class="text-2xl font-semibold text-primary tabular">{{ orderCount }}</p>
         <p class="mt-1 text-sm text-dim">我的订单</p>
       </RouterLink>
       <div class="card p-5 opacity-60">
