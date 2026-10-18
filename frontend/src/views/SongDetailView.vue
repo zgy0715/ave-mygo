@@ -69,7 +69,7 @@ function onPlay() {
     <div class="grid gap-8 md:grid-cols-[280px_1fr]">
       <!-- 左：封面 + 播放 -->
       <div>
-        <CoverArt :title="song.title" :band="band.slug" class="aspect-square w-full shadow-md" rounded="rounded-xl" />
+        <CoverArt :title="song.title" :band="band.slug" :cover-url="song.coverUrl || ''" class="aspect-square w-full shadow-md" rounded="rounded-xl" />
         <button class="btn-primary mt-4 w-full" @click="onPlay">
           ▶ {{ song.audioUrl ? '播放试听' : '播放（演示模式）' }}
         </button>

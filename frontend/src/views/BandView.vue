@@ -193,7 +193,7 @@ const slugById = (id) => (band.value?.id === 2 ? 'ave-mujica' : 'mygo')
       </div>
       <div class="grid gap-4 sm:grid-cols-3">
         <div v-for="a in albums" :key="a.id" class="card p-4">
-          <CoverArt :title="a.name" :band="band.slug" class="h-28 w-full" rounded="rounded-lg" />
+          <CoverArt :title="a.name" :band="band.slug" :cover-url="a.coverUrl || ''" class="h-28 w-full" rounded="rounded-lg" />
           <p class="mt-3 truncate text-sm font-semibold">{{ a.name }}</p>
           <p class="mono mt-0.5 text-[10px] text-faint">{{ a.type }} · {{ a.releaseDate || 'TBD' }}</p>
         </div>

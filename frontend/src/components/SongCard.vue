@@ -32,7 +32,7 @@ function onPlay() {
   <div class="card group relative overflow-hidden p-3 hover:shadow-md">
     <RouterLink :to="`/songs/${song.id}`" class="block">
       <div class="relative overflow-hidden rounded-lg">
-        <CoverArt :title="song.title" :band="slug" class="zoomable aspect-square w-full" rounded="rounded-lg" />
+        <CoverArt :title="song.title" :band="slug" :cover-url="song.coverUrl || ''" class="zoomable aspect-square w-full" rounded="rounded-lg" />
         <span class="tabular absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] text-white">
           {{ Math.floor(song.duration / 60) }}:{{ String(song.duration % 60).padStart(2, '0') }}
         </span>
