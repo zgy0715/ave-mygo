@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventCard from '@/components/EventCard.vue'
 import SongCard from '@/components/SongCard.vue'
@@ -40,6 +40,9 @@ const onSale = computed(() => events.value.filter((e) => e.status === 'PUBLISHED
 const featured = computed(() => onSale.value[0] || events.value[0] || null)
 const upcoming = computed(() => events.value.filter((e) => e.status !== 'ENDED').slice(0, 3))
 const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANDORI / LIVE']
+
+/** 乐队卡 logo 加载失败 → 回退文字标题 */
+const logoErr = reactive({})
 
 /** 「11.01 Sun.」式日期：官网情报区同款格式 */
 const shortDate = computed(() => {
@@ -155,17 +158,17 @@ const gradientOf = (slug) =>
         class="card group overflow-hidden"
         v-reveal="i * 120"
       >
-        <!-- 乐队卡：官方图优先，缺图回退乐队渐变 -->
+        <!-- 官方 logo 叠加渐变底（加载失败回退文字） -->
         <div class="shine relative h-32 overflow-hidden" :style="{ background: gradientOf(b.slug) }">
           <img
-            v-if="b.logoUrl"
-            :src="b.logoUrl"
+            v-if="!logoErr[b.id]"
+            :src="`/img/logo/${b.slug}.png`"
             :alt="b.name"
-            class="zoomable absolute inset-0 h-full w-full object-cover"
+            class="zoomable absolute left-1/2 top-1/2 h-14 w-auto max-w-[80%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_10px_rgba(0,0,0,.45)]"
             loading="lazy"
+            @error="logoErr[b.id] = true"
           >
-          <div v-if="b.logoUrl" class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-          <p class="display absolute bottom-5 left-5 text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>
+          <p v-if="logoErr[b.id]" class="display absolute bottom-5 left-5 text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>
         </div>
         <div class="flex items-center justify-between p-4">
           <p class="text-sm text-dim">{{ b.description?.slice(0, 24) }}…</p>

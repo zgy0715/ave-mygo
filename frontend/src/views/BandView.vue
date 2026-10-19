@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -43,10 +43,10 @@ function tick() {
   eased.value += (target.value - eased.value) * 0.09
   // smoothstep 缓动曲线：两端慢中间快，更有电影感
   const p = eased.value * eased.value * (3 - 2 * eased.value)
-  const img = imgEl.value
-  if (img) {
-    img.style.transform = `translate3d(0, ${(1 - p) * -7}%, 0) scale(${1.28 - 0.28 * p})`
-    img.style.opacity = String(0.6 + 0.4 * p)
+  const media = mediaEl.value
+  if (media) {
+    media.style.transform = `translate3d(0, ${(1 - p) * -7}%, 0) scale(${1.28 - 0.28 * p})`
+    media.style.opacity = String(0.6 + 0.4 * p)
   }
   const txt = heroTextEl.value
   if (txt) {
@@ -58,7 +58,7 @@ function tick() {
   rafId = requestAnimationFrame(tick)
 }
 
-const imgEl = ref(null)
+const mediaEl = ref(null)
 const heroTextEl = ref(null)
 const shadeEl = ref(null)
 
@@ -104,6 +104,24 @@ const gradientOf = computed(() => {
 
 // 乐队 id → 封面渐变 slug（sumimi=3，V11 起第三支乐队）
 const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'mygo')
+
+// ===== 头图媒体层：官方视频 → KV 图 → 渐变，三层回退（任一缺失不报错）=====
+const HERO_VIDEOS = { mygo: '/assets/band-mygo.mp4', 'ave-mujica': '/assets/band-mujica.mp4' }
+const heroVideo = computed(() => HERO_VIDEOS[band.value?.slug] || '')
+const videoFailed = ref(false)
+const imgFailed = ref(false)
+const logoFailed = ref(false)
+const logoSrc = computed(() => (band.value?.slug ? `/img/logo/${band.value.slug}.png` : ''))
+
+const useVideo = computed(() => !!heroVideo.value && !videoFailed.value)
+const useImage = computed(() => !useVideo.value && !imgFailed.value && !!band.value?.logoUrl)
+
+// 换乐队时重置回退状态
+watch(() => band.value?.slug, () => {
+  videoFailed.value = false
+  imgFailed.value = false
+  logoFailed.value = false
+})
 </script>
 
 <template>
@@ -116,28 +134,52 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
   <div v-else-if="band" class="wrap py-8">
     <PageBack label="返回乐队列表" fallback="/bands" />
 
-    <!-- 乐队头图：sticky 满屏画布，lerp 缓动 + 纯 transform（合成层，不掉帧） -->
-    <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[240vh]">
+    <!-- 乐队头图：sticky 满屏画布（媒体链：官方视频 → KV 图 → 渐变），lerp 缓动 + 纯 transform -->
+    <div ref="heroWrap" class="relative h-[240vh]">
       <div class="sticky top-0 h-[100svh] overflow-hidden">
+        <!-- 打底渐变：sumimi 主层 / 视频与图都缺失时的兜底 -->
+        <div class="absolute inset-0" :style="{ background: gradientOf }"></div>
+
+        <!-- ① 官方 MV 视频背景（mygo/mujica），静音循环自动播放 -->
+        <video
+          v-if="useVideo"
+          ref="mediaEl"
+          :src="heroVideo"
+          :alt="band.name"
+          autoplay
+          muted
+          loop
+          playsinline
+          class="absolute inset-x-0 top-0 h-[118%] w-full object-cover will-change-transform"
+          @error="videoFailed = true"
+        />
+        <!-- ② KV 图回退 -->
         <img
-          ref="imgEl"
+          v-else-if="useImage"
+          ref="mediaEl"
           :src="band.logoUrl"
           :alt="band.name"
           class="absolute inset-x-0 top-0 h-[118%] w-full object-cover will-change-transform"
+          @error="imgFailed = true"
         >
+
+        <!-- 底部压暗 + 向下内容的过渡 -->
         <div ref="shadeEl" class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
+
+        <!-- 官方 logo 叠加（加载失败回退文字标题） -->
         <div ref="heroTextEl" class="absolute bottom-14 left-7 will-change-transform sm:bottom-20 sm:left-10">
           <p class="mono text-xs tracking-[0.25em] text-white/70 [text-shadow:0_1px_6px_rgba(0,0,0,.5)]">{{ band.slug.toUpperCase() }}</p>
-          <h1 class="mt-2 text-6xl tracking-wide sm:text-7xl" style="text-shadow: 0 2px 24px rgba(0,0,0,.55)">{{ band.name }}</h1>
+          <img
+            v-if="!logoFailed"
+            :src="logoSrc"
+            :alt="band.name"
+            class="mt-3 h-20 w-auto max-w-[70vw] drop-shadow-[0_2px_16px_rgba(0,0,0,.65)] sm:h-28"
+            @error="logoFailed = true"
+          >
+          <h1 v-else class="mt-2 text-6xl tracking-wide sm:text-7xl" style="text-shadow: 0 2px 24px rgba(0,0,0,.55)">{{ band.name }}</h1>
           <p class="mono mt-4 text-[10px] tracking-[0.3em] text-white/60">SCROLL — 継続表示 ↧</p>
         </div>
       </div>
-    </div>
-
-    <!-- 无图回退：渐变头图（原样式） -->
-    <div v-else class="shine font-display relative flex h-80 flex-col justify-end overflow-hidden rounded-xl p-7 text-white md:h-[26rem]" :style="{ background: gradientOf }">
-      <p class="mono text-xs tracking-[0.25em] text-white/70">{{ band.slug.toUpperCase() }}</p>
-      <h1 class="mt-2 text-5xl tracking-wide sm:text-6xl" style="text-shadow: 0 2px 18px rgba(0,0,0,.45)">{{ band.name }}</h1>
     </div>
     <p class="mt-5 max-w-2xl text-sm leading-relaxed text-dim">{{ band.description }}</p>
 
