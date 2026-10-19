@@ -154,7 +154,7 @@ onBeforeUnmount(() => clearInterval(timer))
   </div>
 
   <div v-else-if="event" class="wrap py-8">
-    <PageBack label="返回演出列表" fallback="/events" class="mb-6 inline-flex" />
+    <PageBack label="返回演出列表" fallback="/events" />
 
     <!-- 头部：海报 + 信息 -->
     <div class="grid gap-6 md:grid-cols-[280px_1fr]">

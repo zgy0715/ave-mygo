@@ -19,7 +19,7 @@ onMounted(async () => {
 
 <template>
   <div class="wrap py-8">
-    <PageBack label="返回" fallback="/" class="mb-4 inline-flex" />
+    <PageBack label="返回" fallback="/" />
     <div class="section-head">
       <div>
         <p class="micro-accent mb-1.5">MY — PROFILE</p>

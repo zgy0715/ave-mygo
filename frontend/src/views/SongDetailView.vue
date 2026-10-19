@@ -66,7 +66,7 @@ function onPlay() {
   </div>
 
   <div v-else-if="song" class="wrap py-8">
-    <PageBack label="返回歌曲库" fallback="/songs" class="mb-6 inline-flex" />
+    <PageBack label="返回歌曲库" fallback="/songs" />
 
     <div class="grid gap-8 md:grid-cols-[280px_1fr]">
       <!-- 左：封面 + 播放 -->

@@ -114,7 +114,7 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
   </div>
 
   <div v-else-if="band" class="wrap py-8">
-    <PageBack label="返回乐队列表" fallback="/bands" class="mb-5 inline-flex" />
+    <PageBack label="返回乐队列表" fallback="/bands" />
 
     <!-- 乐队头图：sticky 满屏画布，lerp 缓动 + 纯 transform（合成层，不掉帧） -->
     <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[240vh]">
