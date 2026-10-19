@@ -105,20 +105,14 @@ const gradientOf = computed(() => {
 // 乐队 id → 封面渐变 slug（sumimi=3，V11 起第三支乐队）
 const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'mygo')
 
-// ===== 头图媒体层：官方视频 → KV 图 → 渐变，三层回退（任一缺失不报错）=====
-const HERO_VIDEOS = { mygo: '/assets/band-mygo.mp4', 'ave-mujica': '/assets/band-mujica.mp4' }
-const heroVideo = computed(() => HERO_VIDEOS[band.value?.slug] || '')
-const videoFailed = ref(false)
+// ===== 头图媒体层：KV 图（band.logoUrl）→ 渐变，两层回退（任一缺失不报错）=====
 const imgFailed = ref(false)
 const logoFailed = ref(false)
 const logoSrc = computed(() => (band.value?.slug ? `/img/logo/${band.value.slug}.png` : ''))
-
-const useVideo = computed(() => !!heroVideo.value && !videoFailed.value)
-const useImage = computed(() => !useVideo.value && !imgFailed.value && !!band.value?.logoUrl)
+const useImage = computed(() => !imgFailed.value && !!band.value?.logoUrl)
 
 // 换乐队时重置回退状态
 watch(() => band.value?.slug, () => {
-  videoFailed.value = false
   imgFailed.value = false
   logoFailed.value = false
 })
@@ -137,25 +131,12 @@ watch(() => band.value?.slug, () => {
     <!-- 乐队头图：sticky 满屏画布（媒体链：官方视频 → KV 图 → 渐变），lerp 缓动 + 纯 transform -->
     <div ref="heroWrap" class="relative h-[240vh]">
       <div class="sticky top-0 h-[100svh] overflow-hidden">
-        <!-- 打底渐变：sumimi 主层 / 视频与图都缺失时的兜底 -->
+        <!-- 打底渐变：KV 图缺失时的兜底 -->
         <div class="absolute inset-0" :style="{ background: gradientOf }"></div>
 
-        <!-- ① 官方 MV 视频背景（mygo/mujica），静音循环自动播放 -->
-        <video
-          v-if="useVideo"
-          ref="mediaEl"
-          :src="heroVideo"
-          :alt="band.name"
-          autoplay
-          muted
-          loop
-          playsinline
-          class="absolute inset-x-0 top-0 h-[118%] w-full object-cover will-change-transform"
-          @error="videoFailed = true"
-        />
-        <!-- ② KV 图回退 -->
+        <!-- KV 图（band.logoUrl，官方主视觉） -->
         <img
-          v-else-if="useImage"
+          v-if="useImage"
           ref="mediaEl"
           :src="band.logoUrl"
           :alt="band.name"

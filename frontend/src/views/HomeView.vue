@@ -10,7 +10,6 @@ import { listSongs, listBands } from '@/api/song'
  * 首页 v4.1：满屏视频 Hero（保留）+ 数据区全部接真接口。
  * featured = 最早一场在售演出；数据失败时各区块独立降级。
  */
-const videoOk = ref(true)
 
 const events = ref([])
 const newSongs = ref([])
@@ -44,6 +43,21 @@ const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '
 /** 乐队卡 logo 加载失败 → 回退文字标题 */
 const logoErr = reactive({})
 
+/** 首页 Hero 双 MV：可切换；当前支失效自动跳另一支；全失效回退 aurora */
+const HERO_VIDEOS = [
+  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo.mp4' },
+  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica.mp4' },
+]
+const activeVideoId = ref('mygo')
+const videoErr = reactive({})
+const activeVideo = computed(() => HERO_VIDEOS.find((v) => v.id === activeVideoId.value))
+
+function onVideoError() {
+  videoErr[activeVideoId.value] = true
+  const other = HERO_VIDEOS.find((v) => v.id !== activeVideoId.value && !videoErr[v.id])
+  if (other) activeVideoId.value = other.id
+}
+
 /** 「11.01 Sun.」式日期：官网情报区同款格式 */
 const shortDate = computed(() => {
   if (!featured.value?.nextSessionTime) return ''
@@ -62,12 +76,14 @@ const gradientOf = (slug) =>
 <template>
   <!-- Hero：满屏视频 + 中央字标（anontokyo 构图，保留） -->
   <section class="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden">
+    <!-- Hero 双 MV 背景：chips 切换，失效自动跳另一支，全失效回退 aurora -->
     <video
-      v-if="videoOk"
+      v-if="activeVideo && !videoErr[activeVideo.id]"
+      :key="activeVideo.id"
       class="animate-kenburns absolute inset-0 h-full w-full object-cover"
-      :src="'/assets/hero.mp4'"
+      :src="activeVideo.src"
       autoplay muted loop playsinline
-      @error="videoOk = false"
+      @error="onVideoError"
     />
     <div v-else class="absolute inset-0 overflow-hidden bg-base" aria-hidden="true">
       <div class="animate-drift absolute -left-1/4 top-[-25%] h-[85vmax] w-[85vmax] rounded-full opacity-25 blur-3xl" style="background: radial-gradient(circle, #7bd, transparent 62%)" />
@@ -86,6 +102,24 @@ const gradientOf = (slug) =>
         BANDORI<span class="mx-1 align-top text-[0.4em] text-primary">✳</span>LIVE
       </h1>
       <p class="mono mt-4 text-sm tracking-[0.45em] text-dim" v-reveal="240">MYGO!!!!! ✳ AVE MUJICA</p>
+    </div>
+
+    <!-- MV 切换 chips：右下、情报带上方 -->
+    <div class="absolute bottom-24 right-6 z-10 flex gap-2 sm:bottom-28 sm:right-10">
+      <button
+        v-for="v in HERO_VIDEOS"
+        :key="v.id"
+        class="rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors duration-300"
+        :class="activeVideoId === v.id && !videoErr[v.id]
+          ? 'border-primary bg-primary text-white'
+          : videoErr[v.id]
+            ? 'border-line bg-surface/70 text-faint line-through'
+            : 'border-line bg-surface/80 text-dim hover:border-primary hover:text-primary'"
+        :disabled="videoErr[v.id]"
+        @click="activeVideoId = v.id"
+      >
+        {{ v.label }}
+      </button>
     </div>
 
     <div class="relative flex items-end justify-between gap-6 px-6 pb-7 sm:px-10">

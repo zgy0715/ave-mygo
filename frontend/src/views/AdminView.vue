@@ -2,7 +2,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import CoverArt from '@/components/CoverArt.vue'
 import { listAlbums, listBands } from '@/api/song'
-import { createAdminSong, deleteAdminSong, listAdminSongs, updateAdminSong } from '@/api/admin'
+import { createAdminSong, deleteAdminSong, listAdminSongs, updateAdminSong, uploadHeroVideo } from '@/api/admin'
 
 /**
  * 管理端 · 歌曲管理（仅 ADMIN，路由守卫拦截）。
@@ -46,9 +46,51 @@ async function load() {
   }
 }
 
+/* ---- 首页 Hero 背景视频管理（两支 MV，覆盖 /assets/band-{slot}.mp4） ---- */
+const HERO_SLOTS = [
+  { id: 'mygo', label: 'MyGO!!!!! MV（壱雫空）', path: '/assets/band-mygo.mp4' },
+  { id: 'mujica', label: 'Ave Mujica MV（KiLLKiSS）', path: '/assets/band-mujica.mp4' },
+]
+const heroStatus = reactive({})
+const heroUploading = reactive({})
+const heroErr = reactive({})
+
+// 就绪检测：GET 该路径，SPA fallback 会把缺失文件回成 200+text/html，
+// 所以按 content-type 判断而非状态码
+async function checkHero(slot) {
+  const s = HERO_SLOTS.find((h) => h.id === slot)
+  heroStatus[slot] = 'checking'
+  try {
+    const r = await fetch(s.path)
+    heroStatus[slot] = (r.headers.get('content-type') || '').includes('video') ? 'ok' : 'missing'
+  } catch {
+    heroStatus[slot] = 'missing'
+  }
+}
+
+async function uploadHero(slot, e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+  if (file.type !== 'video/mp4') { heroErr[slot] = '只支持 MP4 格式'; return }
+  if (file.size > 100 * 1024 * 1024) { heroErr[slot] = '文件超过 100MB'; return }
+  heroErr[slot] = ''
+  heroUploading[slot] = true
+  try {
+    await uploadHeroVideo(slot, file)
+    heroErr[slot] = ''
+  } catch (err) {
+    heroErr[slot] = err.message
+  } finally {
+    heroUploading[slot] = false
+    checkHero(slot)
+  }
+}
+
 onMounted(async () => {
   load()
   try { bands.value = await listBands() } catch { /* 下拉失败不阻塞 */ }
+  HERO_SLOTS.forEach((s) => checkHero(s.id))
 })
 
 const bandName = (bid) => bands.value.find((b) => b.id === bid)?.name || bid
@@ -294,6 +336,35 @@ async function submitCreate() {
       <button class="btn-ghost !px-3 !py-1.5 !text-xs" :disabled="page <= 1" @click="page--">← 上一页</button>
       <span class="tabular text-xs text-faint">{{ page }} / {{ totalPages }}</span>
       <button class="btn-ghost !px-3 !py-1.5 !text-xs" :disabled="page >= totalPages" @click="page++">下一页 →</button>
+    </div>
+
+    <!-- 首页 Hero 背景视频管理 -->
+    <div class="card mt-8 p-5">
+      <p class="micro-accent mb-1">ADMIN — HERO VIDEO</p>
+      <h2 class="serif text-lg font-semibold">首页背景视频</h2>
+      <p class="mt-1 text-xs text-faint">首页满屏 Hero 的两支背景 MV，上传 MP4 后立即覆盖生效（页面刷新可见）。</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div v-for="s in HERO_SLOTS" :key="s.id" class="rounded-lg border border-line p-4">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-semibold">{{ s.label }}</p>
+            <span
+              class="micro"
+              :class="heroStatus[s.id] === 'ok' ? '!text-green-700' : heroStatus[s.id] === 'missing' ? '!text-red-500' : ''"
+            >
+              {{ heroStatus[s.id] === 'ok' ? '✓ 已就位' : heroStatus[s.id] === 'missing' ? '✗ 缺失（回退 aurora）' : '检测中…' }}
+            </span>
+          </div>
+          <input
+            type="file"
+            accept="video/mp4"
+            class="mt-3 block w-full text-xs text-dim file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+            :disabled="heroUploading[s.id]"
+            @change="uploadHero(s.id, $event)"
+          >
+          <p v-if="heroUploading[s.id]" class="mt-1.5 text-xs text-dim">上传中…</p>
+          <p v-if="heroErr[s.id]" class="mt-1 text-xs text-red-500">{{ heroErr[s.id] }}</p>
+        </div>
+      </div>
     </div>
 
     <!-- 新建弹窗 -->
