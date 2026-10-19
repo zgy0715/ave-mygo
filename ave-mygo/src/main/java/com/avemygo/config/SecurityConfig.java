@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health",
                                 "/api/v1/songs/**", "/api/v1/albums/**",
                                 "/api/v1/events/**", "/api/v1/setlists/**",
-                                "/api/v1/bands/**").permitAll()
+                                "/api/v1/bands/**", "/api/v1/assistant/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()                  // 其余：必须登录
                 )
