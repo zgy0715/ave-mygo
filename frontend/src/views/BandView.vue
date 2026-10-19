@@ -218,7 +218,7 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
       <ul class="card divide-y divide-line overflow-hidden">
         <li v-for="(s, i) in songs" :key="s.id" v-reveal="i * 50">
           <RouterLink :to="`/songs/${s.id}`" class="flex items-center gap-3 p-3 transition hover:bg-elevated">
-            <CoverArt :title="s.title" :band="slugById(s.bandId)" class="h-10 w-10" rounded="rounded-md" />
+            <CoverArt :title="s.title" :band="slugById(s.bandId)" :cover-url="s.coverUrl || ''" class="h-10 w-10" rounded="rounded-md" />
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium">{{ s.title }}</p>
               <p class="truncate text-xs text-faint">{{ s.albumName || '未收录单曲' }}</p>

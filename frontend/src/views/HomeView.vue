@@ -155,8 +155,17 @@ const gradientOf = (slug) =>
         class="card group overflow-hidden"
         v-reveal="i * 120"
       >
-        <div class="shine font-display flex h-32 items-end p-5" :style="{ background: gradientOf(b.slug) }">
-          <p class="text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>
+        <!-- 乐队卡：官方图优先，缺图回退乐队渐变 -->
+        <div class="shine relative h-32 overflow-hidden" :style="{ background: gradientOf(b.slug) }">
+          <img
+            v-if="b.logoUrl"
+            :src="b.logoUrl"
+            :alt="b.name"
+            class="zoomable absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          >
+          <div v-if="b.logoUrl" class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+          <p class="display absolute bottom-5 left-5 text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>
         </div>
         <div class="flex items-center justify-between p-4">
           <p class="text-sm text-dim">{{ b.description?.slice(0, 24) }}…</p>

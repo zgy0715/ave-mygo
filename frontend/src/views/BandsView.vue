@@ -43,8 +43,17 @@ const gradientOf = (slug) =>
         :to="`/bands/${b.id}`"
         class="card group overflow-hidden hover:shadow-md"
       >
-        <div class="font-display flex h-32 items-end p-5 text-white" :style="{ background: gradientOf(b.slug) }">
-          <p class="text-3xl tracking-wide" style="text-shadow: 0 1px 8px rgba(0,0,0,.3)">{{ b.name }}</p>
+        <!-- 官方图优先，缺图回退乐队渐变 -->
+        <div class="shine relative h-32 overflow-hidden" :style="{ background: gradientOf(b.slug) }">
+          <img
+            v-if="b.logoUrl"
+            :src="b.logoUrl"
+            :alt="b.name"
+            class="zoomable absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          >
+          <div v-if="b.logoUrl" class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+          <p class="display absolute bottom-5 left-5 text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>
         </div>
         <div class="p-5">
           <p class="text-sm leading-relaxed text-dim">{{ b.description }}</p>

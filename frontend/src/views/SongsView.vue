@@ -132,7 +132,7 @@ function clearFilters() {
           :aria-label="`播放 ${s.title}`"
           @click="onPlay(s)"
         >
-          <CoverArt :title="s.title" :band="slugById(s.bandId)" class="h-11 w-11" rounded="rounded-md" />
+          <CoverArt :title="s.title" :band="slugById(s.bandId)" :cover-url="s.coverUrl || ''" class="h-11 w-11" rounded="rounded-md" />
           <span class="absolute inset-0 flex items-center justify-center rounded-md bg-black/45 text-white opacity-0 transition group-hover:opacity-100">
             <svg v-if="!(player.current?.id === s.id && player.isPlaying)" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
             <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
