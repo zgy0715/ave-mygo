@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { myOrders } from '@/api/order'
+import PageBack from '@/components/PageBack.vue'
 
 /** 个人中心：用户信息卡 + 快捷入口（收藏/歌单为 P1，先占位） */
 const auth = useAuthStore()
@@ -18,6 +19,7 @@ onMounted(async () => {
 
 <template>
   <div class="wrap py-8">
+    <PageBack label="返回" fallback="/" class="mb-4 inline-flex" />
     <div class="section-head">
       <div>
         <p class="micro-accent mb-1.5">MY — PROFILE</p>

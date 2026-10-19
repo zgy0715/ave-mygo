@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import PageBack from '@/components/PageBack.vue'
 import { register as apiRegister } from '@/api/auth'
 
 /**
@@ -52,7 +53,9 @@ async function submit() {
 
 <template>
   <div class="wrap flex justify-center py-14">
-    <div class="card w-full max-w-sm p-7">
+    <div class="w-full max-w-sm">
+      <PageBack label="返回" fallback="/" class="mb-4 inline-flex" />
+      <div class="card p-7">
       <!-- Tab 切换 -->
       <div class="mb-6 grid grid-cols-2 rounded-lg bg-base p-1 text-sm font-medium">
         <button class="rounded-md py-2 transition" :class="mode === 'login' ? 'bg-surface text-ink shadow-sm' : 'text-dim'" @click="mode = 'login'">登录</button>
@@ -79,6 +82,7 @@ async function submit() {
       </form>
 
       <p class="mt-4 text-center text-xs text-faint">已接入 JWT 认证 · 游客可浏览，登录后可购票</p>
+      </div>
     </div>
   </div>
 </template>

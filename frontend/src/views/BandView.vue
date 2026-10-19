@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import PageBack from '@/components/PageBack.vue'
 import { getBand } from '@/api/song'
 import { listSongs } from '@/api/song'
 
@@ -113,6 +114,8 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
   </div>
 
   <div v-else-if="band" class="wrap py-8">
+    <PageBack label="返回乐队列表" fallback="/bands" class="mb-5 inline-flex" />
+
     <!-- 乐队头图：sticky 满屏画布，lerp 缓动 + 纯 transform（合成层，不掉帧） -->
     <div v-if="band.logoUrl" ref="heroWrap" class="relative h-[240vh]">
       <div class="sticky top-0 h-[100svh] overflow-hidden">

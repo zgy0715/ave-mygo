@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import PageBack from '@/components/PageBack.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getEvent, getSetlist } from '@/api/event'
 import { listBands } from '@/api/song'
@@ -153,7 +154,7 @@ onBeforeUnmount(() => clearInterval(timer))
   </div>
 
   <div v-else-if="event" class="wrap py-8">
-    <RouterLink to="/events" class="mb-6 inline-block text-sm text-dim transition hover:text-primary">← 返回演出列表</RouterLink>
+    <PageBack label="返回演出列表" fallback="/events" class="mb-6 inline-flex" />
 
     <!-- 头部：海报 + 信息 -->
     <div class="grid gap-6 md:grid-cols-[280px_1fr]">

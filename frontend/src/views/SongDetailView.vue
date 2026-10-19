@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import PageBack from '@/components/PageBack.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { getSong, listSongs } from '@/api/song'
@@ -65,7 +66,7 @@ function onPlay() {
   </div>
 
   <div v-else-if="song" class="wrap py-8">
-    <RouterLink to="/songs" class="mb-6 inline-block text-sm text-dim hover:text-primary">← 返回歌曲库</RouterLink>
+    <PageBack label="返回歌曲库" fallback="/songs" class="mb-6 inline-flex" />
 
     <div class="grid gap-8 md:grid-cols-[280px_1fr]">
       <!-- 左：封面 + 播放 -->
