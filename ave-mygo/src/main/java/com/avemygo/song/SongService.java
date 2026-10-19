@@ -44,7 +44,7 @@ public class SongService {
                 s.getId(), s.getTitle(), s.getBandId(),
                 bandNames.get(s.getBandId()), s.getAlbumId(),
                 s.getAlbumId() == null ? null : albumNames.get(s.getAlbumId()),
-                s.getDuration(), s.getCoverUrl(), s.getAudioUrl(),
+                s.getDuration(), s.getCoverUrl(), s.getAudioUrl(), s.getStreamUrl(),
                 s.getMvUrl(), s.getMvPlatform(), s.getTags(), s.getReleaseDate()));
     }
 
@@ -66,7 +66,7 @@ public class SongService {
                 album == null ? null : album.getName(),
                 album == null ? null : album.getType(),
                 s.getTrackNo(), s.getReleaseDate(), s.getDuration(),
-                s.getCoverUrl(), s.getAudioUrl(), s.getMvUrl(), s.getMvPlatform(),
+                s.getCoverUrl(), s.getAudioUrl(), s.getStreamUrl(), s.getMvUrl(), s.getMvPlatform(),
                 mvEmbedReady, s.getTags());
     }
 

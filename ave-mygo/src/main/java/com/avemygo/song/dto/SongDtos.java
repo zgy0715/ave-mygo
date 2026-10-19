@@ -11,7 +11,7 @@ public class SongDtos {
             Short bandId, String bandName,
             Long albumId, String albumName,
             Integer duration, String coverUrl,
-            String audioUrl, String mvUrl, String mvPlatform,
+            String audioUrl, String streamUrl, String mvUrl, String mvPlatform,
             String tags, LocalDate releaseDate
     ) {
     }
@@ -22,7 +22,7 @@ public class SongDtos {
             Short bandId, String bandName,
             Long albumId, String albumName, String albumType,
             Integer trackNo, LocalDate releaseDate, Integer duration,
-            String coverUrl, String audioUrl,
+            String coverUrl, String audioUrl, String streamUrl,
             String mvUrl, String mvPlatform, Boolean mvEmbedReady,
             String tags
     ) {

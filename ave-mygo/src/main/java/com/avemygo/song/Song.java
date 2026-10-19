@@ -59,6 +59,10 @@ public class Song {
     @Column(name = "audio_url")
     private String audioUrl;
 
+    /** 官方平台全曲收听页（网易云等，仅外链） */
+    @Column(name = "stream_url", length = 255)
+    private String streamUrl;
+
     @Column(name = "mv_url")
     private String mvUrl;
 
