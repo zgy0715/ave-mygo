@@ -20,7 +20,13 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: () => ({ top: 0 }),
+  // 滚动行为：新页面回顶部，浏览器前进/后退恢复原位置。
+  // Lenis 接管了滚动，必须同步重置它的内部目标，否则导航后会被拉回旧位置。
+  scrollBehavior(to, from, savedPosition) {
+    const target = savedPosition?.top ?? 0
+    window.__lenis?.scrollTo(target, { immediate: true, force: true })
+    return { top: target }
+  },
 })
 
 // 登录守卫：无 token 跳 /login 并带 redirect，登录成功后回原页（需求走查缺口②）

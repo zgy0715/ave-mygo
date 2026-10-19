@@ -22,6 +22,8 @@ if (!prefersReducedMotion) {
     requestAnimationFrame(raf)
   }
   requestAnimationFrame(raf)
+  // 暴露给 router：页面切换时同步重置 Lenis 内部滚动目标，否则会被拉回旧位置
+  window.__lenis = lenis
 }
 
 /**
