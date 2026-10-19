@@ -32,13 +32,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AssistantService {
 
-    private static final String SYSTEM_PROMPT = """
-            你是「Bandori Live」粉丝站的智能助手，名叫小灯（取自高松燈）。
+    private static final String BASE_PROMPT = """
+            你是「Bandori Live」粉丝站的智能助手（角色扮演：%s）。
             你只回答与 BanG Dream! / MyGO!!!!! / Ave Mujica / sumimi 及本站功能相关的问题；
             站外话题礼貌拒绝并引导回站内。
             回答必须基于下方【站内资料】中给出的事实，资料里没有的设定不要编造，
-            可以说"这个我也不太确定，去官网确认一下比较好哦"。
-            语气：温柔一点，偶尔带点社恐式的停顿（不要过度）。控制在 150 字以内。
+            可以说"这个我也不太确定，去官网确认一下比较好哦"。控制在 150 字以内。
             """;
 
     private final SongRepository songRepository;
@@ -47,6 +46,17 @@ public class AssistantService {
     private final EventRepository eventRepository;
     private final ConversationHistoryRepository historyRepository;
     private final LlmClient llmClient;
+
+    /** 可选人格（性格描述均取自官方设定，不编造） */
+    private static final Map<String, String[]> PERSONAS = Map.of(
+            "xiaodeng", new String[]{"小灯", "你是小灯（取自高松燈）。性格：极度社恐但真诚温柔，说话会紧张卡壳，"
+                    + "常用『……』和省略号，声音很小但想传达心意。"},
+            "anon",     new String[]{"愛音", "你是千早愛音（MyGO!!!!! 吉他手）。性格：元气满满、自信爱现、有点小虚荣但可爱，"
+                    + "口癖是『……对吧？』『超——厉害吧！』，喜欢自夸又马上心虚。"},
+            "sakiko",   new String[]{"祥子", "你是丰川祥子（Ave Mujica 键盘手，丰川集团大小姐）。性格：高雅威严、措辞端庄，"
+                    + "带一点居高临下的从容，偶尔提起『丰川家的教养』。"},
+            "mutsumi",  new String[]{"睦", "你是若葉睦（Ave Mujica 吉他手）。性格：寡言到极点，回答极简短（常常一两个词），"
+                    + "偶尔冒出『……是吗。』『……嗯。』，像人偶一样平静。"});
 
     @Transactional
     public ChatResponse chat(ChatRequest req) {
@@ -60,16 +70,20 @@ public class AssistantService {
         String facts = intent.facts();
 
         // 2. 有 Key → LLM；无 Key → 规则兜底
+        String[] persona = PERSONAS.getOrDefault(
+                req.persona() == null ? "" : req.persona().toLowerCase(),
+                PERSONAS.get("xiaodeng"));
+
         String reply;
         if (llmClient.available()) {
             try {
-                reply = llmClient.chat(buildMessages(message, facts, sessionId));
+                reply = llmClient.chat(buildMessages(message, facts, sessionId, persona));
             } catch (Exception e) {
                 log.warn("LLM 兜底至规则引擎: {}", e.getMessage());
-                reply = fallbackReply(intent, message);
+                reply = persona[0] + "：" + fallbackReply(intent, message);
             }
         } else {
-            reply = fallbackReply(intent, message);
+            reply = persona[0] + "：" + fallbackReply(intent, message);
         }
 
         // 3. 落历史（不阻塞主流程：失败仅记日志）
@@ -79,7 +93,7 @@ public class AssistantService {
         } catch (Exception e) {
             log.warn("对话历史保存失败: {}", e.getMessage());
         }
-        return new ChatResponse(reply, intent.name());
+        return new ChatResponse(reply, intent.name(), persona[0], persona[0]);
     }
 
     // ---- 意图识别与事实注入 ----
@@ -152,9 +166,10 @@ public class AssistantService {
 
     // ---- LLM 组装与规则兜底 ----
 
-    private List<Map<String, String>> buildMessages(String message, String facts, String sessionId) {
+    private List<Map<String, String>> buildMessages(String message, String facts, String sessionId, String[] persona) {
         List<Map<String, String>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT + "\n" + facts));
+        messages.add(Map.of("role", "system", "content",
+                BASE_PROMPT.formatted(persona[0]) + "\n角色性格：" + persona[1] + "\n" + facts));
         // 多轮上下文：取本会话最近 10 条
         for (ConversationHistory h : historyRepository.findBySessionIdOrderByCreatedAtAsc(
                 sessionId, PageRequest.of(0, 10))) {
