@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { chatWithAssistant } from '@/api/assistant'
 
