@@ -156,13 +156,14 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
           class="group relative overflow-hidden rounded-lg"
           style="aspect-ratio: 1 / 1.9"
         >
-          <!-- 立牌面：渐变底永远渲染（官方立绘是透明底 PNG），立绘叠加其上 -->
+          <!-- 立牌面：渐变底永远渲染（官方立绘是透明底 PNG），立绘叠加其上
+               立绘锚定：底边 = 文字块顶（7.25rem），left-1/2 + w-auto 保证水平真居中 -->
           <div class="shine absolute inset-0 flex flex-col" :style="{ background: gradientOf }">
             <img
               v-if="m.avatarUrl"
               :src="m.avatarUrl"
               :alt="m.nameJa"
-              class="absolute inset-x-0 bottom-0 z-[1] h-[92%] w-full object-contain object-bottom"
+              class="absolute bottom-[7.25rem] left-1/2 z-[1] h-[calc(100%-7.5rem)] w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
             >
             <template v-if="!m.avatarUrl">
               <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
