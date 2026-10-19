@@ -94,9 +94,23 @@ function onKeydown(e) {
       :class="player.current ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'"
       style="height: min(560px, 70vh)"
     >
-      <!-- 顶栏 -->
+      <!-- 顶栏：徽章 + 名称/状态 + 关闭 -->
       <div class="flex items-center justify-between border-b border-line px-4 py-3">
-        <p class="serif text-base font-semibold">小灯 <span class="micro-accent">✳ AI 助手</span></p>
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm" style="background: linear-gradient(135deg, #2c7da0, #6b4fa3)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
+              <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
+              <rect x="10.2" y="21.1" width="3.6" height="1.4" rx="0.7" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-bold leading-tight">小灯 <span class="micro-accent !text-[9px]">✳ AI 助手</span></p>
+            <p class="micro mt-0.5 flex items-center gap-1.5">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />在线 ONLINE
+            </p>
+          </div>
+        </div>
         <button class="cursor-pointer text-dim transition hover:text-ink" aria-label="收起" @click="open = false">✕</button>
       </div>
 
