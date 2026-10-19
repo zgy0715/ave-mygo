@@ -4,7 +4,13 @@
 -- 未命中者（未上架/命名不含关键词）保持 NULL：前端显示"暂无全曲链接"。
 -- =====================================================================
 
-ALTER TABLE `song` ADD COLUMN `stream_url` VARCHAR(255) NULL COMMENT '官方平台全曲收听页' AFTER `audio_url`;
+-- 幂等：列已存在则跳过（手动执行过的环境重跑不报错）
+SET @col_exists := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'song' AND COLUMN_NAME = 'stream_url');
+SET @ddl := IF(@col_exists = 0,
+    'ALTER TABLE `song` ADD COLUMN `stream_url` VARCHAR(255) NULL COMMENT ''官方平台全曲收听页'' AFTER `audio_url`',
+    'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 UPDATE song SET `stream_url` = 'https://music.163.com/#/song?id=2097485069' WHERE `id` = 1;   -- 迷星叫 -> 迷星叫
 UPDATE song SET `stream_url` = 'https://music.163.com/#/song?id=2097485075' WHERE `id` = 2;   -- 音一会 -> 音一会

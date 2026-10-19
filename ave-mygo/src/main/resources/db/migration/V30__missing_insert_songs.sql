@@ -10,4 +10,5 @@ INSERT INTO song (`id`, `title`, `band_id`, `mv_url`, `mv_platform`, `tags`, `st
 (61, '八芒星ダンス', 2,
  'https://player.bilibili.com/player.html?ep_id=1664378&autoplay=0&danmaku=0', 'BILIBILI', '暗,动画插曲', 1),
 (62, '人間になりたいうたII', 1,
- 'https://player.bilibili.com/player.html?ep_id=1456209&autoplay=0&danmaku=0', 'BILIBILI', 'CRYCHIC,动画插曲', 1);
+ 'https://player.bilibili.com/player.html?ep_id=1456209&autoplay=0&danmaku=0', 'BILIBILI', 'CRYCHIC,动画插曲', 1)
+ON DUPLICATE KEY UPDATE `mv_url` = VALUES(`mv_url`), `title` = VALUES(`title`);
