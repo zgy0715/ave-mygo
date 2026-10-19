@@ -24,3 +24,9 @@ logging:
   level:
     com.avemygo: DEBUG
     org.hibernate.SQL: DEBUG        # 开发期打印 SQL，上线前改 INFO
+
+# AI 助手 LLM：默认本机 Ollama（自动探测模型）；可切云端——LLM_BASE_URL/LLM_API_KEY/LLM_MODEL 覆盖
+llm:
+  base-url: ${LLM_BASE_URL:http://localhost:11434/v1/chat/completions}
+  model: ${LLM_MODEL:}
+  api-key: ${LLM_API_KEY:}
