@@ -163,7 +163,7 @@ const slugById = (id) => ({ 1: 'mygo', 2: 'ave-mujica', 3: 'sumimi' }[id] || 'my
               v-if="m.avatarUrl"
               :src="m.avatarUrl"
               :alt="m.nameJa"
-              class="absolute bottom-[7.25rem] left-1/2 z-[1] h-[calc(100%-7.5rem)] w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
+              class="absolute bottom-[7.25rem] left-1/2 z-[1] h-[calc(100%-9rem)] w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
             >
             <template v-if="!m.avatarUrl">
               <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
