@@ -17,20 +17,37 @@ const loading = ref(false)
 const error = ref('')
 const listEl = ref(null)
 
-/* ---- 人格：xiaodeng 缺省；切换保留会话并插系统提示气泡 ---- */
+/* ---- 人格：xiaodeng 缺省；切换保留会话，各自口吻的问候语 ---- */
 const PERSONAS = [
-  { id: 'xiaodeng', name: '小灯' },
-  { id: 'anon', name: '愛音' },
-  { id: 'sakiko', name: '祥子' },
-  { id: 'mutsumi', name: '睦' },
+  {
+    id: 'xiaodeng', chip: '小灯',
+    gradient: 'linear-gradient(135deg, #2c7da0, #6b4fa3)',
+    greeting: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。',
+  },
+  {
+    id: 'anon', chip: 'Anon',
+    gradient: 'linear-gradient(135deg, #e8618c, #f89)',
+    greeting: '嗨嗨～我是千早愛音✳ 本站的歌曲、成员、演出，想聊什么都可以哦！先说好，MyGO 的票可是超——推荐的说！',
+  },
+  {
+    id: 'sakiko', chip: '小祥',
+    gradient: 'linear-gradient(135deg, #5d1031, #aa1656)',
+    greeting: '……豊川祥子。本站的事，问我便是。歌曲、成员、演出——吧台后面的事，也可以问哦。',
+  },
+  {
+    id: 'mutsumi', chip: '睦子米',
+    gradient: 'linear-gradient(135deg, #4a5568, #86a397)',
+    greeting: '……睦。歌曲的事，演出的事……想知道的话，说吧。我都在。',
+  },
 ]
 const persona = ref('xiaodeng')
-const personaNameById = (id) => PERSONAS.find((p) => p.id === id)?.name || '小灯'
+const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
 
 function switchPersona(p) {
   if (persona.value === p.id) return
   persona.value = p.id
-  messages.value.push({ role: 'system', text: `——换成 ${p.name} 在和你说话——` })
+  // 新人格以自己的口吻打招呼（取代干巴巴的系统行）
+  messages.value.push({ role: 'assistant', name: p.chip, text: p.greeting })
   scrollBottom()
 }
 
@@ -47,7 +64,7 @@ function getSessionId() {
 /* ---- 首次打开：欢迎语（不调接口） ---- */
 watch(open, (v) => {
   if (v && !messages.value.length) {
-    messages.value.push({ role: 'assistant', name: '小灯', text: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。' })
+    messages.value.push({ role: 'assistant', name: '小灯', text: PERSONAS[0].greeting })
     scrollBottom()
   }
 })
@@ -71,7 +88,7 @@ async function send() {
 
   try {
     const data = await chatWithAssistant({ message: text, sessionId: getSessionId(), persona: persona.value })
-    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || personaNameById(persona.value) })
+    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || currentPersona.value.chip })
   } catch {
     // 后端/Ollama 不可达：红字提示，不阻塞后续提问
     error.value = '小灯走神了，再问一次好不好？'
@@ -115,7 +132,7 @@ function onKeydown(e) {
       <div class="border-b border-line px-4 py-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm" style="background: linear-gradient(135deg, #2c7da0, #6b4fa3)">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm" :style="{ background: currentPersona.gradient }">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
                 <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
@@ -123,7 +140,7 @@ function onKeydown(e) {
               </svg>
             </div>
             <div>
-              <p class="text-sm font-bold leading-tight">小灯 <span class="micro-accent !text-[9px]">✳ AI 助手</span></p>
+              <p class="text-sm font-bold leading-tight">{{ currentPersona.chip }} <span class="micro-accent !text-[9px]">✳ AI 助手</span></p>
               <p class="micro mt-0.5 flex items-center gap-1.5">
                 <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />在线 ONLINE
               </p>
@@ -140,7 +157,7 @@ function onKeydown(e) {
             :class="persona === p.id ? 'bg-primary text-white' : 'bg-base text-dim hover:text-ink'"
             @click="switchPersona(p)"
           >
-            {{ p.name }}
+            {{ p.chip }}
           </button>
         </div>
       </div>
@@ -178,7 +195,7 @@ function onKeydown(e) {
           v-model="input"
           rows="1"
           class="input max-h-24 flex-1 resize-none"
-          placeholder="问小灯点什么…（回车发送）"
+          :placeholder="`问${currentPersona.chip}点什么…（回车发送）`"
           @keydown="onKeydown"
         />
         <button
