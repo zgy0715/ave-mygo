@@ -14,4 +14,5 @@ UPDATE song SET `mv_url` = 'https://player.bilibili.com/player.html?ep_id=118567
 -- 补录《焚音打》——3rd Single「壱雫空」C/W 曲（萌百 3rd 单曲 tracklist 核实）
 INSERT INTO song (`id`, `title`, `band_id`, `album_id`, `track_no`, `release_date`, `mv_url`, `mv_platform`, `tags`, `status`) VALUES
 (60, '焚音打', 1, 3, 3, '2023-04-12',
- 'https://player.bilibili.com/player.html?ep_id=1603811&autoplay=0&danmaku=0', 'BILIBILI', '暗,动画插曲', 1);
+ 'https://player.bilibili.com/player.html?ep_id=1603811&autoplay=0&danmaku=0', 'BILIBILI', '暗,动画插曲', 1)
+ON DUPLICATE KEY UPDATE `mv_url` = VALUES(`mv_url`);

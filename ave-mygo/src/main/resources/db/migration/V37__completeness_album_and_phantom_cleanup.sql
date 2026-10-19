@@ -8,7 +8,8 @@
 -- =====================================================================
 
 INSERT INTO album (`id`, `band_id`, `name`, `type`, `release_date`, `cover_url`) VALUES
-(15, 2, 'Completeness', 'ALBUM', '2025-04-23', '/img/covers/song-57.jpg');
+(15, 2, 'Completeness', 'ALBUM', '2025-04-23', '/img/covers/song-57.jpg')
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `cover_url` = VALUES(`cover_url`);
 
 -- 七首曲目挂入专辑（track_no 按官方曲序）
 UPDATE song SET `album_id` = 15, `track_no` = 1 WHERE `id` = 49;   -- KiLLKiSS
