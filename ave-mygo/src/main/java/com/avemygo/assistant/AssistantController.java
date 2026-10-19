@@ -2,6 +2,7 @@ package com.avemygo.assistant;
 
 import com.avemygo.assistant.dto.AssistantDtos.ChatRequest;
 import com.avemygo.assistant.dto.AssistantDtos.ChatResponse;
+import com.avemygo.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,7 @@ public class AssistantController {
     private final AssistantService assistantService;
 
     @PostMapping("/chat")
-    public ChatResponse chat(@Valid @RequestBody ChatRequest req) {
-        return assistantService.chat(req);
+    public ApiResponse<ChatResponse> chat(@Valid @RequestBody ChatRequest req) {
+        return ApiResponse.ok(assistantService.chat(req));
     }
 }

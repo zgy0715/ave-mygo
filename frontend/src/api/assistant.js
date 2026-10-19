@@ -5,4 +5,5 @@ import request from './request'
  * body: { message: string(≤500字), sessionId: string(前端生成，后端凭它续会话) }
  * 返回: { reply, intent: 'SONG_QA'|'EVENT_RECO'|'GENERAL'|'FALLBACK' }
  */
-export const chatWithAssistant = (body) => request.post('/assistant/chat', body)
+// 大模型首答可能较慢（本地模型加载），单独放宽到 60s
+export const chatWithAssistant = (body) => request.post('/assistant/chat', body, { timeout: 60_000 })
