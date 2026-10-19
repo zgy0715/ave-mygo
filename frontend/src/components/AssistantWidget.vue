@@ -17,6 +17,23 @@ const loading = ref(false)
 const error = ref('')
 const listEl = ref(null)
 
+/* ---- 人格：xiaodeng 缺省；切换保留会话并插系统提示气泡 ---- */
+const PERSONAS = [
+  { id: 'xiaodeng', name: '小灯' },
+  { id: 'anon', name: '愛音' },
+  { id: 'sakiko', name: '祥子' },
+  { id: 'mutsumi', name: '睦' },
+]
+const persona = ref('xiaodeng')
+const personaNameById = (id) => PERSONAS.find((p) => p.id === id)?.name || '小灯'
+
+function switchPersona(p) {
+  if (persona.value === p.id) return
+  persona.value = p.id
+  messages.value.push({ role: 'system', text: `——换成 ${p.name} 在和你说话——` })
+  scrollBottom()
+}
+
 /* ---- 会话 ID：首次生成，sessionStorage 持久 ---- */
 function getSessionId() {
   let id = sessionStorage.getItem('assistant_session_id')
@@ -30,7 +47,7 @@ function getSessionId() {
 /* ---- 首次打开：欢迎语（不调接口） ---- */
 watch(open, (v) => {
   if (v && !messages.value.length) {
-    messages.value.push({ role: 'assistant', text: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。' })
+    messages.value.push({ role: 'assistant', name: '小灯', text: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。' })
     scrollBottom()
   }
 })
@@ -53,8 +70,8 @@ async function send() {
   loading.value = true
 
   try {
-    const data = await chatWithAssistant({ message: text, sessionId: getSessionId() })
-    messages.value.push({ role: 'assistant', text: data.reply })
+    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(), persona: persona.value })
+    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || personaNameById(persona.value) })
   } catch {
     // 后端/Ollama 不可达：红字提示，不阻塞后续提问
     error.value = '小灯走神了，再问一次好不好？'
@@ -94,37 +111,54 @@ function onKeydown(e) {
       :class="player.current ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'"
       style="height: min(560px, 70vh)"
     >
-      <!-- 顶栏：徽章 + 名称/状态 + 关闭 -->
-      <div class="flex items-center justify-between border-b border-line px-4 py-3">
-        <div class="flex items-center gap-3">
-          <div class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm" style="background: linear-gradient(135deg, #2c7da0, #6b4fa3)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
-              <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
-              <rect x="10.2" y="21.1" width="3.6" height="1.4" rx="0.7" />
-            </svg>
+      <!-- 顶栏：徽章 + 名称/状态 + 人格 chips + 关闭 -->
+      <div class="border-b border-line px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm" style="background: linear-gradient(135deg, #2c7da0, #6b4fa3)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
+                <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
+                <rect x="10.2" y="21.1" width="3.6" height="1.4" rx="0.7" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-bold leading-tight">小灯 <span class="micro-accent !text-[9px]">✳ AI 助手</span></p>
+              <p class="micro mt-0.5 flex items-center gap-1.5">
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />在线 ONLINE
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-sm font-bold leading-tight">小灯 <span class="micro-accent !text-[9px]">✳ AI 助手</span></p>
-            <p class="micro mt-0.5 flex items-center gap-1.5">
-              <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />在线 ONLINE
-            </p>
-          </div>
+          <button class="cursor-pointer text-dim transition hover:text-ink" aria-label="收起" @click="open = false">✕</button>
         </div>
-        <button class="cursor-pointer text-dim transition hover:text-ink" aria-label="收起" @click="open = false">✕</button>
+        <!-- 人格切换 chips -->
+        <div class="mt-2.5 flex gap-1.5">
+          <button
+            v-for="p in PERSONAS"
+            :key="p.id"
+            class="cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200"
+            :class="persona === p.id ? 'bg-primary text-white' : 'bg-base text-dim hover:text-ink'"
+            @click="switchPersona(p)"
+          >
+            {{ p.name }}
+          </button>
+        </div>
       </div>
 
       <!-- 消息列表 -->
       <div ref="listEl" class="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
         <template v-for="(m, i) in messages" :key="i">
+          <!-- 系统提示：换人格 -->
+          <p v-if="m.role === 'system'" class="micro self-center !text-[9px]">{{ m.text }}</p>
           <!-- 用户：右对齐主色底 -->
-          <p v-if="m.role === 'user'" class="self-end rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
+          <p v-else-if="m.role === 'user'" class="self-end rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
             {{ m.text }}
           </p>
-          <!-- 助手：左对齐 card 底 -->
-          <p v-else class="card self-start max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm px-3.5 py-2 text-sm leading-relaxed">
-            {{ m.text }}
-          </p>
+          <!-- 助手：左对齐 card 底，顶部显示当前角色名 -->
+          <div v-else class="card self-start max-w-[85%] rounded-2xl rounded-bl-sm px-3.5 py-2">
+            <p v-if="m.name" class="micro-accent mb-1 !text-[9px]">{{ m.name }}</p>
+            <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ m.text }}</p>
+          </div>
         </template>
 
         <!-- 三点 loading -->
