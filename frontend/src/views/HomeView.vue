@@ -58,6 +58,9 @@ function onVideoError() {
   if (other) activeVideoId.value = other.id
 }
 
+/** 视频在播 → 白字透视频（暗雾压底）；aurora 兜底 → 保持墨字（浅底） */
+const videoActive = computed(() => !!activeVideo.value && !videoErr[activeVideo.value.id])
+
 /** 「11.01 Sun.」式日期：官网情报区同款格式 */
 const shortDate = computed(() => {
   if (!featured.value?.nextSessionTime) return ''
@@ -90,18 +93,36 @@ const gradientOf = (slug) =>
       <div class="animate-drift-slow absolute -right-1/4 bottom-[-30%] h-[75vmax] w-[75vmax] rounded-full opacity-20 blur-3xl" style="background: radial-gradient(circle, #f89, transparent 62%)" />
     </div>
 
-    <div class="absolute inset-0 bg-gradient-to-b from-base/70 via-base/45 to-base" />
+    <!-- 雾面：视频模式暗调压底（白字透视频），aurora 模式浅雾保黑字 -->
+    <div
+      class="absolute inset-0"
+      :class="videoActive
+        ? 'bg-gradient-to-b from-black/40 via-black/25 to-base'
+        : 'bg-gradient-to-b from-base/70 via-base/45 to-base'"
+    />
 
-    <p class="vertical-rl mono absolute right-5 top-1/2 hidden -translate-y-1/2 text-[10px] tracking-[0.35em] text-faint lg:block" aria-hidden="true">
+    <p
+      class="vertical-rl mono absolute right-5 top-1/2 hidden -translate-y-1/2 text-[10px] tracking-[0.35em] lg:block"
+      :class="videoActive ? 'text-white/50' : 'text-faint'"
+      aria-hidden="true"
+    >
       迷子でもいい、迷子でも進む — MYGO!!!!! ✳ AVE MUJICA
     </p>
 
     <div class="relative flex flex-1 flex-col items-center justify-center px-4 text-center">
-      <p class="micro-accent mb-4" v-reveal>BAN!DREAM! FAN PROJECT — 2026</p>
-      <h1 class="display text-[15vw] leading-[0.95] text-ink sm:text-[8.5rem]" v-reveal="120">
-        BANDORI<span class="mx-1 align-top text-[0.4em] text-primary">✳</span>LIVE
+      <p class="micro-accent mb-4" :class="videoActive && '!text-white/75'" v-reveal>BAN!DREAM! FAN PROJECT — 2026</p>
+      <h1
+        class="display text-[15vw] leading-[0.95] sm:text-[8.5rem]"
+        :class="videoActive
+          ? 'text-white/90 [text-shadow:0_2px_40px_rgba(0,0,0,.35)]'
+          : 'text-ink'"
+        v-reveal="120"
+      >
+        BANDORI<span class="mx-1 align-top text-[0.4em]" :class="videoActive ? 'text-white/80' : 'text-primary'">✳</span>LIVE
       </h1>
-      <p class="mono mt-4 text-sm tracking-[0.45em] text-dim" v-reveal="240">MYGO!!!!! ✳ AVE MUJICA</p>
+      <p class="mono mt-4 text-sm tracking-[0.45em] v-reveal" :class="videoActive ? 'text-white/75' : 'text-dim'" v-reveal="240">
+        MYGO!!!!! ✳ AVE MUJICA
+      </p>
     </div>
 
     <!-- MV 切换 chips：右下、情报带上方 -->
