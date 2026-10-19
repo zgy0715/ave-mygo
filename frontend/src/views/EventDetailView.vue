@@ -4,7 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
-import { getEvent } from '@/api/event'
+import { getEvent, getSetlist } from '@/api/event'
 import { listBands } from '@/api/song'
 import { createOrder, payOrder, cancelOrder } from '@/api/order'
 
@@ -27,6 +27,7 @@ const activeSessionId = ref(null)
 const session = computed(() => event.value?.sessions.find((s) => s.id === activeSessionId.value))
 
 const quantities = ref({})          // ticketTypeId → 数量
+const setlist = ref([])             // 当前场次歌单
 const ordering = ref(false)
 const buyErr = ref('')
 
@@ -65,6 +66,7 @@ async function load() {
     event.value = data
     activeSessionId.value = data.sessions[0]?.id ?? null
     bandSlug.value = bands.find((b) => b.name === data.bandName)?.slug || 'mygo'
+    loadSetlist()
   } catch (e) {
     errMsg.value = e.message
   } finally {
@@ -72,6 +74,21 @@ async function load() {
   }
 }
 load()
+
+async function loadSetlist() {
+  if (!activeSessionId.value) return (setlist.value = [])
+  try {
+    setlist.value = await getSetlist(activeSessionId.value)
+  } catch {
+    setlist.value = []   // 歌单拉取失败不阻塞购票主流程
+  }
+}
+
+// 切场次 → 歌单跟随
+function pickSession(id) {
+  activeSessionId.value = id
+  loadSetlist()
+}
 
 // ===== 下单 → 倒计时 → 支付/取消 =====
 async function buy(tt) {
@@ -141,7 +158,9 @@ onBeforeUnmount(() => clearInterval(timer))
     <!-- 头部：海报 + 信息 -->
     <div class="grid gap-6 md:grid-cols-[280px_1fr]">
       <div class="relative flex h-72 flex-col justify-between overflow-hidden rounded-xl p-5 text-white md:h-80">
-        <div class="absolute inset-0" :style="{ background: bandSlug === 'mygo' ? 'linear-gradient(135deg,#2c7da0,#1f6485)' : 'linear-gradient(135deg,#6b4fa3,#4a3573)' }"></div>
+        <img v-if="event.posterUrl" :src="event.posterUrl" :alt="event.title" class="absolute inset-0 h-full w-full object-cover">
+        <div v-else class="absolute inset-0" :style="{ background: bandSlug === 'mygo' ? 'linear-gradient(135deg,#2c7da0,#1f6485)' : 'linear-gradient(135deg,#6b4fa3,#4a3573)' }"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent"></div>
         <span class="mono relative text-xs tracking-[0.2em] opacity-80">{{ event.sessions[0] ? fmtTime(event.sessions[0].startTime) : '' }}</span>
         <p class="relative text-2xl leading-snug font-black" style="text-shadow: 0 1px 8px rgba(0,0,0,.3)">{{ event.title }}</p>
       </div>
@@ -162,6 +181,31 @@ onBeforeUnmount(() => clearInterval(timer))
     <!-- 简介 -->
     <p class="mt-6 max-w-3xl text-sm leading-relaxed text-dim">{{ event.description }}</p>
 
+    <!-- 本场歌单 -->
+    <section v-if="setlist.length" class="mt-10">
+      <div class="section-head">
+        <div>
+          <p class="micro-accent mb-1.5">SETLIST — {{ session?.name }}</p>
+          <h2 class="serif text-2xl font-semibold">本场歌单</h2>
+        </div>
+        <p class="micro">{{ setlist.length }} SONGS</p>
+      </div>
+      <ul class="card divide-y divide-line overflow-hidden">
+        <li v-for="item in setlist" :key="item.orderNo" class="flex items-center gap-3 p-3 transition hover:bg-elevated sm:px-4">
+          <span class="mono w-8 text-xs" :class="item.encore ? 'text-live' : 'text-faint'">
+            {{ item.encore ? '✳' : String(item.orderNo).padStart(2, '0') }}
+          </span>
+          <RouterLink :to="`/songs/${item.songId}`" class="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary">
+            {{ item.songTitle }}
+            <span v-if="item.encore" class="ml-2 rounded bg-live/10 px-1.5 py-0.5 text-[10px] font-bold text-live">ENCORE</span>
+          </RouterLink>
+          <span v-if="item.duration" class="tabular text-xs text-faint">
+            {{ Math.floor(item.duration / 60) }}:{{ String(item.duration % 60).padStart(2, '0') }}
+          </span>
+        </li>
+      </ul>
+    </section>
+
     <!-- 购票区 -->
     <section class="mt-8">
       <h2 class="mb-3 text-lg font-bold">选票</h2>
@@ -173,7 +217,7 @@ onBeforeUnmount(() => clearInterval(timer))
           :key="s.id"
           class="rounded-lg border px-4 py-2 text-sm transition"
           :class="activeSessionId === s.id ? 'border-primary text-primary' : 'border-line bg-transparent text-dim hover:border-line-strong'"
-          @click="activeSessionId = s.id"
+          @click="pickSession(s.id)"
         >
           {{ s.name }}<span class="tabular ml-1.5 text-xs text-faint">{{ fmtTime(s.startTime) }}</span>
         </button>

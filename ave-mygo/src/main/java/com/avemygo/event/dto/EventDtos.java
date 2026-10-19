@@ -39,4 +39,11 @@ public class EventDtos {
             List<SessionView> sessions
     ) {
     }
+
+    /** 演出曲视图：songTitle/duration 由 song 表联取 */
+    public record SetlistItemView(
+            Integer orderNo, Boolean encore,
+            Long songId, String songTitle, Integer duration
+    ) {
+    }
 }

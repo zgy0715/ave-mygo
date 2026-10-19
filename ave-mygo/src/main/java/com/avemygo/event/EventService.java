@@ -4,9 +4,12 @@ import com.avemygo.common.BizException;
 import com.avemygo.event.dto.EventDtos.EventDetail;
 import com.avemygo.event.dto.EventDtos.EventItem;
 import com.avemygo.event.dto.EventDtos.SessionView;
+import com.avemygo.event.dto.EventDtos.SetlistItemView;
 import com.avemygo.event.dto.EventDtos.TicketTypeView;
 import com.avemygo.song.Band;
 import com.avemygo.song.BandRepository;
+import com.avemygo.song.Song;
+import com.avemygo.song.SongRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +36,8 @@ public class EventService {
     private final LiveSessionRepository sessionRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final BandRepository bandRepository;
+    private final SongRepository songRepository;
+    private final SetlistItemRepository setlistItemRepository;
 
     /** 前台演出列表（DRAFT 永远不可见） */
     public Page<EventItem> list(String status, Short bandId, int page, int pageSize) {
@@ -97,5 +102,27 @@ public class EventService {
 
     private static <T, K> Map<K, List<T>> group(List<T> list, Function<T, K> key) {
         return list.stream().collect(Collectors.groupingBy(key));
+    }
+
+    /** 某场次的演出歌单：setlist 关联 song 取标题/时长，安可曲排最后由 order_no 天然保证 */
+    @Transactional(readOnly = true)
+    public List<SetlistItemView> setlist(Long sessionId) {
+        List<SetlistItem> items = setlistItemRepository.findBySessionIdOrderByOrderNoAsc(sessionId);
+        if (items.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Song> songsById = songRepository.findAllById(
+                        items.stream().map(SetlistItem::getSongId).toList())
+                .stream().collect(Collectors.toMap(Song::getId, Function.identity()));
+        return items.stream()
+                .map(i -> {
+                    Song song = songsById.get(i.getSongId());
+                    return new SetlistItemView(
+                            i.getOrderNo(), i.getIsEncore() == (byte) 1,
+                            i.getSongId(),
+                            song != null ? song.getTitle() : "(未知曲目)",
+                            song != null ? song.getDuration() : null);
+                })
+                .toList();
     }
 }

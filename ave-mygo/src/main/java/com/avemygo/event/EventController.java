@@ -3,7 +3,9 @@ package com.avemygo.event;
 import com.avemygo.common.ApiResponse;
 import com.avemygo.event.dto.EventDtos.EventDetail;
 import com.avemygo.event.dto.EventDtos.EventItem;
+import com.avemygo.event.dto.EventDtos.SetlistItemView;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,5 +37,11 @@ public class EventController {
     @GetMapping("/{id}")
     public ApiResponse<EventDetail> detail(@PathVariable Long id) {
         return ApiResponse.ok(eventService.detail(id));
+    }
+
+    /** 某场次的演出歌单（setlist_item + song 联取，公开可看） */
+    @GetMapping("/sessions/{sessionId}/setlist")
+    public ApiResponse<List<SetlistItemView>> setlist(@PathVariable Long sessionId) {
+        return ApiResponse.ok(eventService.setlist(sessionId));
     }
 }
