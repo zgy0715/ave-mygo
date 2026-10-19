@@ -1,13 +1,17 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores/player'
+import CoverArt from '@/components/CoverArt.vue'
+import { slugByBandId } from '@/utils/band'
 
 /**
  * 全局底部播放条：播放/暂停、进度拖拽、音量、上下曲、队列抽屉。
- * 进度条用原生 input[range]，够用且无依赖；后续可换自绘。
+ * 封面 = 当前曲官方封面（无图回退程序化渐变）。
  */
 const player = usePlayerStore()
 const showQueue = ref(false)
+
+const currentSlug = computed(() => slugByBandId(player.current?.bandId))
 
 const curText = computed(() => {
   const m = Math.floor(player.position / 60)
@@ -47,20 +51,22 @@ function onVolume(e) {
           >
             <span class="mono w-6 text-center text-xs text-faint">{{ i + 1 }}</span>
             <span class="flex-1 truncate text-sm">{{ s.title }}</span>
-            <span class="hidden text-xs text-faint sm:block">{{ s.album }}</span>
+            <span class="hidden text-xs text-faint sm:block">{{ s.albumName || '未收录单曲' }}</span>
             <button class="text-xs text-faint opacity-0 group-hover:opacity-100 hover:text-red-500" @click.stop="player.removeAt(i)">✕</button>
           </li>
         </ul>
       </div>
 
       <div class="wrap flex h-16 items-center gap-3 sm:gap-4">
-        <!-- 封面 + 曲名 -->
-        <div
-          class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md text-white sm:flex"
-          :style="{ background: 'linear-gradient(135deg, #2c7da0, #6b4fa3)' }"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" /></svg>
-        </div>
+        <!-- 封面 = 当前曲官方封面（缺图回退渐变） -->
+        <CoverArt
+          v-if="player.current"
+          :title="player.current.title"
+          :band="currentSlug"
+          :cover-url="player.current.coverUrl || ''"
+          class="hidden h-10 w-10 shrink-0 sm:flex"
+          rounded="rounded-md"
+        />
         <div class="w-28 min-w-0 sm:w-44">
           <p class="truncate text-sm font-semibold">{{ player.current.title }}</p>
           <p class="truncate text-xs text-faint">{{ player.current.album }}</p>

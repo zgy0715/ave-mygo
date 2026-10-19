@@ -33,8 +33,10 @@ export const usePlayerStore = defineStore('player', {
       this._start()
     },
 
-    /** 整单入队，从第 index 首开始播 */
+    /** 整单入队，从第 index 首开始播
+     *  点的若正是当前播放曲 → 暂停/恢复，而不是从头重播（点击即所得） */
     playQueue(list, index = 0) {
+      if (this.current?.id === list[index]?.id) return this.toggle()
       this.queue = [...list]
       this.currentIndex = index
       this._start()
@@ -43,6 +45,7 @@ export const usePlayerStore = defineStore('player', {
     _start() {
       this._teardown()
       this.position = 0
+      this._paused = false   // 换曲必须清除暂停标志，否则「暂停后切歌」进度冻结
       const song = this.current
       if (!song) return
 
