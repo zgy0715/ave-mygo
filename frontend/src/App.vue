@@ -8,6 +8,7 @@ import NavBar from '@/components/NavBar.vue'
 import SideMenu from '@/components/SideMenu.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import PlayerBar from '@/components/PlayerBar.vue'
+import AssistantWidget from '@/components/AssistantWidget.vue'
 </script>
 
 <template>
@@ -24,5 +25,6 @@ import PlayerBar from '@/components/PlayerBar.vue'
     </main>
     <SiteFooter />
     <PlayerBar />
+    <AssistantWidget />
   </div>
 </template>

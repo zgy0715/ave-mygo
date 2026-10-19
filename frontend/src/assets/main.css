@@ -241,5 +241,18 @@ body {
 
 .vertical-rl { writing-mode: vertical-rl; }
 
+/* AI 助手三点 loading */
+@keyframes dot-jump {
+  0%, 80%, 100% { transform: translateY(0); opacity: .4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+.assistant-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  animation: dot-jump 1.2s ease-in-out infinite;
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #d4d4da; border-radius: 4px; }

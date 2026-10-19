@@ -1,0 +1,147 @@
+<script setup>
+import { nextTick, ref, watch } from 'vue'
+import { usePlayerStore } from '@/stores/player'
+import { chatWithAssistant } from '@/api/assistant'
+
+/**
+ * 「小灯」AI 助手：右下角悬浮球 + 聊天抽屉。
+ * - 悬浮球 fixed 常驻（播放条出现时上移避开进度条）
+ * - sessionId：crypto.randomUUID() 首次生成存 sessionStorage，刷新续会话（历史在后端）
+ * - 发送 → 立即上屏用户消息 + 三点 loading → 响应替换为 reply；失败红字可重试
+ */
+const player = usePlayerStore()
+const open = ref(false)
+const input = ref('')
+const messages = ref([])
+const loading = ref(false)
+const error = ref('')
+const listEl = ref(null)
+
+/* ---- 会话 ID：首次生成，sessionStorage 持久 ---- */
+function getSessionId() {
+  let id = sessionStorage.getItem('assistant_session_id')
+  if (!id) {
+    id = crypto.randomUUID?.() || `s-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    sessionStorage.setItem('assistant_session_id', id)
+  }
+  return id
+}
+
+/* ---- 首次打开：欢迎语（不调接口） ---- */
+watch(open, (v) => {
+  if (v && !messages.value.length) {
+    messages.value.push({ role: 'assistant', text: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。' })
+    scrollBottom()
+  }
+})
+
+/* ---- 自动滚底 ---- */
+function scrollBottom() {
+  nextTick(() => listEl.value?.scrollTo({ top: listEl.value.scrollHeight, behavior: 'smooth' }))
+}
+watch([messages, loading], scrollBottom, { deep: true })
+
+/* ---- 发送 ---- */
+async function send() {
+  const text = input.value.trim()
+  if (!text || loading.value) return
+  if (text.length > 500) { error.value = '消息太长啦，控制在 500 字以内'; return }
+
+  messages.value.push({ role: 'user', text })
+  input.value = ''
+  error.value = ''
+  loading.value = true
+
+  try {
+    const data = await chatWithAssistant({ message: text, sessionId: getSessionId() })
+    messages.value.push({ role: 'assistant', text: data.reply })
+  } catch {
+    // 后端/Ollama 不可达：红字提示，不阻塞后续提问
+    error.value = '小灯走神了，再问一次好不好？'
+  } finally {
+    loading.value = false
+  }
+}
+
+function onKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+}
+</script>
+
+<template>
+  <!-- 悬浮球：播放条出现时上移避开进度条 -->
+  <button
+    class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
+    :class="player.current ? 'bottom-24' : 'bottom-6'"
+    :aria-expanded="open"
+    aria-label="小灯 AI 助手"
+    style="transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1)"
+    @click="open = !open"
+  >
+    <svg v-if="!open" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
+      <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
+      <rect x="10.2" y="21.1" width="3.6" height="1.4" rx="0.7" />
+    </svg>
+    <span v-else class="text-lg leading-none">✕</span>
+  </button>
+
+  <!-- 聊天抽屉：从底部弹起 -->
+  <Transition name="assistant">
+    <div
+      v-if="open"
+      class="fixed right-6 z-[42] flex w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-2xl"
+      :class="player.current ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'"
+      style="height: min(560px, 70vh)"
+    >
+      <!-- 顶栏 -->
+      <div class="flex items-center justify-between border-b border-line px-4 py-3">
+        <p class="serif text-base font-semibold">小灯 <span class="micro-accent">✳ AI 助手</span></p>
+        <button class="cursor-pointer text-dim transition hover:text-ink" aria-label="收起" @click="open = false">✕</button>
+      </div>
+
+      <!-- 消息列表 -->
+      <div ref="listEl" class="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
+        <template v-for="(m, i) in messages" :key="i">
+          <!-- 用户：右对齐主色底 -->
+          <p v-if="m.role === 'user'" class="self-end rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
+            {{ m.text }}
+          </p>
+          <!-- 助手：左对齐 card 底 -->
+          <p v-else class="card self-start max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm px-3.5 py-2 text-sm leading-relaxed">
+            {{ m.text }}
+          </p>
+        </template>
+
+        <!-- 三点 loading -->
+        <div v-if="loading" class="card flex items-center gap-1.5 self-start rounded-2xl rounded-bl-sm px-4 py-3">
+          <span class="assistant-dot" style="animation-delay: 0s" />
+          <span class="assistant-dot" style="animation-delay: .15s" />
+          <span class="assistant-dot" style="animation-delay: .3s" />
+        </div>
+
+        <!-- 错误红字（不阻塞后续提问） -->
+        <p v-if="error" class="self-start text-xs text-red-500">{{ error }}</p>
+      </div>
+
+      <!-- 输入区 -->
+      <div class="flex items-end gap-2 border-t border-line p-3">
+        <textarea
+          v-model="input"
+          rows="1"
+          class="input max-h-24 flex-1 resize-none"
+          placeholder="问小灯点什么…（回车发送）"
+          @keydown="onKeydown"
+        />
+        <button
+          class="btn-primary h-9 w-9 shrink-0 !px-0"
+          :disabled="loading || !input.trim()"
+          aria-label="发送"
+          @click="send"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21 23 12 2 3l4.5 7L14 12l-7.5 2z" /></svg>
+        </button>
+      </div>
+    </div>
+  </Transition>
+</template>
