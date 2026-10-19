@@ -13,6 +13,7 @@ const routes = [
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { title: '登录 / 注册' } },
   { path: '/orders', name: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { title: '我的订单', requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { title: '个人中心', requiresAuth: true } },
+  { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { title: '歌曲管理', requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue'), meta: { title: '页面不存在' } },
 ]
 
@@ -23,9 +24,14 @@ const router = createRouter({
 })
 
 // 登录守卫：无 token 跳 /login 并带 redirect，登录成功后回原页（需求走查缺口②）
+// 管理守卫：requiresAdmin 且非 ADMIN → 回首页（前端侧拦截，后端接口另有双重校验）
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth && !useAuthStore().isLogin) {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isLogin) {
     return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.requiresAdmin && auth.user?.role !== 'ADMIN') {
+    return { path: '/' }
   }
 })
 

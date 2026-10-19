@@ -23,6 +23,14 @@ const route = useRoute()
       <div class="flex items-center gap-3">
         <template v-if="auth.isLogin">
           <RouterLink
+            v-if="auth.user?.role === 'ADMIN'"
+            to="/admin"
+            class="micro hidden py-1 transition-colors duration-300 hover:text-primary sm:block"
+            :class="route.path.startsWith('/admin') && 'text-primary'"
+          >
+            管理 ADMIN
+          </RouterLink>
+          <RouterLink
             to="/orders"
             class="micro hidden py-1 transition-colors duration-300 hover:text-primary sm:block"
             :class="route.path.startsWith('/orders') && 'text-primary'"
