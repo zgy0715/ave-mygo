@@ -25,3 +25,15 @@ export const uploadHeroVideo = (slot, file) => {
   fd.append('file', file)
   return request.post('/admin/hero-videos', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
+
+/* ===== 演出 / 场次 / 票档（管理端）===== */
+export const listAdminEvents = (params) => request.get('/admin/events', { params })
+export const createAdminEvent = (body) => request.post('/admin/events', body)
+export const updateAdminEvent = (id, body) => request.patch(`/admin/events/${id}`, body)
+
+export const listAdminSessions = (eventId) => request.get(`/admin/events/${eventId}/sessions`)
+export const createAdminSession = (eventId, body) => request.post(`/admin/events/${eventId}/sessions`, body)
+export const updateAdminSession = (id, body) => request.patch(`/admin/sessions/${id}`, body)
+
+export const createTicketType = (sessionId, body) => request.post(`/admin/sessions/${sessionId}/ticket-types`, body)
+export const updateTicketType = (id, body) => request.patch(`/admin/ticket-types/${id}`, body)
