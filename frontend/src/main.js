@@ -12,6 +12,8 @@ import router from './router'
  * 尊重系统「减少动态效果」设置。
  */
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+// 滚动位置由 router 统一接管（savedPosition + 重试落位），关掉浏览器原生恢复避免打架
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
 if (!prefersReducedMotion) {
   const lenis = new Lenis({
     duration: 1.1,
