@@ -13,6 +13,9 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
     /** 场次下的启用票档（购票面板用） */
     List<TicketType> findBySessionIdAndStatusOrderByIdAsc(Long sessionId, Byte status);
 
+    /** 管理端：场次下全部票档（含停售） */
+    List<TicketType> findBySessionIdOrderByIdAsc(Long sessionId);
+
     /** 批量取多场次的票档（列表页防 N+1） */
     List<TicketType> findBySessionIdIn(Collection<Long> sessionIds);
 
