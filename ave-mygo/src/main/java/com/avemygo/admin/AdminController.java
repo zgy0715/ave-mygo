@@ -4,6 +4,7 @@ import com.avemygo.admin.dto.AdminDtos.AdminSongView;
 import com.avemygo.admin.dto.AdminDtos.SongPatch;
 import com.avemygo.admin.dto.AdminDtos.SongUpsert;
 import com.avemygo.common.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,12 +41,12 @@ public class AdminController {
     }
 
     @PostMapping("/songs")
-    public ApiResponse<AdminSongView> create(@RequestBody SongUpsert req) {
+    public ApiResponse<AdminSongView> create(@Valid @RequestBody SongUpsert req) {
         return ApiResponse.ok(adminService.create(req));
     }
 
     @PatchMapping("/songs/{id}")
-    public ApiResponse<AdminSongView> update(@PathVariable Long id, @RequestBody SongPatch req) {
+    public ApiResponse<AdminSongView> update(@PathVariable Long id, @Valid @RequestBody SongPatch req) {
         return ApiResponse.ok(adminService.update(id, req));
     }
 
