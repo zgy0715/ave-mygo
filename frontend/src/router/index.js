@@ -17,17 +17,35 @@ const routes = [
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue'), meta: { title: '页面不存在' } },
 ]
 
+/**
+ * 滚动恢复：浏览器前进/后退（popstate）时 savedPosition 才有值。
+ * 关键坑：目标页数据是异步拉的，恢复那一刻页面可能只有骨架屏 → 高度不够 →
+ * 目标位置被 clamp 成 0（表现为「返回后跳到顶部」）。所以这里只记录目标，
+ * 真正的恢复放到 afterEach 里带重试地执行，等布局高度长出来再落位。
+ */
+let pendingRestoreTop = null
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  // 滚动行为：新页面回顶部，浏览器前进/后退恢复原位置。
-  // Lenis 接管了滚动，必须同步重置它的内部目标，否则导航后会被拉回旧位置。
   scrollBehavior(to, from, savedPosition) {
-    const target = savedPosition?.top ?? 0
-    window.__lenis?.scrollTo(target, { immediate: true, force: true })
-    return { top: target }
+    pendingRestoreTop = savedPosition?.top ?? null
+    if (savedPosition) return savedPosition   // 先让路由落一次位（能成最好）
+    return { top: 0 }                          // 新导航：回顶部
   },
 })
+
+/** 重试恢复：高度不足时连续尝试，直到到位或超时（~1.2s） */
+function restoreScroll(target) {
+  let tries = 0
+  const apply = () => {
+    window.__lenis?.scrollTo(target, { immediate: true, force: true })
+    window.scrollTo({ top: target })
+    // 被 clamp（高度不够）时重试；到位即停
+    if (Math.abs(window.scrollY - target) > 4 && tries++ < 15) setTimeout(apply, 80)
+  }
+  apply()
+}
 
 // 登录守卫：无 token 跳 /login 并带 redirect，登录成功后回原页（需求走查缺口②）
 // 管理守卫：requiresAdmin 且非 ADMIN → 回首页（前端侧拦截，后端接口另有双重校验）
@@ -41,9 +59,14 @@ router.beforeEach((to) => {
   }
 })
 
-// 页面标题：历史记录里每一跳都可辨认
+// 页面标题 + 滚动落位
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} — Bandori / LIVE` : 'Bandori / LIVE'
+
+  const target = pendingRestoreTop
+  pendingRestoreTop = null
+  if (target != null) restoreScroll(target)
+  else window.__lenis?.scrollTo(0, { immediate: true, force: true })
 })
 
 export default router
