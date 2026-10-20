@@ -25,6 +25,9 @@ spring:
       max-request-size: 110MB
 
 logging:
+  # 结构化单行日志：时间 级别 [requestId] 线程 类名 - 内容
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-no-trace}] %thread %logger{36} - %msg%n"
   level:
     com.avemygo: DEBUG
     org.hibernate.SQL: DEBUG        # 开发期打印 SQL，上线前改 INFO

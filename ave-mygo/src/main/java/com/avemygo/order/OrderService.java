@@ -81,6 +81,8 @@ public class OrderService {
         order.setTotalAmount(ticketType.getPrice().multiply(BigDecimal.valueOf(qty)));
         order.setPayDeadline(LocalDateTime.now().plusMinutes(PAY_WINDOW_MINUTES));
         order = orderRepository.save(order);
+        log.info("下单成功 orderNo={} userId={} session={} type={} qty={} amount={}",
+                order.getOrderNo(), userId, session.getId(), ticketType.getId(), qty, order.getTotalAmount());
 
         return new OrderCreated(order.getOrderNo(), order.getStatus(),
                 order.getUnitPrice(), order.getTotalAmount(), order.getQuantity().intValue(),
@@ -121,6 +123,7 @@ public class OrderService {
         }
         order.setStatus("PAID");
         order.setPaidAt(LocalDateTime.now());
+        log.info("支付成功 orderNo={} userId={} amount={}", order.getOrderNo(), userId, order.getTotalAmount());
         return toView(order);
     }
 
@@ -134,6 +137,7 @@ public class OrderService {
         order.setStatus("CANCELLED");
         order.setCancelledAt(LocalDateTime.now());
         rollbackStock(order);
+        log.info("用户取消订单 orderNo={} userId={} qty={}", order.getOrderNo(), userId, order.getQuantity());
         return toView(order);
     }
 
