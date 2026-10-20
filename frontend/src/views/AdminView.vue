@@ -3,6 +3,7 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import CoverArt from '@/components/CoverArt.vue'
 import { listAlbums, listBands } from '@/api/song'
 import { createAdminSong, deleteAdminSong, listAdminSongs, updateAdminSong, uploadHeroVideo } from '@/api/admin'
+import AdminEventsPanel from './AdminEventsPanel.vue'
 
 /**
  * 管理端 · 歌曲管理（仅 ADMIN，路由守卫拦截）。
@@ -19,6 +20,9 @@ const page = ref(1)
 const pageSize = 10
 const loading = ref(true)
 const pageErr = ref('')
+
+/* ---- 标签页：songs 歌曲 / events 演出 ---- */
+const tab = ref('songs')
 
 /* ---- 筛选 ---- */
 const bandId = ref('')
@@ -213,6 +217,20 @@ async function submitCreate() {
 
 <template>
   <div class="wrap py-8">
+    <!-- 标签页：歌曲管理 / 演出管理 -->
+    <div class="mb-6 flex gap-1.5 border-b border-line pb-3">
+      <button
+        v-for="t in [{ id: 'songs', label: '歌曲管理' }, { id: 'events', label: '演出管理' }]"
+        :key="t.id"
+        class="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200"
+        :class="tab === t.id ? 'bg-primary text-white' : 'text-dim hover:text-ink'"
+        @click="tab = t.id"
+      >
+        {{ t.label }}
+      </button>
+    </div>
+
+    <div v-show="tab === 'songs'">
     <!-- 头部 -->
     <div class="section-head">
       <div>
@@ -366,6 +384,12 @@ async function submitCreate() {
         </div>
       </div>
     </div>
+
+    </div>
+    <!-- /歌曲管理标签页 -->
+
+    <!-- 演出管理标签页 -->
+    <AdminEventsPanel v-if="tab === 'events'" />
 
     <!-- 新建弹窗 -->
     <Teleport to="body">
