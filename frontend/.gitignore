@@ -39,3 +39,5 @@ __screenshots__/
 *.timestamp-*-*.mjs
 dist-verify
 .tmp-build
+.tmp-build*
+.tmp-check*
