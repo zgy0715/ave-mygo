@@ -23,8 +23,7 @@ const band = computed(() => BAND_STYLE[slug.value])
 const tags = computed(() => (props.song.tags || '').split(',').filter(Boolean))
 
 function onPlay() {
-  // 需求走查缺口①：游客点播放引导登录而非报错
-  if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: `/songs/${props.song.id}` } })
+  // 听歌不设登录门槛（游客可试听，登录只影响购票等操作）
   player.play(props.song)
 }
 </script>
