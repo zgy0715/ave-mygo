@@ -24,6 +24,27 @@ const loading = ref(true)
 const errMsg = ref('')
 
 const tags = computed(() => (song.value?.tags || '').split(',').filter(Boolean))
+
+/**
+ * MV 链接解析：
+ * - player.html?bvid=… → 可内嵌 iframe
+ * - player.html?ep_id=… → 番剧页禁止第三方嵌入（B 站会弹「无法正常播放」）→ 转成 bangumi 跳转
+ * - youtu.be / 其他外链 → 直接跳转
+ */
+const mvIsBangumi = computed(() => /[?&]ep_id=/.test(song.value?.mvUrl || ''))
+const mvEmbedUrl = computed(() => {
+  const u = song.value?.mvUrl || ''
+  return /player\.bilibili\.com/.test(u) && /[?&]bvid=/.test(u) ? u : ''
+})
+const mvExternalUrl = computed(() => {
+  const u = song.value?.mvUrl || ''
+  if (!u) return ''
+  const ep = u.match(/[?&]ep_id=(\d+)/)
+  if (ep) return `https://www.bilibili.com/bangumi/play/ep${ep[1]}`
+  const bv = u.match(/[?&]bvid=([A-Za-z0-9]+)/)
+  if (bv) return `https://www.bilibili.com/video/${bv[1]}`
+  return u
+})
 const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 
 // 乐队徽标：详情里只有 bandName，按名字映射配色
@@ -90,15 +111,39 @@ function onPlay() {
           <div><dt class="text-faint">标签</dt><dd class="mt-0.5 font-medium">{{ tags.join(' / ') || '—' }}</dd></div>
         </dl>
 
-        <!-- MV 区：B站/YouTube 按 mvPlatform 分流渲染 -->
+        <!-- MV 区：番剧 ep_id 不可外嵌，降级为跳转卡片；bvid 播放器正常内嵌 -->
         <div class="mt-8">
           <h2 class="mb-3 text-lg font-bold">MV</h2>
-          <div v-if="song.mvUrl && song.mvPlatform === 'BILIBILI'" class="aspect-video overflow-hidden rounded-xl border border-line">
-            <iframe :src="song.mvUrl" class="h-full w-full" allowfullscreen scrolling="no" />
-          </div>
-          <a v-else-if="song.mvUrl" :href="song.mvUrl" target="_blank" rel="noopener" class="btn-ghost inline-flex">
-            在 {{ song.mvPlatform === 'YOUTUBE' ? 'YouTube' : '外部' }} 观看 MV ↗
+
+          <!-- 可内嵌（player.html?bvid=…） -->
+          <template v-if="mvEmbedUrl">
+            <div class="aspect-video overflow-hidden rounded-xl border border-line">
+              <iframe :src="mvEmbedUrl" class="h-full w-full" allowfullscreen scrolling="no" />
+            </div>
+            <a :href="mvExternalUrl" target="_blank" rel="noopener" class="btn-ghost mt-2 inline-flex !py-1.5 !text-xs">
+              内嵌无法播放？在 B 站打开 ↗
+            </a>
+          </template>
+
+          <!-- 番剧页 / 其他外链：只给跳转，不硬塞 iframe -->
+          <a
+            v-else-if="mvExternalUrl"
+            :href="mvExternalUrl"
+            target="_blank"
+            rel="noopener"
+            class="card flex items-center gap-4 p-4 transition hover:shadow-md"
+          >
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white">▶</span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold">
+                在 B 站观看 MV
+                <span v-if="mvIsBangumi" class="micro ml-1.5 !text-[9px]">番剧页 · 不支持站内播放</span>
+              </span>
+              <span class="mt-0.5 block truncate text-xs text-faint">{{ mvExternalUrl }}</span>
+            </span>
+            <span class="text-primary">↗</span>
           </a>
+
           <EmptyState
             v-else
             icon="📺"
