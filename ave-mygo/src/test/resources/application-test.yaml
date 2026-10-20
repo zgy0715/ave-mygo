@@ -1,0 +1,19 @@
+# 测试 profile：指向独立测试库（真 MySQL，无需 Docker）
+# 每次测试启动 Flyway 建表，DDL 校验保持一致；测试数据由用例自行建/清。
+spring:
+  datasource:
+    url: ${DB_URL_TEST:jdbc:mysql://localhost:3306/bandori_live_test?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+logging:
+  level:
+    com.avemygo: WARN
+    org.hibernate.SQL: WARN
+    org.flywaydb: WARN
