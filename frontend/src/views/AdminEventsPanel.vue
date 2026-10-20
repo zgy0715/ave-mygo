@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import { listBands } from '@/api/song'
 import {
@@ -120,6 +120,32 @@ async function saveTicket(t) {
     ticketErr[t.id] = e.message
   } finally {
     ticketSaving.value = null
+  }
+}
+
+/* ===== 失败提示 toast（红字，3.2s 自动消失） ===== */
+const toast = ref('')
+let toastTimer = null
+function showToast(msg) {
+  toast.value = msg
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => (toast.value = ''), 3200)
+}
+onBeforeUnmount(() => clearTimeout(toastTimer))
+
+/* ===== 票档停售 / 恢复（就地切换，不用弹窗） ===== */
+const togglingId = ref(null)
+
+async function toggleTicketStatus(t) {
+  togglingId.value = t.id
+  const next = t.status === 1 ? 0 : 1
+  try {
+    await updateTicketType(t.id, { status: next })
+    t.status = next   // 就地更新：按钮文案与输入禁用状态随之切换
+  } catch (e) {
+    showToast(e.message)
+  } finally {
+    togglingId.value = null
   }
 }
 
@@ -334,24 +360,44 @@ async function submitTicket() {
                       <th class="py-1 pr-3 font-medium">库存</th>
                       <th class="py-1 pr-3 font-medium">已售</th>
                       <th class="py-1 pr-3 font-medium">余票</th>
+                      <th class="py-1 pr-3 font-medium">状态</th>
                       <th class="py-1 font-medium">操作</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="t in s.ticketTypes" :key="t.id" class="border-t border-line/60">
+                    <tr v-for="t in s.ticketTypes" :key="t.id" class="border-t border-line/60" :class="t.status === 0 && 'opacity-55'">
                       <td class="py-1.5 pr-3">{{ t.name }}</td>
                       <td class="py-1.5 pr-3">
-                        <input v-model="draftOf(t).price" type="number" min="0" step="0.01" class="input !w-24 !py-1 !text-xs">
+                        <input v-model="draftOf(t).price" type="number" min="0" step="0.01" class="input !w-24 !py-1 !text-xs" :disabled="t.status === 0">
                       </td>
                       <td class="py-1.5 pr-3">
-                        <input v-model="draftOf(t).totalStock" type="number" min="0" class="input !w-20 !py-1 !text-xs">
+                        <input v-model="draftOf(t).totalStock" type="number" min="0" class="input !w-20 !py-1 !text-xs" :disabled="t.status === 0">
                       </td>
                       <td class="py-1.5 pr-3 tabular text-dim">{{ t.soldCount }}</td>
                       <td class="py-1.5 pr-3 tabular" :class="t.remaining <= 0 ? 'text-red-500' : 'text-dim'">{{ t.remaining }}</td>
+                      <td class="py-1.5 pr-3">
+                        <span class="micro" :class="t.status === 1 ? '!text-green-700' : '!text-faint'">
+                          {{ t.status === 1 ? '在售' : '停售' }}
+                        </span>
+                      </td>
                       <td class="py-1.5">
-                        <button class="btn-primary !px-2.5 !py-1 !text-xs" :disabled="ticketSaving === t.id" @click="saveTicket(t)">
-                          {{ ticketSaving === t.id ? '保存中…' : '保存' }}
-                        </button>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap">
+                          <button
+                            class="btn-primary !px-2.5 !py-1 !text-xs"
+                            :disabled="t.status === 0 || ticketSaving === t.id"
+                            @click="saveTicket(t)"
+                          >
+                            {{ ticketSaving === t.id ? '保存中…' : '保存' }}
+                          </button>
+                          <button
+                            class="btn-ghost !px-2.5 !py-1 !text-xs"
+                            :class="t.status === 1 && '!border-red-200 !text-red-500'"
+                            :disabled="togglingId === t.id"
+                            @click="toggleTicketStatus(t)"
+                          >
+                            {{ togglingId === t.id ? '切换中…' : t.status === 1 ? '停售' : '恢复' }}
+                          </button>
+                        </div>
                         <p v-if="ticketErr[t.id]" class="mt-1 max-w-36 text-xs text-red-500">{{ ticketErr[t.id] }}</p>
                       </td>
                     </tr>
@@ -506,4 +552,12 @@ async function submitTicket() {
       </div>
     </div>
   </Teleport>
+
+  <!-- 操作失败 toast：红字，3.2s 自动消失 -->
+  <p
+    v-if="toast"
+    class="fixed bottom-8 left-1/2 z-[60] -translate-x-1/2 rounded-lg border border-red-200 bg-surface px-4 py-2 text-xs text-red-500 shadow-lg"
+  >
+    {{ toast }}
+  </p>
 </template>
