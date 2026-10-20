@@ -19,4 +19,14 @@ public interface EventRepository extends JpaRepository<LiveEvent, Long> {
     Page<LiveEvent> search(@Param("status") String status,
                            @Param("bandId") Short bandId,
                            Pageable pageable);
+
+    /** 管理端列表：包含 DRAFT/ENDED，可按状态与乐队筛选 */
+    @Query("""
+            SELECT e FROM LiveEvent e
+            WHERE (:status IS NULL OR e.status = :status)
+              AND (:bandId IS NULL OR e.bandId = :bandId)
+            """)
+    Page<LiveEvent> searchAdmin(@Param("status") String status,
+                                @Param("bandId") Short bandId,
+                                Pageable pageable);
 }

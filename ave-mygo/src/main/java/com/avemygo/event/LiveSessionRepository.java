@@ -12,4 +12,7 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
 
     /** 批量取多场演出的场次（列表页防 N+1） */
     List<LiveSession> findByEventIdIn(Collection<Long> eventIds);
+
+    /** 管理端列表：演出下有几场 */
+    long countByEventId(Long eventId);
 }
