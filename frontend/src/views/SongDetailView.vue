@@ -26,14 +26,18 @@ const errMsg = ref('')
 const tags = computed(() => (song.value?.tags || '').split(',').filter(Boolean))
 
 /**
- * MV 链接解析：
+ * MV 链接解析（三种来源）：
  * - player.html?bvid=… → 可内嵌 iframe
- * - player.html?ep_id=… → 番剧页禁止第三方嵌入（B 站会弹「无法正常播放」）→ 转成 bangumi 跳转
+ * - mvPlatform='BILIBILI_PAGE' 或 player.html?ep_id=… → 番剧播放页，B 站禁止第三方嵌入，
+ *   一律降级为跳转（ep_id 形式自动改写成 bangumi/play/epX）
  * - youtu.be / 其他外链 → 直接跳转
  */
-const mvIsBangumi = computed(() => /[?&]ep_id=/.test(song.value?.mvUrl || ''))
+const mvIsBangumi = computed(
+  () => song.value?.mvPlatform === 'BILIBILI_PAGE' || /[?&]ep_id=/.test(song.value?.mvUrl || ''),
+)
 const mvEmbedUrl = computed(() => {
   const u = song.value?.mvUrl || ''
+  if (song.value?.mvPlatform === 'BILIBILI_PAGE') return '' // 番剧页永不 iframe
   return /player\.bilibili\.com/.test(u) && /[?&]bvid=/.test(u) ? u : ''
 })
 const mvExternalUrl = computed(() => {
@@ -44,6 +48,11 @@ const mvExternalUrl = computed(() => {
   const bv = u.match(/[?&]bvid=([A-Za-z0-9]+)/)
   if (bv) return `https://www.bilibili.com/video/${bv[1]}`
   return u
+})
+const mvLinkLabel = computed(() => {
+  if (song.value?.mvPlatform === 'BILIBILI_PAGE') return '前往 B 站番剧观看'
+  if (song.value?.mvPlatform === 'YOUTUBE') return '在 YouTube 观看 MV'
+  return '在 B 站观看 MV'
 })
 const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 
@@ -136,7 +145,7 @@ function onPlay() {
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white">▶</span>
             <span class="min-w-0 flex-1">
               <span class="block text-sm font-semibold">
-                在 B 站观看 MV
+                {{ mvLinkLabel }} ↗
                 <span v-if="mvIsBangumi" class="micro ml-1.5 !text-[9px]">番剧页 · 不支持站内播放</span>
               </span>
               <span class="mt-0.5 block truncate text-xs text-faint">{{ mvExternalUrl }}</span>
