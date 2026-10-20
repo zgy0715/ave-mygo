@@ -128,10 +128,11 @@ const showEvent = ref(false)
 const eventSubmitting = ref(false)
 const eventFormErr = ref('')
 const eventErr = reactive({})
-const eventForm = reactive({ title: '', bandId: '', venue: '', status: 'DRAFT' })
+// 默认 PUBLISHED：DRAFT 在前台不可见，演示时最容易被误判成「建完看不到」
+const eventForm = reactive({ title: '', bandId: '', venue: '', status: 'PUBLISHED' })
 
 function openEvent() {
-  Object.assign(eventForm, { title: '', bandId: '', venue: '', status: 'DRAFT' })
+  Object.assign(eventForm, { title: '', bandId: '', venue: '', status: 'PUBLISHED' })
   clearErr(eventErr)
   eventFormErr.value = ''
   showEvent.value = true
@@ -167,11 +168,18 @@ const sessionSubmitting = ref(false)
 const sessionFormErr = ref('')
 const sessionErr = reactive({})
 const sessionEventId = ref(null)
-const sessionForm = reactive({ name: '', startTime: '', endTime: '', saleStartTime: '' })
+// 默认 ONSALE：NOT_OPEN 状态下用户买不了票；三值为后端仅有的合法枚举
+const sessionForm = reactive({ name: '', startTime: '', endTime: '', saleStartTime: '', status: 'ONSALE' })
+
+const SESSION_STATUS = [
+  { v: 'ONSALE', t: '立即开售 ONSALE' },
+  { v: 'NOT_OPEN', t: '未开售 NOT_OPEN' },
+  { v: 'ENDED', t: '已结束 ENDED' },
+]
 
 function openSession(ev) {
   sessionEventId.value = ev.id
-  Object.assign(sessionForm, { name: '', startTime: '', endTime: '', saleStartTime: '' })
+  Object.assign(sessionForm, { name: '', startTime: '', endTime: '', saleStartTime: '', status: 'ONSALE' })
   clearErr(sessionErr)
   sessionFormErr.value = ''
   showSession.value = true
@@ -186,6 +194,8 @@ async function submitSession() {
   if (!sessionForm.name.trim()) { sessionErr.name = '请填写场次名称'; return }
   if (!sessionForm.startTime) { sessionErr.startTime = '请选择开始时间'; return }
   if (!sessionForm.endTime) { sessionErr.endTime = '请选择结束时间'; return }
+  // 后端硬规则：结束必须晚于开始（本地先拦，省一次往返）
+  if (sessionForm.endTime <= sessionForm.startTime) { sessionErr.endTime = '结束时间必须晚于开演时间'; return }
   sessionSubmitting.value = true
   try {
     await createAdminSession(sessionEventId.value, {
@@ -193,6 +203,7 @@ async function submitSession() {
       startTime: toIso(sessionForm.startTime),
       endTime: toIso(sessionForm.endTime),
       saleStartTime: toIso(sessionForm.saleStartTime),
+      status: sessionForm.status,
     })
     showSession.value = false
     await loadSessions(sessionEventId.value)
@@ -394,10 +405,11 @@ async function submitTicket() {
           <div>
             <label class="mb-1 block text-xs font-medium text-dim">状态</label>
             <select v-model="eventForm.status" class="input">
-              <option value="DRAFT">草稿 DRAFT</option>
-              <option value="PUBLISHED">已发布 PUBLISHED</option>
+              <option value="PUBLISHED">已发布 PUBLISHED（前台可见）</option>
+              <option value="DRAFT">草稿 DRAFT（前台不可见）</option>
               <option value="ENDED">已结束 ENDED</option>
             </select>
+            <p class="mt-1 text-[11px] text-faint">默认已发布，草稿状态在前台完全看不到。</p>
           </div>
           <p v-if="eventFormErr" class="text-xs text-red-500">{{ eventFormErr }}</p>
           <div class="flex justify-end gap-2 pt-1">
@@ -436,7 +448,15 @@ async function submitTicket() {
           <div>
             <label class="mb-1 block text-xs font-medium text-dim">开售时间</label>
             <input v-model="sessionForm.saleStartTime" type="datetime-local" class="input">
+            <p class="mt-1 text-[11px] text-faint">不填默认当前时间。</p>
             <p v-if="sessionErr.saleStartTime" class="mt-1 text-xs text-red-500">{{ sessionErr.saleStartTime }}</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-medium text-dim">场次状态</label>
+            <select v-model="sessionForm.status" class="input">
+              <option v-for="s in SESSION_STATUS" :key="s.v" :value="s.v">{{ s.t }}</option>
+            </select>
+            <p class="mt-1 text-[11px] text-faint">只有「立即开售」状态下用户才能下单购票。</p>
           </div>
           <p v-if="sessionFormErr" class="text-xs text-red-500">{{ sessionFormErr }}</p>
           <div class="flex justify-end gap-2 pt-1">
@@ -474,7 +494,7 @@ async function submitTicket() {
           </div>
           <div>
             <label class="mb-1 block text-xs font-medium text-dim">每人限购</label>
-            <input v-model="tForm.maxPerUser" type="number" min="1" class="input" placeholder="选填，默认不限">
+            <input v-model="tForm.maxPerUser" type="number" min="1" class="input" placeholder="不填默认 4 人">
             <p v-if="ticketFormErrMap.maxPerUser" class="mt-1 text-xs text-red-500">{{ ticketFormErrMap.maxPerUser }}</p>
           </div>
           <p v-if="ticketFormErr" class="text-xs text-red-500">{{ ticketFormErr }}</p>
