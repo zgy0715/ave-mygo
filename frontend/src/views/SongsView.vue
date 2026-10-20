@@ -71,7 +71,7 @@ onMounted(async () => {
 const fmt = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 
 function onPlay(song) {
-  if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: '/songs' } })
+  // 听歌不设登录门槛（产品定位：游客可浏览 / 试听，登录才需要买票）
   // 列表播放 = 整个当前页结果入队，从该曲开始（歌单体验）
   player.playQueue(songs.value, songs.value.findIndex((s) => s.id === song.id))
 }

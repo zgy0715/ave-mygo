@@ -83,7 +83,7 @@ async function load() {
 onMounted(load)
 
 function onPlay() {
-  if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: route.fullPath } })
+  // 听歌不设登录门槛（游客可试听，登录只影响购票/收藏等）
   player.play(song.value)
 }
 </script>
