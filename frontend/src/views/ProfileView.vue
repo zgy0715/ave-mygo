@@ -2,17 +2,25 @@
 import { onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { myOrders } from '@/api/order'
+import { listFavorites } from '@/api/favorite'
 import PageBack from '@/components/PageBack.vue'
 
 /** 个人中心：用户信息卡 + 快捷入口（收藏/歌单为 P1，先占位） */
 const auth = useAuthStore()
 const orderCount = ref('…')
+const favoriteCount = ref('…')
 
 onMounted(async () => {
   try {
     orderCount.value = (await myOrders()).length
   } catch {
     orderCount.value = '—'
+  }
+  try {
+    const [s, e] = await Promise.all([listFavorites('SONG'), listFavorites('EVENT')])
+    favoriteCount.value = s.length + e.length
+  } catch {
+    favoriteCount.value = '—'
   }
 })
 </script>
@@ -38,8 +46,8 @@ onMounted(async () => {
     </div>
 
     <div class="mt-5 grid gap-4 sm:grid-cols-3">
-      <RouterLink v-if="false" to="/favorites" class="card p-5 hover:shadow-md">
-        <p class="text-2xl font-semibold text-primary">0</p>
+      <RouterLink to="/favorites" class="card p-5 hover:shadow-md">
+        <p class="text-2xl font-semibold text-primary tabular">{{ favoriteCount }}</p>
         <p class="mt-1 text-sm text-dim">我的收藏</p>
       </RouterLink>
       <RouterLink to="/orders" class="card p-5 hover:shadow-md">
@@ -48,7 +56,7 @@ onMounted(async () => {
       </RouterLink>
       <div class="card p-5 opacity-60">
         <p class="text-2xl font-black text-faint">P1</p>
-        <p class="mt-1 text-sm text-dim">收藏 / 歌单（待开发）</p>
+        <p class="mt-1 text-sm text-dim">歌单（开发中）</p>
       </div>
     </div>
   </div>

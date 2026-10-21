@@ -5,6 +5,7 @@ import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PageBack from '@/components/PageBack.vue'
 import LoginGate from '@/components/LoginGate.vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 import { isGateDismissed } from '@/utils/loginGate'
 import { useAuthStore } from '@/stores/auth'
 import { getEvent, getSetlist } from '@/api/event'
@@ -236,6 +237,10 @@ onBeforeUnmount(() => clearInterval(timer))
           <StatusBadge :status="event.status" />
         </div>
         <h1 class="serif mt-3 text-3xl font-semibold sm:text-4xl">{{ event.title }}</h1>
+        <div class="mt-3 flex items-center gap-2">
+          <FavoriteButton type="EVENT" :id="event.id" :size="16" />
+          <span class="text-xs text-faint">收藏这场演出</span>
+        </div>
         <dl class="mt-5 grid grid-cols-2 gap-y-2 text-sm">
           <div><dt class="text-faint">会场</dt><dd class="mt-0.5 font-medium">{{ event.venue }}</dd></div>
           <div><dt class="text-faint">状态</dt><dd class="mt-0.5 font-medium">{{ event.status }}</dd></div>

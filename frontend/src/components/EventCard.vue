@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 
 /**
  * 演出卡片：列表/首页通用（真接口字段）。
@@ -24,6 +25,10 @@ const datePart = (props.event.nextSessionTime || '').slice(5, 10).replace('-', '
     <!-- 海报面 -->
     <div class="relative flex h-40 flex-col justify-between p-4 text-white" :style="{ background: band.gradient }">
       <div class="absolute inset-0 opacity-20" style="background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.6) 45%, transparent 60%)" />
+      <!-- 收藏：海报右上 -->
+      <div class="absolute right-3 top-3 z-10 opacity-0 transition group-hover:opacity-100">
+        <FavoriteButton type="EVENT" :id="event.id" overlay :size="15" />
+      </div>
       <span class="mono relative text-[11px] tracking-[0.2em] opacity-80">{{ datePart }} · {{ event.venue }}</span>
       <p class="serif relative text-xl leading-snug font-semibold" style="text-shadow: 0 1px 10px rgba(0,0,0,.4)">
         {{ event.title }}

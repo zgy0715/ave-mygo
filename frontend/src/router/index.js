@@ -12,6 +12,7 @@ const routes = [
   { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue'), meta: { title: '演出详情' } },
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { title: '登录 / 注册' } },
   { path: '/orders', name: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { title: '我的订单', requiresAuth: true } },
+  { path: '/favorites', name: 'favorites', component: () => import('@/views/FavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { title: '个人中心', requiresAuth: true } },
   { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { title: '歌曲管理', requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue'), meta: { title: '页面不存在' } },

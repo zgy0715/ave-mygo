@@ -9,6 +9,18 @@ import SideMenu from '@/components/SideMenu.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import PlayerBar from '@/components/PlayerBar.vue'
 import AssistantWidget from '@/components/AssistantWidget.vue'
+import { watch } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFavoriteStore } from '@/stores/favorites'
+
+// 登录后一次性拉取收藏状态（供各处心形按钮即时判断）；登出时清空
+const auth = useAuthStore()
+const fav = useFavoriteStore()
+watch(
+  () => auth.isLogin,
+  (logged) => { logged ? fav.loadAll() : fav.clear() },
+  { immediate: true },
+)
 </script>
 
 <template>
