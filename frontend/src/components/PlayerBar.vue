@@ -203,11 +203,12 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l3 10 3-14 3 10h5" stroke-linecap="round" stroke-linejoin="round" /></svg>
             </button>
 
-            <!-- 音量：hover 展开 -->
-            <div class="group/vol relative hidden items-center lg:flex">
+            <!-- 音量：常驻滑条（不走 hover 弹层 —— 鼠标移动不会丢，也不会被遮挡） -->
+            <div class="hidden items-center gap-2 lg:flex">
               <button
-                class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-dim transition hover:text-ink"
+                class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-dim transition hover:text-ink"
                 :aria-label="player.muted ? '取消静音' : '静音'"
+                :title="player.muted ? '取消静音' : '静音'"
                 @click="player.toggleMute"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -218,24 +219,24 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
                 </svg>
               </button>
 
-              <div class="pointer-events-none absolute right-0 bottom-full mb-2 w-24 rounded-lg border border-line bg-surface p-2 opacity-0 shadow-md transition-opacity group-hover/vol:pointer-events-auto group-hover/vol:opacity-100">
-                <div
-                 
-                  class="relative flex h-5 cursor-pointer items-center"
-                  @pointerdown="onVolDown"
-                  @pointermove="onVolMove"
-                  @pointerup="onVolUp"
-                  @pointercancel="onVolUp"
-                >
-                  <div class="h-[3px] w-full rounded-full bg-line-strong/60">
-                    <div class="h-[3px] rounded-full bg-primary" :style="{ width: (player.muted ? 0 : player.volume * 100) + '%' }" />
-                  </div>
-                  <span
-                    class="absolute h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-primary"
-                    :style="{ left: (player.muted ? 0 : player.volume * 100) + '%' }"
-                  />
+              <div
+                class="group/vol relative flex h-6 w-24 cursor-pointer items-center"
+                @pointerdown="onVolDown"
+                @pointermove="onVolMove"
+                @pointerup="onVolUp"
+                @pointercancel="onVolUp"
+              >
+                <div class="h-[3px] w-full rounded-full bg-line-strong/60">
+                  <div class="h-[3px] rounded-full bg-primary" :style="{ width: (player.muted ? 0 : player.volume * 100) + '%' }" />
                 </div>
+                <span
+                  class="absolute h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-primary shadow transition-opacity"
+                  :class="volDragging ? 'opacity-100' : 'opacity-0 group-hover/vol:opacity-100'"
+                  :style="{ left: (player.muted ? 0 : player.volume * 100) + '%' }"
+                />
               </div>
+
+              <span class="tabular w-6 shrink-0 text-[10px] text-faint">{{ Math.round((player.muted ? 0 : player.volume) * 100) }}</span>
             </div>
 
             <!-- 队列 -->
