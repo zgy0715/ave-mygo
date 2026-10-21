@@ -62,6 +62,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)                 // 前后端分离 + token，无 CSRF 风险
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 例外：演出下的"提醒"写操作必须登录（其余 /events/** 都是公开读）
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/events/*/reminder").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/v1/events/*/reminder").authenticated()
                         // 公开区：认证 + 健康检查 + 内容浏览（游客可看，登录才能操作）
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/health", "/api/v1/ready",
                                 "/api/v1/songs/**", "/api/v1/albums/**",
