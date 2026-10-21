@@ -76,10 +76,13 @@ const expandedId = ref(null)
 const sessions = ref([])
 const sessLoading = ref(false)
 const sessErr = ref('')
+const sessionCache = new Map()   // eventId → sessions（避免每次展开/收起都重拉）
 
 async function toggleExpand(ev) {
   if (expandedId.value === ev.id) { expandedId.value = null; return }
   expandedId.value = ev.id
+  sessErr.value = ''
+  if (sessionCache.has(ev.id)) { sessions.value = sessionCache.get(ev.id); return }
   sessions.value = []
   await loadSessions(ev.id)
 }
@@ -89,6 +92,7 @@ async function loadSessions(eventId) {
   sessErr.value = ''
   try {
     sessions.value = await listAdminSessions(eventId)
+    sessionCache.set(eventId, sessions.value)   // 写回缓存（新建场次/票档后刷新也走这里）
   } catch (e) {
     sessErr.value = e.message
   } finally {
