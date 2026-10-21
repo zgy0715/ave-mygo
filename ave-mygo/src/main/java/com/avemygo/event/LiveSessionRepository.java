@@ -1,8 +1,12 @@
 package com.avemygo.event;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /** 场次数据访问。 */
 public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> {
@@ -15,4 +19,23 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
 
     /** 管理端列表：演出下有几场 */
     long countByEventId(Long eventId);
+
+    /**
+     * 状态机（定时任务）：到开售时间且未散场的 NOT_OPEN 场次 → ONSALE。
+     * 单条 UPDATE，影响行数即本次翻转数量；可重复执行（已 ONSALE 不会重复命中）。
+     */
+    @Modifying
+    @Query("""
+            UPDATE LiveSession s SET s.status = 'ONSALE'
+            WHERE s.status = 'NOT_OPEN' AND s.saleStartTime <= :now AND s.endTime > :now
+            """)
+    int activateDueSessions(@Param("now") LocalDateTime now);
+
+    /** 状态机：已过散场时间的未结束场次（NOT_OPEN/ONSALE）→ ENDED */
+    @Modifying
+    @Query("""
+            UPDATE LiveSession s SET s.status = 'ENDED'
+            WHERE s.status IN ('NOT_OPEN', 'ONSALE') AND s.endTime <= :now
+            """)
+    int finishEndedSessions(@Param("now") LocalDateTime now);
 }

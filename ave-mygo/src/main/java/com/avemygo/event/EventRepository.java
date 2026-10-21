@@ -2,7 +2,9 @@ package com.avemygo.event;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -29,4 +31,14 @@ public interface EventRepository extends JpaRepository<LiveEvent, Long> {
     Page<LiveEvent> searchAdmin(@Param("status") String status,
                                 @Param("bandId") Short bandId,
                                 Pageable pageable);
+
+    /** 状态机：已发布演出若所有场次都已散场 → ENDED */
+    @Modifying
+    @Query("""
+            UPDATE LiveEvent e SET e.status = 'ENDED'
+            WHERE e.status = 'PUBLISHED'
+              AND EXISTS (SELECT 1 FROM LiveSession s WHERE s.eventId = e.id)
+              AND NOT EXISTS (SELECT 1 FROM LiveSession s2 WHERE s2.eventId = e.id AND s2.endTime > :now)
+            """)
+    int finishEndedEvents(@Param("now") LocalDateTime now);
 }
