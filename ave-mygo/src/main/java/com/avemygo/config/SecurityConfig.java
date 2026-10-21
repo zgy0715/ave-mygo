@@ -33,13 +33,20 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** CORS：显式允许本地前端地址（开发 5173 + 生产预览 4173；禁用通配符） */
+    /**
+     * CORS：来源走配置（CORS_ALLOWED_ORIGINS，逗号分隔），生产改成正式域名即可，代码不用动。
+     * 默认值覆盖本地开发站 5173 与预览站 4173；仍禁用通配符。
+     */
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
+    CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}") String origins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173", "http://127.0.0.1:5173",   // vite dev
-                "http://localhost:4173", "http://127.0.0.1:4173"));  // vite preview（scripts/start.bat）
+        config.setAllowedOrigins(org.springframework.util.StringUtils.commaDelimitedListToStringArray(origins).length == 0
+                ? List.of()
+                : List.of(org.springframework.util.StringUtils.commaDelimitedListToStringArray(origins)));
+        if (config.getAllowedOrigins() == null || config.getAllowedOrigins().isEmpty()) {
+            throw new IllegalStateException("app.cors.allowed-origins 不能为空");
+        }
         config.setMaxAge(3600L);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
@@ -56,7 +63,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 公开区：认证 + 健康检查 + 内容浏览（游客可看，登录才能操作）
-                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/health",
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/health", "/api/v1/ready",
                                 "/api/v1/songs/**", "/api/v1/albums/**",
                                 "/api/v1/events/**", "/api/v1/setlists/**",
                                 "/api/v1/bands/**", "/api/v1/assistant/**", "/api/v1/search", "/api/v1/search/**",

@@ -23,14 +23,26 @@ spring:
     multipart:
       max-file-size: 100MB       # Hero 背景视频上传上限
       max-request-size: 110MB
+  # 本项目用 JWT 自校验，不需要 Spring 自动生成的内存账号（否则启动日志里会打一串随机密码）
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+# 应用级配置（生产只需改环境变量，不改代码）
+app:
+  cors:
+    # 逗号分隔；生产改成正式域名，例如 https://bandori-live.example.com
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
 
 logging:
   # 结构化单行日志：时间 级别 [requestId] 线程 类名 - 内容
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-no-trace}] %thread %logger{36} - %msg%n"
   level:
-    com.avemygo: DEBUG
-    org.hibernate.SQL: DEBUG        # 开发期打印 SQL，上线前改 INFO
+    root: INFO
+    com.avemygo: ${LOG_LEVEL:INFO}          # 本地排查想更详细：LOG_LEVEL=DEBUG
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
 
 # AI 助手 LLM：默认本机 Ollama（自动探测模型）；可切云端——LLM_BASE_URL/LLM_API_KEY/LLM_MODEL 覆盖
 llm:

@@ -17,3 +17,8 @@ logging:
     com.avemygo: WARN
     org.hibernate.SQL: WARN
     org.flywaydb: WARN
+
+# 测试默认关限流：否则批量用例会互相挤占配额
+app:
+  rate-limit:
+    enabled: false
