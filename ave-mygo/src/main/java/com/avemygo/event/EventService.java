@@ -83,11 +83,18 @@ public class EventService {
         }
 
         String bandName = bandRepository.findById(e.getBandId()).map(Band::getName).orElse(null);
-        List<SessionView> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(id).stream()
+        List<LiveSession> sessionList = sessionRepository.findByEventIdOrderByStartTimeAsc(id);
+        // 一次取回全部票档再按场次分组（原实现每场次一次查询，场次多时 N+1）
+        var typesBySession = sessionList.isEmpty() ? java.util.Map.<Long, java.util.List<TicketType>>of()
+                : ticketTypeRepository.findBySessionIdIn(
+                        sessionList.stream().map(LiveSession::getId).toList())
+                .stream().filter(t -> t.getStatus() == 1)
+                .collect(java.util.stream.Collectors.groupingBy(TicketType::getSessionId));
+        List<SessionView> sessions = sessionList.stream()
                 .map(s -> new SessionView(
                         s.getId(), s.getName(), s.getStartTime(), s.getEndTime(),
                         s.getStatus(), s.getSaleStartTime(),
-                        ticketTypeRepository.findBySessionIdAndStatusOrderByIdAsc(s.getId(), (byte) 1)
+                        typesBySession.getOrDefault(s.getId(), java.util.List.of())
                                 .stream().map(this::toView).toList()))
                 .toList();
 
