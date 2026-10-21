@@ -56,10 +56,10 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 公开区：认证 + 健康检查 + 内容浏览（游客可看，登录才能操作）
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/health",
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/health",
                                 "/api/v1/songs/**", "/api/v1/albums/**",
                                 "/api/v1/events/**", "/api/v1/setlists/**",
-                                "/api/v1/bands/**", "/api/v1/assistant/**",
+                                "/api/v1/bands/**", "/api/v1/assistant/**", "/api/v1/search", "/api/v1/search/**",
                                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()                  // 其余：必须登录
