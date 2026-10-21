@@ -60,11 +60,13 @@ export const usePlayerStore = defineStore('player', {
         })
       } else {
         // 演示模式：每 250ms 推进 0.25s
+        // 注意：duration 可能为 null（库里没填时长）→ 用 0 兜底，
+        // 否则 Math.min(x, undefined) 会算出 NaN，进度条直接崩
+        const dur = Number(song.duration) || 0
         this._timer = setInterval(() => {
-          if (!this._paused) {
-            this.position = Math.min(this.position + 0.25, song.duration)
-            if (this.position >= song.duration) this.next()
-          }
+          if (this._paused || !dur) return
+          this.position = Math.min(this.position + 0.25, dur)
+          if (this.position >= dur) this.next()
         }, 250)
       }
       this.isPlaying = true
