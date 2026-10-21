@@ -18,36 +18,70 @@ const routes = [
 ]
 
 /**
- * 滚动恢复：浏览器前进/后退（popstate）时 savedPosition 才有值。
- * 关键坑：目标页数据是异步拉的，恢复那一刻页面可能只有骨架屏 → 高度不够 →
- * 目标位置被 clamp 成 0（表现为「返回后跳到顶部」）。所以这里只记录目标，
- * 真正的恢复放到 afterEach 里带重试地执行，等布局高度长出来再落位。
+ * 滚动位置管理（不依赖 vue-router 内部的 savedPosition 时序）：
+ * - before 导航：把「离开的页面 + 当时的 scrollY」记进自己的 Map
+ * - popstate（浏览器/PageBack 返回）：用 Map 里的位置恢复
+ * - 恢复用 rAF 逐帧重试 2.5s：目标页数据异步到达前高度不足，一次性 scrollTo 会被 clamp 成 0
+ * - 用户一旦滚轮/触摸，立刻放弃恢复，不抢方向盘
  */
+const scrollMemo = new Map()
+let isPopNavigation = false
 let pendingRestoreTop = null
+
+// 后退/前进的标志：popstate 先于路由回调触发
+window.addEventListener('popstate', () => { isPopNavigation = true })
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior(to, from, savedPosition) {
     pendingRestoreTop = savedPosition?.top ?? null
-    if (savedPosition) return savedPosition   // 先让路由落一次位（能成最好）
-    return { top: 0 }                          // 新导航：回顶部
+    if (savedPosition) return savedPosition
+    return { top: 0 }
   },
 })
 
-/** 重试恢复：高度不足时连续尝试，直到到位或超时（~1.2s） */
+let cancelRestore = null
+
+/** 逐帧落位：高度不够时持续重试，到位或超时/用户干预即停 */
 function restoreScroll(target) {
-  let tries = 0
-  const apply = () => {
-    window.__lenis?.scrollTo(target, { immediate: true, force: true })
-    window.scrollTo({ top: target })
-    // 被 clamp（高度不够）时重试；到位即停
-    if (Math.abs(window.scrollY - target) > 4 && tries++ < 15) setTimeout(apply, 80)
+  cancelRestore?.()
+  const lenis = window.__lenis
+  if (!target || target <= 0) {
+    lenis?.scrollTo(0, { immediate: true, force: true })
+    return
   }
-  apply()
+
+  let stopped = false
+  const stop = () => { stopped = true; cleanup() }
+  const cleanup = () => {
+    window.removeEventListener('wheel', stop)
+    window.removeEventListener('touchstart', stop)
+    window.removeEventListener('keydown', stop)
+    cancelRestore = null
+  }
+  cancelRestore = stop
+  window.addEventListener('wheel', stop, { passive: true })
+  window.addEventListener('touchstart', stop, { passive: true })
+  window.addEventListener('keydown', stop)
+
+  const start = performance.now()
+  const tick = () => {
+    if (stopped) return
+    lenis?.scrollTo(target, { immediate: true, force: true })
+    window.scrollTo(0, target)
+    if (Math.abs(window.scrollY - target) <= 4 || performance.now() - start > 2500) { cleanup(); return }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
 }
 
-// 登录守卫：无 token 跳 /login 并带 redirect，登录成功后回原页（需求走查缺口②）
+// 离开前记录滚动位置（返回时用它还原，不依赖 vue-router savedPosition 的时序）
+router.beforeEach((to, from) => {
+  if (from.name && from.fullPath !== to.fullPath) scrollMemo.set(from.fullPath, window.scrollY)
+})
+
+// 登录守卫：无 token 跳 /login 并带 redirect，登录成功后回原页
 // 管理守卫：requiresAdmin 且非 ADMIN → 回首页（前端侧拦截，后端接口另有双重校验）
 router.beforeEach((to) => {
   const auth = useAuthStore()
@@ -63,10 +97,12 @@ router.beforeEach((to) => {
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} — Bandori / LIVE` : 'Bandori / LIVE'
 
-  const target = pendingRestoreTop
+  const pop = isPopNavigation
+  isPopNavigation = false
+  // 返回/前进：优先用自己缓存的位置（比 savedPosition 可靠），再用路由给的位置兜底
+  const target = (pop ? scrollMemo.get(to.fullPath) : undefined) ?? pendingRestoreTop ?? 0
   pendingRestoreTop = null
-  if (target != null) restoreScroll(target)
-  else window.__lenis?.scrollTo(0, { immediate: true, force: true })
+  restoreScroll(target)
 })
 
 export default router
