@@ -41,7 +41,10 @@ async function submit() {
       })
       await auth.login(username.value.trim(), password.value)
     }
-    router.push(route.query.redirect || '/')
+    // redirect 只接受站内路径（防 /\/evil.com 之类的开放跳转）；非法值回首页
+    const raw = route.query.redirect
+    const redirect = typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+    router.push(redirect)
   } catch (e) {
     // request.js 已把后端 message（如"用户名已存在"）转成可读 Error
     error.value = e.message
