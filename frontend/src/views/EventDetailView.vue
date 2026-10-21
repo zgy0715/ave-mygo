@@ -4,6 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PageBack from '@/components/PageBack.vue'
+import LoginGate from '@/components/LoginGate.vue'
+import { isGateDismissed } from '@/utils/loginGate'
 import { useAuthStore } from '@/stores/auth'
 import { getEvent, getSetlist } from '@/api/event'
 import { listBands } from '@/api/song'
@@ -136,8 +138,18 @@ function pickSession(id) {
 }
 
 // ===== 下单 → 倒计时 → 支付/取消 =====
+const gateOpen = ref(false)
+
+/** 需要登录的操作：优先弹引导弹窗；用户选过「随便逛逛」则直接跳登录 */
+function requireLogin(action) {
+  if (auth.isLogin) return true
+  if (isGateDismissed()) router.push({ path: '/login', query: { redirect: route.fullPath } })
+  else gateOpen.value = true
+  return false
+}
+
 async function buy(tt) {
-  if (!auth.isLogin) return router.push({ path: '/login', query: { redirect: route.fullPath } })
+  if (!requireLogin('购票')) return
   ordering.value = true
   buyErr.value = ''
   try {
@@ -346,4 +358,7 @@ onBeforeUnmount(() => clearInterval(timer))
       </template>
     </div>
   </div>
+
+  <!-- 游客购票引导 -->
+  <LoginGate v-model:open="gateOpen" action="购票" />
 </template>
