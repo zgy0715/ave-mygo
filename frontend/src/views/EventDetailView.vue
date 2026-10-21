@@ -65,7 +65,9 @@ async function load() {
   try {
     const [data, bands] = await Promise.all([getEvent(route.params.id), listBands()])
     event.value = data
-    activeSessionId.value = data.sessions[0]?.id ?? null
+    // 刷新时保留用户当前选中的场次（支付后重查余票不应把用户弹回第一场）
+    const prev = activeSessionId.value
+    activeSessionId.value = data.sessions.some((s) => s.id === prev) ? prev : (data.sessions[0]?.id ?? null)
     bandSlug.value = bands.find((b) => b.name === data.bandName)?.slug || 'mygo'
     loadSetlist()
   } catch (e) {
@@ -132,6 +134,7 @@ const countdownText = computed(() => {
 async function pay() {
   try {
     orderInfo.value = { ...orderInfo.value, ...(await payOrder(orderInfo.value.orderNo)) }
+    await load()    // 支付成功：重查演出，余票/已售立刻更新
   } catch (e) { buyErr.value = e.message }
 }
 
