@@ -22,6 +22,7 @@ const links = [
 ]
 const userLinks = [
   { to: '/favorites', label: 'FAVORITES', cn: '我的收藏' },
+  { to: '/playlists', label: 'PLAYLISTS', cn: '我的歌单' },
   { to: '/orders', label: 'ORDERS', cn: '我的订单' },
   { to: '/profile', label: 'PROFILE', cn: '个人中心' },
 ]
