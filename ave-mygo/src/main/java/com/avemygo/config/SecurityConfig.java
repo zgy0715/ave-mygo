@@ -33,11 +33,14 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** CORS：显式允许本地前端开发地址（生产改为正式域名，禁用通配符） */
+    /** CORS：显式允许本地前端地址（开发 5173 + 生产预览 4173；禁用通配符） */
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173", "http://127.0.0.1:5173",   // vite dev
+                "http://localhost:4173", "http://127.0.0.1:4173"));  // vite preview（scripts/start.bat）
+        config.setMaxAge(3600L);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
