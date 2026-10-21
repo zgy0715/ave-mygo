@@ -16,10 +16,6 @@ import { getSong, listSongs } from '@/api/song'
 const route = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
-const qqMusicUrl = computed(() =>
-  `https://y.qq.com/n/ryqq/search?w=${encodeURIComponent(`${song.value?.title || ''} ${song.value?.bandName || ''}`)}`)
-const biliSearchUrl = computed(() =>
-  `https://search.bilibili.com/all?keyword=${encodeURIComponent(`${song.value?.title || ''} ${song.value?.bandName || ''}`)}`)
 const mvLoaded = ref(false)      // MV 播放器需手动载入：载入会暂停底部播放器，避免双音轨
 const mvNotice = ref('')         // 互斥提示（谁让谁静音）
 const auth = useAuthStore()
@@ -158,20 +154,17 @@ watch(() => player.isPlaying, (playing) => {
           该曲暂无官方试听外链，可观看 MV 或前往官方平台
         </p>
 
-        <!-- 听全曲：三条路径并列（不托管完整音源，播放权限由各平台自己的账号决定） -->
-        <div class="mt-2 space-y-1.5">
-          <a v-if="song.streamUrl" :href="song.streamUrl" target="_blank" rel="noopener"
-             class="btn-ghost w-full !py-1.5 !text-xs">网易云收听完整版 ↗</a>
-          <button v-if="mvEmbedUrl" class="btn-ghost w-full !py-1.5 !text-xs" @click="loadMv">
-            用下方 MV 听全曲 ↓
-          </button>
-          <a :href="qqMusicUrl" target="_blank" rel="noopener" class="btn-ghost w-full !py-1.5 !text-xs">
-            在 QQ 音乐听（会员权益在此生效）↗
-          </a>
-          <a :href="biliSearchUrl" target="_blank" rel="noopener" class="btn-ghost w-full !py-1.5 !text-xs">
-            在 B 站搜索完整版 ↗
-          </a>
-        </div>
+        <!-- 听全曲：有官方外链直达，否则引导到 MV / B 站搜索 -->
+        <a v-if="song.streamUrl" :href="song.streamUrl" target="_blank" rel="noopener"
+           class="btn-ghost mt-2 w-full !py-1.5 !text-xs">收听完整版（官方平台）↗</a>
+        <button v-else-if="mvEmbedUrl" class="btn-ghost mt-2 w-full !py-1.5 !text-xs" @click="loadMv">
+          用下方 MV 听全曲 ↓
+        </button>
+        <a v-else
+           :href="`https://search.bilibili.com/all?keyword=${encodeURIComponent(song.title + ' ' + song.bandName)}`"
+           target="_blank" rel="noopener" class="btn-ghost mt-2 w-full !py-1.5 !text-xs">
+          在 B 站搜索完整版 ↗
+        </a>
       </div>
 
       <!-- 右：元信息 -->
