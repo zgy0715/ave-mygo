@@ -7,6 +7,7 @@ import com.avemygo.common.BizException;
 import com.avemygo.user.User;
 import com.avemygo.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,8 +37,13 @@ public class AuthService {
         user.setNickname(req.nickname() == null || req.nickname().isBlank()
                 ? req.username() : req.nickname());
 
-        // 3. 落库
-        return userRepository.save(user).getId();
+        // 3. 落库：并发场景 exists 查询可能同时通过，唯一索引会拒第二笔，
+        //    这里把它翻译成业务错误 40904，而不是抛 500
+        try {
+            return userRepository.saveAndFlush(user).getId();
+        } catch (DataIntegrityViolationException e) {
+            throw new BizException(40904, "用户名已存在");
+        }
     }
 
     /** 登录：查用户 → 验密码 → 查封禁 → 签发 token */
