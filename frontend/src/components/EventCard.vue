@@ -10,11 +10,11 @@ import FavoriteButton from '@/components/FavoriteButton.vue'
 const props = defineProps({ event: { type: Object, required: true } })
 
 const BAND_STYLE = {
-  'MyGO!!!!': { gradient: 'linear-gradient(135deg,#2c7da0,#1f6485)', color: '#2c7da0' },
+  'MyGO!!!!!': { gradient: 'linear-gradient(135deg,#2c7da0,#1f6485)', color: '#2c7da0' },
   'Ave Mujica': { gradient: 'linear-gradient(135deg,#6b4fa3,#4a3573)', color: '#6b4fa3' },
   sumimi: { gradient: 'linear-gradient(135deg, #d4789f 0%, #b95 100%)', color: '#d4789f' },
 }
-const band = BAND_STYLE[props.event.bandName] || BAND_STYLE['MyGO!!!!']
+const band = BAND_STYLE[props.event.bandName] || BAND_STYLE['MyGO!!!!!']
 
 // "11.01" 式日期（官网情报区同款）
 const datePart = (props.event.nextSessionTime || '').slice(5, 10).replace('-', '.')

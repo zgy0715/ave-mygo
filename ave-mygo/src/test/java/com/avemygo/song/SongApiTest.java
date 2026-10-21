@@ -52,7 +52,7 @@ class SongApiTest {
         mvc.perform(get("/api/v1/songs").param("keyword", "MyGO").param("pageSize", "5"))
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.content.length()").value(org.hamcrest.Matchers.greaterThan(0)))
-                .andExpect(jsonPath("$.data.content[0].bandName").value("MyGO!!!!"));
+                .andExpect(jsonPath("$.data.content[0].bandName").value("MyGO!!!!!"));
     }
 
     @Test
