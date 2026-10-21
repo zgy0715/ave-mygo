@@ -47,3 +47,9 @@ dist-verify
 # 构建自测临时产物（统一走 .vite-check，用完即删）
 .tmp-*
 .vite-check
+
+# Playwright
+test-results
+playwright-report
+blob-report
+.playwright
