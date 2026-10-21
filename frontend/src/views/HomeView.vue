@@ -36,7 +36,8 @@ onMounted(async () => {
 })
 
 const onSale = computed(() => events.value.filter((e) => e.status === 'PUBLISHED'))
-const featured = computed(() => onSale.value[0] || events.value[0] || null)
+// 只把「售票中」的演出放进 Hero 购票位；没有在售就不显示（避免给已结束演出挂「立即购票」）
+const featured = computed(() => onSale.value[0] || null)
 const upcoming = computed(() => events.value.filter((e) => e.status !== 'ENDED').slice(0, 3))
 const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANDORI / LIVE']
 
