@@ -48,6 +48,28 @@ public class SongService {
                 s.getMvUrl(), s.getMvPlatform(), s.getTags(), s.getReleaseDate()));
     }
 
+    /**
+     * 按给定 id 顺序返回歌曲列表项（歌单详情用）。
+     * 不存在的 id 自动跳过（可能已下架/软删），保持调用方顺序。
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.List<SongItem> itemsByIds(java.util.List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return java.util.List.of();
+        Map<Long, Song> byId = songRepository.findAllById(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Song::getId, java.util.function.Function.identity()));
+        Map<Short, String> bandNames = toMap(bandRepository.findAll(), Band::getId, Band::getName);
+        Map<Long, String> albumNames = toMap(albumRepository.findAll(), Album::getId, Album::getName);
+        return ids.stream()
+                .map(byId::get)
+                .filter(java.util.Objects::nonNull)
+                .map(s -> new SongItem(
+                        s.getId(), s.getTitle(), s.getBandId(), bandNames.get(s.getBandId()),
+                        s.getAlbumId(), s.getAlbumId() == null ? null : albumNames.get(s.getAlbumId()),
+                        s.getDuration(), s.getCoverUrl(), s.getAudioUrl(), s.getStreamUrl(),
+                        s.getMvUrl(), s.getMvPlatform(), s.getTags(), s.getReleaseDate()))
+                .toList();
+    }
+
     /** 歌曲详情：下架/不存在一律 40401，不向前台区分 */
     public SongDetail detail(Long id) {
         Song s = songRepository.findById(id)
