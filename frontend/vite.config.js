@@ -17,4 +17,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Vitest：组件测试用 jsdom；用例放各目录 __tests__ 下
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    include: ['src/**/__tests__/**/*.spec.js'],
+    restoreMocks: true,
+  },
 })
