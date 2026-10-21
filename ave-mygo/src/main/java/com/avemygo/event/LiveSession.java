@@ -12,12 +12,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * 演出场次实体，对应表 live_session（docs/05 §3.7）。
  * 状态机（定时任务驱动）：NOT_OPEN --到达开售时间--> ONSALE --到达散场时间--> ENDED
  * SOLD_OUT（售罄）不落库：余票=0 的派生状态，查询时计算。
  */
+@SQLRestriction("is_deleted = 0")
 @Entity
 @Table(name = "live_session")
 @Getter

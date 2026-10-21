@@ -15,8 +15,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.SQLRestriction;
 
 /** 乐队成员实体，对应表 member（docs/05 §3.4）。 */
+@SQLRestriction("is_deleted = 0")
 @Entity
 @Table(name = "member")
 @Getter
