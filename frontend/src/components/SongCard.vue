@@ -9,8 +9,8 @@ import { useRouter } from 'vue-router'
 /** 歌曲卡片：封面网格用（真接口字段）。点击封面进详情，播放钮直接入队 */
 const props = defineProps({ song: { type: Object, required: true } })
 const player = usePlayerStore()
-const auth = useAuthStore()
 const router = useRouter()
+const auth = useAuthStore()
 
 // 库里乐队名写法不统一（'MyGO!!!!' 与 'MyGO!!!!!' 都有），按前缀归一化，别用精确匹配
 const slugOf = (name = '') => {
@@ -29,6 +29,11 @@ const band = computed(() => BAND_STYLE[slug.value])
 const tags = computed(() => (props.song.tags || '').split(',').filter(Boolean))
 
 function onPlay() {
+  // 无官方试听：静音"演示播放"没有意义，直接进详情页走 MV / 外链
+  if (!props.song.audioUrl) {
+    router.push(`/songs/${props.song.id}`)
+    return
+  }
   // 听歌不设登录门槛（游客可试听，登录只影响购票等操作）
   player.play(props.song)
 }
@@ -40,7 +45,7 @@ function onPlay() {
       <div class="relative overflow-hidden rounded-lg">
         <CoverArt :title="song.title" :band="slug" :cover-url="song.coverUrl || ''" class="zoomable aspect-square w-full" rounded="rounded-lg" />
         <span class="tabular absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] text-white">
-          {{ Math.floor(song.duration / 60) }}:{{ String(song.duration % 60).padStart(2, '0') }}
+          {{ song.duration ? `${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')}` : '--:--' }}
         </span>
       </div>
       <p class="mt-2.5 truncate text-sm font-semibold" :title="song.title">{{ song.title }}</p>
