@@ -17,6 +17,15 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
     /** 批量取多场演出的场次（列表页防 N+1） */
     List<LiveSession> findByEventIdIn(Collection<Long> eventIds);
 
+    /** 搜索用：批量取各演出「下一场」开演时间（已开演/已结束的不算） */
+    @Query("""
+            SELECT s.eventId, MIN(s.startTime) FROM LiveSession s
+            WHERE s.eventId IN :eventIds AND s.startTime > :now
+            GROUP BY s.eventId
+            """)
+    java.util.List<Object[]> nextStartByEvent(@Param("eventIds") java.util.Collection<Long> eventIds,
+                                              @Param("now") LocalDateTime now);
+
     /** 管理端列表：演出下有几场 */
     long countByEventId(Long eventId);
 

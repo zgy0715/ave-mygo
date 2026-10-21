@@ -32,6 +32,14 @@ public interface EventRepository extends JpaRepository<LiveEvent, Long> {
                                 @Param("bandId") Short bandId,
                                 Pageable pageable);
 
+    /** 全局搜索：按标题模糊匹配，排除草稿（ENDED 保留，用户可能想找旧演出） */
+    @Query("""
+            SELECT e FROM LiveEvent e
+            WHERE e.status <> 'DRAFT' AND e.title LIKE CONCAT('%', :kw, '%')
+            ORDER BY e.id DESC
+            """)
+    java.util.List<LiveEvent> searchByTitle(@Param("kw") String kw, Pageable pageable);
+
     /** 状态机：已发布演出若所有场次都已散场 → ENDED */
     @Modifying
     @Query("""
