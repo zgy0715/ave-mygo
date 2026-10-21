@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { chatWithAssistant } from '@/api/assistant'
 
@@ -12,9 +12,6 @@ import { chatWithAssistant } from '@/api/assistant'
 const player = usePlayerStore()
 const open = ref(false)
 const input = ref('')
-const messages = ref([])
-const loading = ref(false)
-const error = ref('')
 const listEl = ref(null)
 
 /* ---- 人格：xiaodeng 缺省；切换保留会话，各自口吻的问候语 ---- */
@@ -41,61 +38,81 @@ const PERSONAS = [
   },
 ]
 const persona = ref('xiaodeng')
+
+/**
+ * 每个人格一条独立对话线程（相当于各自一个会话页面）：
+ * 切换人格 = 切线程，历史互不串台；sessionId 也各自独立（后端记忆不混淆）
+ */
+const threads = reactive(
+  Object.fromEntries(PERSONAS.map((p) => [p.id, {
+    messages: [{ role: 'assistant', name: p.chip, text: p.greeting }],
+    sessionId: '',
+    loading: false,
+    error: '',
+  }])),
+)
+const thread = computed(() => threads[persona.value])
+const messages = computed(() => thread.value.messages)
+const loading = computed(() => thread.value.loading)
+const error = computed(() => thread.value.error)
+
 const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
 const chipById = (id) => PERSONAS.find((p) => p.id === id)?.chip || '小灯'
 
 function switchPersona(p) {
   if (persona.value === p.id) return
   persona.value = p.id
-  // 新人格以自己的口吻打招呼（取代干巴巴的系统行）
-  messages.value.push({ role: 'assistant', name: p.chip, text: p.greeting })
   scrollBottom()
 }
 
-/* ---- 会话 ID：首次生成，sessionStorage 持久 ---- */
-function getSessionId() {
-  let id = sessionStorage.getItem('assistant_session_id')
+/** 清空当前人格的对话（重新打招呼 + 换新 session） */
+function clearThread() {
+  const t = thread.value
+  t.messages.splice(0, t.messages.length, { role: 'assistant', name: currentPersona.value.chip, text: currentPersona.value.greeting })
+  t.sessionId = ''
+  t.error = ''
+  scrollBottom()
+}
+
+/* ---- 会话 ID：每个人格独立，首次生成，sessionStorage 持久 ---- */
+function getSessionId(pid) {
+  const key = `assistant_session:${pid}`
+  let id = sessionStorage.getItem(key)
   if (!id) {
     id = crypto.randomUUID?.() || `s-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    sessionStorage.setItem('assistant_session_id', id)
+    sessionStorage.setItem(key, id)
   }
   return id
 }
-
-/* ---- 首次打开：欢迎语（不调接口） ---- */
-watch(open, (v) => {
-  if (v && !messages.value.length) {
-    messages.value.push({ role: 'assistant', name: '小灯', text: PERSONAS[0].greeting })
-    scrollBottom()
-  }
-})
 
 /* ---- 自动滚底 ---- */
 function scrollBottom() {
   nextTick(() => listEl.value?.scrollTo({ top: listEl.value.scrollHeight, behavior: 'smooth' }))
 }
-watch([messages, loading], scrollBottom, { deep: true })
+watch(() => [messages.value.length, loading.value], scrollBottom)
 
-/* ---- 发送 ---- */
+/* ---- 发送（线程隔离：回复永远回到发送时那条线程） ---- */
 async function send() {
+  const t = thread.value
   const text = input.value.trim()
-  if (!text || loading.value) return
-  if (text.length > 500) { error.value = '消息太长啦，控制在 500 字以内'; return }
+  if (!text || t.loading) return
+  if (text.length > 500) { t.error = '消息太长啦，控制在 500 字以内'; return }
 
-  messages.value.push({ role: 'user', text })
+  const sentPersona = persona.value
+  const sentThread = t          // 飞行中切人格：回复仍落回原线程，不串台
+  t.messages.push({ role: 'user', text })
   input.value = ''
-  error.value = ''
-  loading.value = true
+  t.error = ''
+  t.loading = true
 
-  const sentPersona = persona.value   // 发送时的人格：请求飞行中切人格也不影响这条回复的署名
   try {
-    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(), persona: sentPersona })
-    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || chipById(sentPersona) })
+    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(sentPersona), persona: sentPersona })
+    sentThread.messages.push({ role: 'assistant', text: data.reply, name: data.personaName || chipById(sentPersona) })
   } catch {
-    // 后端/Ollama 不可达：红字提示，不阻塞后续提问
-    error.value = '小灯走神了，再问一次好不好？'
+    sentThread.error = '小灯走神了，再问一次好不好？'
   } finally {
-    loading.value = false
+    sentThread.loading = false
+    if (sentPersona === persona.value) scrollBottom()
   }
 }
 
@@ -110,7 +127,7 @@ function onKeydown(e) {
     class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
     :class="player.current ? 'bottom-24' : 'bottom-6'"
     :aria-expanded="open"
-    aria-label="小灯 AI 助手"
+    :aria-label="currentPersona.chip + ' AI 助手'"
     style="transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1)"
     @click="open = !open"
   >
@@ -150,16 +167,29 @@ function onKeydown(e) {
           </div>
           <button class="cursor-pointer text-dim transition hover:text-ink" aria-label="收起" @click="open = false">✕</button>
         </div>
-        <!-- 人格切换 chips -->
-        <div class="mt-2.5 flex gap-1.5">
+        <!-- 人格切换：每个人格一条独立对话（右侧 ↺ 清空当前线程） -->
+        <div class="mt-2.5 flex items-center gap-1.5">
           <button
             v-for="p in PERSONAS"
             :key="p.id"
-            class="cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200"
+            class="flex cursor-pointer items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200"
             :class="persona === p.id ? 'bg-primary text-white' : 'bg-base text-dim hover:text-ink'"
             @click="switchPersona(p)"
           >
             {{ p.chip }}
+            <span
+              v-if="threads[p.id].messages.length > 1"
+              class="ml-1 inline-block h-1.5 w-1.5 rounded-full"
+              :class="persona === p.id ? 'bg-white/80' : 'bg-primary'"
+            />
+          </button>
+          <button
+            class="ml-auto cursor-pointer text-xs text-faint transition hover:text-ink"
+            title="清空当前对话"
+            aria-label="清空当前对话"
+            @click="clearThread"
+          >
+            ↺ 清空
           </button>
         </div>
       </div>
