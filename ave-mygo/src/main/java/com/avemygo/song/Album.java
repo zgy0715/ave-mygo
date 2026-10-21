@@ -12,11 +12,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * 专辑/单曲实体，对应表 album（docs/05 §3.3）。
  * 关联采用扁平 ID 派：只存 bandId，不装整个 Band 对象——查询行为可控、JSON 不嵌套。
  */
+@SQLRestriction("is_deleted = 0")
 @Entity
 @Table(name = "album")
 @Getter
