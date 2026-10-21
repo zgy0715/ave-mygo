@@ -63,9 +63,11 @@ async function pay(o) {
   actingNo.value = o.orderNo
   actionErr.value = ''
   try {
-    // 就地更新状态，不整页重拉（体验更顺）
+    const res = await payOrder(o.orderNo)
+    // 就地更新状态，不整页重拉；找不到（列表已变）则整表重拉
     const idx = orders.value.findIndex((x) => x.orderNo === o.orderNo)
-    orders.value[idx] = { ...orders.value[idx], ...(await payOrder(o.orderNo)) }
+    if (idx >= 0) orders.value[idx] = { ...orders.value[idx], ...res }
+    else await load()
   } catch (e) {
     actionErr.value = e.message
   } finally {
@@ -77,8 +79,10 @@ async function cancel(o) {
   actingNo.value = o.orderNo
   actionErr.value = ''
   try {
+    const res = await cancelOrder(o.orderNo)
     const idx = orders.value.findIndex((x) => x.orderNo === o.orderNo)
-    orders.value[idx] = { ...orders.value[idx], ...(await cancelOrder(o.orderNo)) }
+    if (idx >= 0) orders.value[idx] = { ...orders.value[idx], ...res }
+    else await load()
   } catch (e) {
     actionErr.value = e.message
   } finally {
