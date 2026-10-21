@@ -42,3 +42,7 @@ export const updateTicketType = (id, body) => request.patch(`/admin/ticket-types
 export const listAdminOrders = (params) => request.get('/admin/orders', { params })
 export const getAdminStats = (days = 30) => request.get('/admin/stats/overview', { params: { days } })
 export const refundAdminOrder = (orderNo, body) => request.patch(`/admin/orders/${orderNo}/refund`, body)
+
+/* ===== 用户管理（管理端） ===== */
+export const listAdminUsers = (params) => request.get('/admin/users', { params })
+export const updateAdminUserStatus = (id, status) => request.patch(`/admin/users/${id}/status`, { status })
