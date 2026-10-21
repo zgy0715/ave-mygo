@@ -20,6 +20,7 @@ const curText = computed(() => {
 })
 const durText = computed(() => {
   const d = player.current?.duration || 0
+  if (!d) return '—'
   return `${Math.floor(d / 60)}:${String(Math.floor(d % 60)).padStart(2, '0')}`
 })
 

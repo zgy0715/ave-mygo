@@ -68,7 +68,7 @@ onMounted(async () => {
   try { bands.value = await listBands() } catch { /* 下拉失败不阻塞列表 */ }
 })
 
-const fmt = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+const fmt = (sec) => (sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '—')
 
 function onPlay(song) {
   // 听歌不设登录门槛（产品定位：游客可浏览 / 试听，登录才需要买票）

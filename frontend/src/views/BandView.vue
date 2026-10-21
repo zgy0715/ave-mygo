@@ -76,7 +76,16 @@ onBeforeUnmount(() => {
   if (rafId) cancelAnimationFrame(rafId)
 })
 
-onMounted(async () => {
+onMounted(async () => { await loadBand() })
+
+// 乐队页互跳（/bands/1 → /bands/2）组件被复用，需监听 id 变化重新加载
+watch(() => route.params.id, async (id, old) => {
+  if (id && id !== old) { window.scrollTo(0, 0); await loadBand() }
+})
+
+async function loadBand() {
+  loading.value = true
+  errMsg.value = ''
   try {
     const data = await getBand(route.params.id)
     band.value = data.band
@@ -89,7 +98,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
 
 // 成员立牌首字：名最后的汉字（"高松 燈"→"燈"）
 const lastChar = (nameJa) => (nameJa || '').replace(/\s/g, '').slice(-1)
