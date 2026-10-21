@@ -42,13 +42,26 @@ request.interceptors.response.use(
       handleUnauthorized()
       return Promise.reject(new Error('请先登录'))
     }
+    if (code >= 40300 && code < 40400) {              // 业务层权限错误（40301 封禁等）
+      return Promise.reject(new Error(message || '没有权限执行该操作'))
+    }
     return Promise.reject(new Error(message || '操作失败'))
   },
   (err) => {
-    // HTTP 层错误：401（Security 拦截）/ 网络断开 / 500
-    if (err.response?.status === 401) {
+    // HTTP 层错误：401 未登录 / 403 无权限 / 超时 / 断网 / 5xx
+    const status = err.response?.status
+    if (status === 401) {
       handleUnauthorized()
       return Promise.reject(new Error('请先登录'))
+    }
+    if (status === 403) {
+      return Promise.reject(new Error('没有权限执行该操作（需要管理员账号）'))
+    }
+    if (err.code === 'ECONNABORTED' || String(err.message).includes('timeout')) {
+      return Promise.reject(new Error('请求超时，请检查网络后重试'))
+    }
+    if (!err.response) {
+      return Promise.reject(new Error('无法连接服务器，请确认后端已启动'))
     }
     return Promise.reject(new Error(err.response?.data?.message || '服务开小差了，请稍后重试'))
   },

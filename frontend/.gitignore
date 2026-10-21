@@ -41,3 +41,5 @@ dist-verify
 .tmp-build
 .tmp-build*
 .tmp-check*
+.build-tmp
+.verify-*
