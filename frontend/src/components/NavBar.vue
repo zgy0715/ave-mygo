@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import SearchBox from '@/components/SearchBox.vue'
 
 /**
  * 顶部栏 v4：极简化（anontokyo 式）——只留 Logo + 登录态。
@@ -19,8 +20,9 @@ const route = useRoute()
         <span class="micro-accent">/ LIVE</span>
       </RouterLink>
 
-      <!-- 右侧：登录态。极简克制——mono 细字外链（避免与 MENU 页签抢位置/撞色） -->
-      <div class="flex items-center gap-3">
+      <!-- 右侧：搜索 + 登录态 -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <SearchBox />
         <template v-if="auth.isLogin">
           <RouterLink
             v-if="auth.user?.role === 'ADMIN'"
