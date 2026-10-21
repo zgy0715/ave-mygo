@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import FavoriteButton from '@/components/FavoriteButton.vue'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu.vue'
+import SongComments from '@/components/SongComments.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PageBack from '@/components/PageBack.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -259,5 +260,7 @@ watch(() => player.isPlaying, (playing) => {
 
   <div v-else class="wrap py-16">
     <EmptyState icon="🤔" text="歌曲不存在或已下架" action-text="回到歌曲库" @action="router.push('/songs')" />
+    <!-- 评论区 -->
+    <SongComments :song-id="song.id" />
   </div>
 </template>

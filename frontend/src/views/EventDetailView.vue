@@ -6,6 +6,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import PageBack from '@/components/PageBack.vue'
 import LoginGate from '@/components/LoginGate.vue'
 import FavoriteButton from '@/components/FavoriteButton.vue'
+import { myReminders, subscribeReminder, cancelReminder } from '@/api/reminder'
 import { isGateDismissed } from '@/utils/loginGate'
 import { useAuthStore } from '@/stores/auth'
 import { getEvent, getSetlist } from '@/api/event'
@@ -83,6 +84,7 @@ async function load() {
     // 刷新时保留用户当前选中的场次（支付后重查余票不应把用户弹回第一场）
     const prev = activeSessionId.value
     activeSessionId.value = data.sessions.some((s) => s.id === prev) ? prev : (data.sessions[0]?.id ?? null)
+    loadReminderState()
     bandSlug.value = bands.find((b) => b.name === data.bandName)?.slug || 'mygo'
     loadSetlist()
     loadMyPurchases()
@@ -140,6 +142,30 @@ function pickSession(id) {
 
 // ===== 下单 → 倒计时 → 支付/取消 =====
 const gateOpen = ref(false)
+
+// ===== 开售提醒 =====
+const reminded = ref(false)
+const reminding = ref(false)
+async function loadReminderState() {
+  reminded.value = false
+  if (!auth.isLogin || !event.value) return
+  try {
+    const list = await myReminders()
+    reminded.value = list.some((r) => r.eventId === Number(route.params.id))
+  } catch { /* 忽略 */ }
+}
+async function toggleReminder() {
+  if (!requireLogin('购票')) return
+  reminding.value = true
+  try {
+    if (reminded.value) { await cancelReminder(route.params.id); reminded.value = false }
+    else { await subscribeReminder(route.params.id); reminded.value = true }
+  } catch (e) {
+    buyErr.value = e.message
+  } finally {
+    reminding.value = false
+  }
+}
 
 /** 需要登录的操作：优先弹引导弹窗；用户选过「随便逛逛」则直接跳登录 */
 function requireLogin(action) {
@@ -278,7 +304,19 @@ onBeforeUnmount(() => clearInterval(timer))
 
     <!-- 购票区 -->
     <section class="mt-8">
-      <h2 class="mb-3 text-lg font-bold">选票</h2>
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">选票</h2>
+        <!-- 未开售才提供开售提醒（已开售直接买就行） -->
+        <button
+          v-if="session && session.status === 'NOT_OPEN'"
+          class="btn-ghost !px-3 !py-1.5 !text-xs"
+          :class="reminded ? '!border-primary !text-primary' : ''"
+          :disabled="reminding"
+          @click="toggleReminder"
+        >
+          {{ reminding ? '处理中…' : (reminded ? '已订阅开售提醒 ✓' : '🔔 开售提醒我') }}
+        </button>
+      </div>
 
       <!-- 场次 Tab -->
       <div class="mb-4 flex flex-wrap gap-2">
