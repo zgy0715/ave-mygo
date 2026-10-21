@@ -6,6 +6,7 @@ import Lenis from 'lenis'
 
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from './stores/auth'
 
 /**
  * Lenis 平滑滚动：iOS 般惯性质感（依赖已在 package.json）。
@@ -48,6 +49,11 @@ const revealObserver = new IntersectionObserver(
 )
 
 const app = createApp(App)
+
+// 登录失效：request 拦截器发事件，这里同步清空 Pinia 状态（否则顶栏仍显示已登录）
+window.addEventListener('auth:expired', () => {
+  try { useAuthStore().logout() } catch { /* pinia 尚未就绪时忽略 */ }
+})
 
 app.directive('reveal', {
   mounted(el, binding) {
