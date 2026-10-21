@@ -5,7 +5,7 @@ import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { listBands, listSongs } from '@/api/song'
 
 /**
@@ -16,6 +16,7 @@ import { listBands, listSongs } from '@/api/song'
 const player = usePlayerStore()
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const bands = ref([])
 const PAGE_SIZE = 20
@@ -80,8 +81,16 @@ watch(bandFilter, applyFilter)
 watch(page, load)
 
 onMounted(async () => {
+  // 支持 /songs?band=1 直达（乐队页「歌曲库 →」带参跳转）
+  const q = route.query.band
+  if (q) bandFilter.value = Number(q)
   load()
   try { bands.value = await listBands() } catch { /* 下拉失败不阻塞列表 */ }
+})
+
+// 已在歌曲库时再从别的乐队点进来（query 变化）也要生效
+watch(() => route.query.band, (v) => {
+  if (v) bandFilter.value = Number(v)
 })
 
 const fmt = (sec) => (sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '—')
