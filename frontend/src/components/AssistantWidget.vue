@@ -125,7 +125,7 @@ function onKeydown(e) {
   <!-- 悬浮球：播放条出现时上移避开进度条 -->
   <button
     class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
-    :class="player.current ? 'bottom-24' : 'bottom-6'"
+    :class="player.current && !player.barCollapsed ? 'bottom-24' : 'bottom-6'"
     :aria-expanded="open"
     :aria-label="currentPersona.chip + ' AI 助手'"
     style="transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1)"
@@ -144,7 +144,7 @@ function onKeydown(e) {
     <div
       v-if="open"
       class="fixed right-6 z-[42] flex w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-2xl"
-      :class="player.current ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'"
+      :class="player.current && !player.barCollapsed ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'"
       style="height: min(560px, 70vh)"
     >
       <!-- 顶栏：徽章 + 名称/状态 + 人格 chips + 关闭 -->

@@ -23,6 +23,7 @@ export const usePlayerStore = defineStore('player', {
     muted: false,
     mode: localStorage.getItem(MODE_KEY) || 'order',  // order | repeat | shuffle
     notice: '',                                    // 队列操作提示（播放条上浮提示条）
+    barCollapsed: false,                           // 播放条是否收起（收起≠停止，音乐继续）
   }),
 
   getters: {
@@ -88,10 +89,15 @@ export const usePlayerStore = defineStore('player', {
       this._noticeTimer = setTimeout(() => (this.notice = ''), 2200)
     },
 
+    /** 收起播放条：只是隐藏 UI，播放不中断 */
+    collapseBar() { this.barCollapsed = true },
+    expandBar() { this.barCollapsed = false },
+
     _start() {
       this._teardown()
       this.position = 0
       this._paused = false
+      this.barCollapsed = false   // 开始播放时自动展开播放条
       const song = this.current
       if (!song) return
 
