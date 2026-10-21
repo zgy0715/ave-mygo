@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PageBack from '@/components/PageBack.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -172,6 +173,10 @@ watch(() => player.isPlaying, (playing) => {
         <span class="rounded px-2 py-0.5 text-xs font-medium" :style="{ background: band.soft, color: band.color }">{{ song.bandName }}</span>
         <h1 class="serif mt-3 text-3xl font-semibold sm:text-4xl">{{ song.title }}</h1>
         <p class="mt-2 text-dim">{{ song.albumName || '未收录单曲' }}</p>
+        <div class="mt-3 flex items-center gap-2">
+          <FavoriteButton type="SONG" :id="song.id" :size="16" />
+          <span class="text-xs text-faint">收藏这首歌</span>
+        </div>
 
         <dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
           <div><dt class="text-faint">发行日期</dt><dd class="tabular mt-0.5 font-medium">{{ song.releaseDate }}</dd></div>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -41,6 +42,11 @@ function onPlay() {
 
 <template>
   <div class="card group relative overflow-hidden p-3 hover:shadow-md">
+    <!-- 收藏：悬浮在封面右上（不触发卡片跳转） -->
+    <div class="absolute right-4 top-4 z-10 opacity-0 transition group-hover:opacity-100">
+      <FavoriteButton type="SONG" :id="song.id" overlay :size="15" />
+    </div>
+
     <RouterLink :to="`/songs/${song.id}`" class="block">
       <div class="relative overflow-hidden rounded-lg">
         <CoverArt :title="song.title" :band="slug" :cover-url="song.coverUrl || ''" class="zoomable aspect-square w-full" rounded="rounded-lg" />
