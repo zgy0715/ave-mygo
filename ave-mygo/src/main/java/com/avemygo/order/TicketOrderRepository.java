@@ -3,6 +3,8 @@ package com.avemygo.order;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,24 @@ public interface TicketOrderRepository extends JpaRepository<TicketOrder, Long> 
               AND o.status IN ('PENDING_PAYMENT', 'PAID')
             """)
     int sumActiveQuantity(@Param("userId") Long userId, @Param("sessionId") Long sessionId);
+
+    /**
+     * 管理端订单检索：状态 / 场次 / 关键词（订单号或用户名）三选任意组合 + 分页。
+     * 用户名用 EXISTS 子查询匹配，避免关联查询把分页 count 搞乱。
+     */
+    @Query("""
+            SELECT o FROM TicketOrder o
+            WHERE (:status IS NULL OR o.status = :status)
+              AND (:eventId IS NULL OR o.eventId = :eventId)
+              AND (:kw IS NULL
+                   OR o.orderNo LIKE CONCAT('%', :kw, '%')
+                   OR EXISTS (SELECT 1 FROM User u WHERE u.id = o.userId
+                              AND u.username LIKE CONCAT('%', :kw, '%')))
+            """)
+    Page<TicketOrder> adminSearch(@Param("status") String status,
+                                  @Param("eventId") Long eventId,
+                                  @Param("kw") String kw,
+                                  Pageable pageable);
 
     /** 我的订单列表（按创建时间倒序） */
     List<TicketOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
