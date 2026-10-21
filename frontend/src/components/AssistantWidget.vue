@@ -42,6 +42,7 @@ const PERSONAS = [
 ]
 const persona = ref('xiaodeng')
 const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
+const chipById = (id) => PERSONAS.find((p) => p.id === id)?.chip || '小灯'
 
 function switchPersona(p) {
   if (persona.value === p.id) return
@@ -86,9 +87,10 @@ async function send() {
   error.value = ''
   loading.value = true
 
+  const sentPersona = persona.value   // 发送时的人格：请求飞行中切人格也不影响这条回复的署名
   try {
-    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(), persona: persona.value })
-    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || currentPersona.value.chip })
+    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(), persona: sentPersona })
+    messages.value.push({ role: 'assistant', text: data.reply, name: data.personaName || chipById(sentPersona) })
   } catch {
     // 后端/Ollama 不可达：红字提示，不阻塞后续提问
     error.value = '小灯走神了，再问一次好不好？'
