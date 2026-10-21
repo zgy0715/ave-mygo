@@ -28,8 +28,18 @@ const tab = ref('songs')
 const bandId = ref('')
 const keyword = ref('')
 let kwTimer = null
-watch(keyword, () => { clearTimeout(kwTimer); kwTimer = setTimeout(() => { page.value = 1; load() }, 300) })
-watch(bandId, () => { page.value = 1; load() })
+// 筛选变化 → 回第 1 页；改 page 时交给 watch(page)，避免双请求
+function applyFilter() {
+  if (page.value === 1) load()
+  else page.value = 1
+}
+
+let kwTimer = null
+watch(keyword, () => {
+  clearTimeout(kwTimer)
+  kwTimer = setTimeout(applyFilter, 300)
+})
+watch(bandId, applyFilter)
 watch(page, load)
 
 async function load() {
