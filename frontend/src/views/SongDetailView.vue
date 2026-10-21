@@ -217,12 +217,16 @@ watch(() => player.isPlaying, (playing) => {
             <span class="text-primary">↗</span>
           </a>
 
-          <EmptyState
-            v-else
-            icon="📺"
-            text="MV 外链待补充"
-            hint="管理端维护 mv_url / mv_platform 字段即可"
-          />
+          <div v-else class="card p-6 text-center">
+            <p class="text-sm text-dim">该曲暂无官方 MV 源</p>
+            <p class="mt-1 text-xs text-faint">可先在 B 站搜索完整版／live 版本</p>
+            <a
+              :href="`https://search.bilibili.com/all?keyword=${encodeURIComponent(song.title + ' ' + song.bandName)}`"
+              target="_blank" rel="noopener" class="btn-ghost mt-3 inline-flex !py-1.5 !text-xs"
+            >
+              在 B 站搜索「{{ song.title }}」↗
+            </a>
+          </div>
         </div>
 
         <!-- 同专辑其他曲目 -->
