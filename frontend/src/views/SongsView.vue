@@ -39,7 +39,11 @@ const BAND_THEME = {
 }
 const bandTheme = (id) => BAND_THEME[slugById(id)] || BAND_THEME.mygo
 
+// 请求序号：只有最后一次请求的结果能落地（防筛选/翻页时的旧响应覆盖新结果）
+let reqSeq = 0
+
 async function load() {
+  const my = ++reqSeq
   loading.value = true
   errMsg.value = ''
   try {
@@ -49,18 +53,30 @@ async function load() {
       page: page.value,
       pageSize: PAGE_SIZE,
     })
+    if (my !== reqSeq) return          // 过期响应：直接丢弃
     songs.value = data.content
     totalElements.value = data.totalElements
     totalPages.value = data.totalPages
   } catch (e) {
-    errMsg.value = e.message
+    if (my === reqSeq) errMsg.value = e.message
   } finally {
-    loading.value = false
+    if (my === reqSeq) loading.value = false
   }
 }
 
-// 筛选变化 → 回第 1 页重新查（服务端分页的固定套路）
-watch([bandFilter, keyword], () => { page.value = 1; load() })
+// 筛选变化 → 回第 1 页重新查。
+// 注意：只能由一个入口触发 load —— 改 page 时交给 watch(page)，否则会发两次请求
+function applyFilter() {
+  if (page.value === 1) load()
+  else page.value = 1
+}
+
+let kwTimer = null
+watch(keyword, () => {
+  clearTimeout(kwTimer)
+  kwTimer = setTimeout(applyFilter, 300)   // 输入防抖，避免每个字符一次请求
+})
+watch(bandFilter, applyFilter)
 watch(page, load)
 
 onMounted(async () => {
