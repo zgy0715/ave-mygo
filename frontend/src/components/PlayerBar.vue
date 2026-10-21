@@ -69,7 +69,16 @@ function onVolume(e) {
           rounded="rounded-md"
         />
         <div class="w-28 min-w-0 sm:w-44">
-          <p class="truncate text-sm font-semibold">{{ player.current.title }}</p>
+          <p class="flex items-center gap-2 truncate text-sm font-semibold">
+            <span class="truncate">{{ player.current.title }}</span>
+            <!-- 无音源：演示模式（进度条模拟，无声音）——明确标注，避免被当成 bug -->
+            <span
+              v-if="!player.current.audioUrl"
+              class="shrink-0 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-normal text-amber-700"
+            >
+              试听待补充
+            </span>
+          </p>
           <p class="truncate text-xs text-faint">{{ player.current.album }}</p>
         </div>
 
