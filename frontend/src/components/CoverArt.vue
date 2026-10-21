@@ -4,7 +4,7 @@
  * 用乐队渐变色 + 首字生成，视觉统一且零资源加载；
  * 后端有 cover_url 后换成 <img> 即可（组件对外接口不变）。
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -34,6 +34,10 @@ const BAND_VISUALS = {
 
 const band = computed(() => BAND_VISUALS[props.band] || BAND_VISUALS.mygo)
 const failed = ref(false)   // 封面 404 → 回退程序化渐变
+
+// 组件会被复用（如歌曲详情页互跳）：coverUrl 变化必须重置失败标记，
+// 否则上一首 404 过，新歌的封面永远不显示
+watch(() => props.coverUrl, () => { failed.value = false })
 </script>
 
 <template>
