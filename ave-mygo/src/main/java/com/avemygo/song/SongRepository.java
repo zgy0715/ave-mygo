@@ -13,12 +13,18 @@ import org.springframework.data.repository.query.Param;
  */
 public interface SongRepository extends JpaRepository<Song, Long> {
 
-    /** 前台歌曲列表：只查上架歌曲，支持乐队/关键词/标签筛选 + 分页 */
+    /**
+     * 前台歌曲列表：只查上架歌曲，支持乐队/关键词/标签筛选 + 分页。
+     * 关键词同时匹配「曲名」与「乐队名」——用户搜 "MyGO" 期望看到该乐队全部曲目。
+     */
     @Query("""
             SELECT s FROM Song s
             WHERE s.status = 1
               AND (:bandId IS NULL OR s.bandId = :bandId)
-              AND (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:keyword IS NULL
+                   OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR EXISTS (SELECT 1 FROM Band b WHERE b.id = s.bandId
+                              AND LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%'))))
               AND (:tag IS NULL OR FUNCTION('FIND_IN_SET', :tag, s.tags) > 0)
             """)
     Page<Song> search(@Param("bandId") Short bandId,
