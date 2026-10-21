@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -75,6 +75,11 @@ async function load() {
   }
 }
 load()
+
+// 详情页互跳时组件被复用，需监听 id 变化重新加载
+watch(() => route.params.id, (id, old) => {
+  if (id && id !== old) { window.scrollTo(0, 0); load() }
+})
 
 async function loadSetlist() {
   if (!activeSessionId.value) return (setlist.value = [])

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -54,7 +54,8 @@ const mvLinkLabel = computed(() => {
   if (song.value?.mvPlatform === 'YOUTUBE') return '在 YouTube 观看 MV'
   return '在 B 站观看 MV'
 })
-const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+// 时长格式化：空/0 显示「—」，避免出现 0:00
+const fmtDur = (sec) => (sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '—')
 
 // 乐队徽标：详情里只有 bandName，按名字映射配色
 const BAND_THEME = {
@@ -67,6 +68,7 @@ const band = computed(() => BAND_THEME[song.value?.bandName] || BAND_THEME['MyGO
 async function load() {
   loading.value = true
   errMsg.value = ''
+  sameAlbum.value = []   // 切歌时先清空，避免上一首的「同专辑」残留
   try {
     song.value = await getSong(route.params.id)
     // 同专辑曲目：同乐队列表里滤出专辑相同者（数据量小，够用）
@@ -81,6 +83,14 @@ async function load() {
   }
 }
 onMounted(load)
+
+// 关键：同专辑曲目互跳时组件被复用，onMounted 不会重跑 → 必须监听 id 变化重新加载
+watch(() => route.params.id, (id, old) => {
+  if (id && id !== old) {
+    window.scrollTo(0, 0)
+    load()
+  }
+})
 
 function onPlay() {
   // 听歌不设登录门槛（游客可试听，登录只影响购票/收藏等）
