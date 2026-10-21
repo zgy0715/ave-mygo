@@ -46,3 +46,8 @@ export const refundAdminOrder = (orderNo, body) => request.patch(`/admin/orders/
 /* ===== 用户管理（管理端） ===== */
 export const listAdminUsers = (params) => request.get('/admin/users', { params })
 export const updateAdminUserStatus = (id, status) => request.patch(`/admin/users/${id}/status`, { status })
+
+/* ===== 场次歌单（Setlist） ===== */
+export const getSessionSetlist = (sessionId) => request.get(`/admin/sessions/${sessionId}/setlist`)
+/** 全量替换：items=[{songId, orderNo, encore}] */
+export const saveSessionSetlist = (sessionId, items) => request.put(`/admin/sessions/${sessionId}/setlist`, { items })
