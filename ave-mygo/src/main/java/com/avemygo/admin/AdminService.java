@@ -62,7 +62,7 @@ public class AdminService {
     public AdminSongView update(Long id, SongPatch req) {
         Song song = songRepository.findById(id)
                 .orElseThrow(() -> new BizException(40004, "歌曲不存在"));
-        applyPatch(song, null, null, null, null, null, null, null, null, null, null);
+        // 无意义的空调用已移除：title 单独处理（空串视为不改），其余字段走 applyPatch
         if (req.title() != null && !req.title().isBlank()) song.setTitle(req.title().trim());
         applyPatch(song, req.albumId(), req.trackNo(), req.releaseDate(), req.duration(),
                 req.coverUrl(), req.audioUrl(), req.mvUrl(), req.mvPlatform(), req.tags(), req.status());
