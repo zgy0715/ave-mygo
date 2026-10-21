@@ -22,6 +22,7 @@ export const usePlayerStore = defineStore('player', {
     volume: Number(localStorage.getItem(VOL_KEY)) || 0.8,
     muted: false,
     mode: localStorage.getItem(MODE_KEY) || 'order',  // order | repeat | shuffle
+    notice: '',                                    // 队列操作提示（播放条上浮提示条）
   }),
 
   getters: {
@@ -49,6 +50,42 @@ export const usePlayerStore = defineStore('player', {
       this.queue = [...list]
       this.currentIndex = index
       this._start()
+    },
+
+    /**
+     * 加入播放列表（不打断当前播放）
+     * @param {object} song 歌曲
+     * @param {boolean} next true = 插到当前曲之后（下一首播放）
+     * @returns {'started'|'playing'|'exists'|'added'}
+     */
+    addToQueue(song, next = false) {
+      if (!this.queue.length) {
+        this.play(song)
+        this._notify('已开始播放')
+        return 'started'
+      }
+      if (this.current?.id === song.id) {
+        this._notify('这首正在播放')
+        return 'playing'
+      }
+      if (this.queue.some((s) => s.id === song.id)) {
+        this._notify('已在播放列表中')
+        return 'exists'
+      }
+      if (next) {
+        this.queue.splice(this.currentIndex + 1, 0, song)
+        this._notify('已插到下一首')
+      } else {
+        this.queue.push(song)
+        this._notify(`已加入播放列表（${this.queue.length} 首）`)
+      }
+      return 'added'
+    },
+
+    _notify(msg) {
+      this.notice = msg
+      clearTimeout(this._noticeTimer)
+      this._noticeTimer = setTimeout(() => (this.notice = ''), 2200)
     },
 
     _start() {

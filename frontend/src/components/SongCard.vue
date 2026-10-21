@@ -62,6 +62,17 @@ function onPlay() {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
     </button>
 
+    <!-- 加入播放列表（不打断当前播放） -->
+    <button
+      class="absolute right-14 top-[7.25rem] flex h-9 w-9 scale-75 items-center justify-center rounded-full border border-line bg-surface text-dim opacity-0 shadow-lg transition-all duration-300 hover:border-primary hover:text-primary group-hover:scale-100 group-hover:opacity-100"
+      style="transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1)"
+      aria-label="加入播放列表"
+      title="加入播放列表"
+      @click.stop="player.addToQueue(song)"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+    </button>
+
     <div class="mt-2 flex items-center gap-1.5">
       <span class="rounded px-1.5 py-0.5 text-[11px] font-medium" :style="{ background: band.soft, color: band.color }">
         {{ song.bandName }}
