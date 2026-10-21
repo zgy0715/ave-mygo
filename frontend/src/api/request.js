@@ -47,9 +47,20 @@ request.interceptors.response.use(
     }
     return Promise.reject(new Error(message || '操作失败'))
   },
-  (err) => {
+  async (err) => {
     // HTTP 层错误：401 未登录 / 403 无权限 / 超时 / 断网 / 5xx
     const status = err.response?.status
+
+    // 5xx 自动重试：只对幂等 GET 生效（POST 重试可能重复下单/重复注册）
+    const cfg = err.config || {}
+    const retried = cfg.__retryCount || 0
+    const isRetriable = cfg.method === 'get' && (status >= 500 || !err.response)
+    if (isRetriable && retried < 2) {
+      cfg.__retryCount = retried + 1
+      await new Promise((r) => setTimeout(r, 300 * (retried + 1)))
+      return request(cfg)
+    }
+
     if (status === 401) {
       handleUnauthorized()
       return Promise.reject(new Error('请先登录'))
