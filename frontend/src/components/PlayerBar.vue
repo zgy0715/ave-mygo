@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import CoverArt from '@/components/CoverArt.vue'
 import { slugByBandId } from '@/utils/band'
@@ -113,24 +114,30 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
 
       <div class="px-4 py-2.5 sm:px-8">
         <div class="flex items-center gap-3 sm:gap-5">
-          <!-- 封面 + 曲目信息 -->
-          <CoverArt
-            :title="player.current.title"
-            :band="currentSlug"
-            :cover-url="player.current.coverUrl || ''"
-            class="hidden h-11 w-11 shrink-0 sm:flex"
-            rounded="rounded-md"
-          />
-          <div class="w-32 min-w-0 shrink-0 sm:w-48">
-            <p class="flex items-center gap-1.5 truncate text-sm font-semibold">
-              <span class="truncate">{{ player.current.title }}</span>
-              <span
-                v-if="!player.current.audioUrl"
-                class="shrink-0 rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[9px] font-normal text-amber-700"
-              >试听待补充</span>
-            </p>
-            <p class="truncate text-xs text-faint">{{ player.current.albumName || player.current.bandName }}</p>
-          </div>
+          <!-- 封面 + 曲目信息：整块可点，进歌曲详情 -->
+          <RouterLink
+            :to="`/songs/${player.current.id}`"
+            class="group/info flex min-w-0 shrink-0 items-center gap-3 transition"
+            :title="`查看《${player.current.title}》详情`"
+          >
+            <CoverArt
+              :title="player.current.title"
+              :band="currentSlug"
+              :cover-url="player.current.coverUrl || ''"
+              class="hidden h-11 w-11 shrink-0 transition-opacity group-hover/info:opacity-85 sm:flex"
+              rounded="rounded-md"
+            />
+            <div class="w-32 min-w-0 sm:w-48">
+              <p class="flex items-center gap-1.5 truncate text-sm font-semibold transition-colors group-hover/info:text-primary">
+                <span class="truncate">{{ player.current.title }}</span>
+                <span
+                  v-if="!player.current.audioUrl"
+                  class="shrink-0 rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[9px] font-normal text-amber-700"
+                >试听待补充</span>
+              </p>
+              <p class="truncate text-xs text-faint">{{ player.current.albumName || player.current.bandName }}</p>
+            </div>
+          </RouterLink>
 
           <!-- 传输控制 -->
           <div class="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
