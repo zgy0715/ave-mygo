@@ -20,14 +20,26 @@ request.interceptors.request.use((config) => {
   return config
 })
 
+/**
+ * 统一处理登录失效：
+ * 清 sessionStorage + 通知 Pinia 清状态（用事件解耦，避免 request ↔ store 循环依赖）
+ * + 跳登录并带 redirect，登录后可回原页
+ */
+function handleUnauthorized() {
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
+  window.dispatchEvent(new Event('auth:expired'))
+  const cur = router.currentRoute.value
+  if (cur.path !== '/login') router.push({ path: '/login', query: { redirect: cur.fullPath } })
+}
+
 // 响应拦截：统一拆包 + 统一错误
 request.interceptors.response.use(
   (res) => {
     const { code, message, data } = res.data
     if (code === 0) return data                       // 成功：剥壳，直接给业务数据
     if (code === 40101) {                             // 业务层判定未登录
-      sessionStorage.removeItem('token')
-      router.push('/login')
+      handleUnauthorized()
       return Promise.reject(new Error('请先登录'))
     }
     return Promise.reject(new Error(message || '操作失败'))
@@ -35,8 +47,7 @@ request.interceptors.response.use(
   (err) => {
     // HTTP 层错误：401（Security 拦截）/ 网络断开 / 500
     if (err.response?.status === 401) {
-      sessionStorage.removeItem('token')
-      router.push('/login')
+      handleUnauthorized()
       return Promise.reject(new Error('请先登录'))
     }
     return Promise.reject(new Error(err.response?.data?.message || '服务开小差了，请稍后重试'))
