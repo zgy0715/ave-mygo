@@ -35,7 +35,8 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    pendingRestoreTop = savedPosition?.top ?? null
+    // 只有真的后退/前进才记录位置；新导航一律清空，避免遗留值污染下一次落位
+    pendingRestoreTop = isPopNavigation ? (savedPosition?.top ?? null) : null
     if (savedPosition) return savedPosition
     return { top: 0 }
   },
@@ -99,10 +100,18 @@ router.afterEach((to) => {
 
   const pop = isPopNavigation
   isPopNavigation = false
-  // 返回/前进：优先用自己缓存的位置（比 savedPosition 可靠），再用路由给的位置兜底
-  const target = (pop ? scrollMemo.get(to.fullPath) : undefined) ?? pendingRestoreTop ?? 0
+  const saved = pendingRestoreTop
   pendingRestoreTop = null
-  restoreScroll(target)
+
+  if (pop) {
+    // 后退/前进：优先自己的缓存，其次路由给的位置
+    restoreScroll(scrollMemo.get(to.fullPath) ?? saved ?? 0)
+  } else {
+    // 新导航：无条件回顶部。
+    // 注意不能用 saved/pendingRestoreTop —— afterEach 常早于 scrollBehavior 执行，
+    // 读到的可能是上一次后退恢复的遗留值，会把新页面甩到最底部。
+    restoreScroll(0)
+  }
 })
 
 export default router
