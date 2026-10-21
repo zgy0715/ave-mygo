@@ -29,3 +29,7 @@ logs/
 # 数据库本地数据
 *.sql.bak
 mysql-data/
+
+# 审计原始产物 / 会话临时目录
+.audit/
+.workbuddy/tmp/
