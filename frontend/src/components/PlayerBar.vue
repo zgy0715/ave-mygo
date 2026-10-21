@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import CoverArt from '@/components/CoverArt.vue'
@@ -51,8 +51,18 @@ function onSeekUp(e) {
   e.currentTarget.releasePointerCapture?.(e.pointerId)
 }
 
-/* ===== 音量：同样自定义，hover 展开 ===== */
+/* ===== 音量：同样自定义；hover 展开 + 点击固定 ===== */
 const volDragging = ref(false)
+const volHover = ref(false)
+const volPinned = ref(false)
+const volWrap = ref(null)
+
+// 固定展开时，点面板外部收起（避免一直挂着挡内容）
+function onDocPointerDown(e) {
+  if (volPinned.value && volWrap.value && !volWrap.value.contains(e.target)) volPinned.value = false
+}
+onMounted(() => document.addEventListener('pointerdown', onDocPointerDown))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDown))
 
 function volPctFromEvent(e) {
   const rect = e.currentTarget.getBoundingClientRect()
@@ -200,12 +210,15 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l3 10 3-14 3 10h5" stroke-linecap="round" stroke-linejoin="round" /></svg>
             </button>
 
-            <!-- 音量：hover 展开 -->
-            <div class="group/vol relative hidden items-center lg:flex">
+            <!-- 音量：hover 无缝展开（面板下缘用 padding 做「悬停桥」，不再有间隙），点击可固定 -->
+            <div ref="volWrap" class="relative hidden items-center lg:flex" @mouseenter="volHover = true" @mouseleave="volHover = false">
               <button
-                class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-dim transition hover:text-ink"
+                class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition"
+                :class="volHover || volPinned ? 'text-primary' : 'text-dim hover:text-ink'"
                 :aria-label="player.muted ? '取消静音' : '静音'"
-                @click="player.toggleMute"
+                :aria-expanded="volHover || volPinned"
+                title="音量（点击可固定）"
+                @click="volPinned = !volPinned"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4 9v6h4l5 4V5L8 9H4z" />
@@ -215,22 +228,36 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
                 </svg>
               </button>
 
-              <div class="pointer-events-none absolute right-0 bottom-full mb-2 w-24 rounded-lg border border-line bg-surface p-2 opacity-0 shadow-md transition-opacity group-hover/vol:pointer-events-auto group-hover/vol:opacity-100">
-                <div
-                 
-                  class="relative flex h-5 cursor-pointer items-center"
-                  @pointerdown="onVolDown"
-                  @pointermove="onVolMove"
-                  @pointerup="onVolUp"
-                  @pointercancel="onVolUp"
-                >
-                  <div class="h-[3px] w-full rounded-full bg-line-strong/60">
-                    <div class="h-[3px] rounded-full bg-primary" :style="{ width: (player.muted ? 0 : player.volume * 100) + '%' }" />
+              <div v-show="volHover || volPinned" class="absolute bottom-full right-0 z-50 pb-2">
+                <div class="w-32 rounded-lg border border-line bg-surface px-2.5 py-2 shadow-md">
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="shrink-0 cursor-pointer text-faint transition hover:text-ink"
+                      :aria-label="player.muted ? '取消静音' : '静音'"
+                      @click="player.toggleMute"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 9v6h4l5 4V5L8 9H4z" />
+                        <path v-if="player.muted || player.volume <= 0.05" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                    <div
+                      class="relative flex h-5 flex-1 cursor-pointer items-center"
+                      @pointerdown="onVolDown"
+                      @pointermove="onVolMove"
+                      @pointerup="onVolUp"
+                      @pointercancel="onVolUp"
+                    >
+                      <div class="h-[3px] w-full rounded-full bg-line-strong/60">
+                        <div class="h-[3px] rounded-full bg-primary" :style="{ width: (player.muted ? 0 : player.volume * 100) + '%' }" />
+                      </div>
+                      <span
+                        class="absolute h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-primary"
+                        :style="{ left: (player.muted ? 0 : player.volume * 100) + '%' }"
+                      />
+                    </div>
+                    <span class="tabular w-6 shrink-0 text-right text-[10px] text-faint">{{ Math.round((player.muted ? 0 : player.volume) * 100) }}</span>
                   </div>
-                  <span
-                    class="absolute h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-primary"
-                    :style="{ left: (player.muted ? 0 : player.volume * 100) + '%' }"
-                  />
                 </div>
               </div>
             </div>
