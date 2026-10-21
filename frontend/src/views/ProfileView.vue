@@ -54,10 +54,10 @@ onMounted(async () => {
         <p class="text-2xl font-semibold text-primary tabular">{{ orderCount }}</p>
         <p class="mt-1 text-sm text-dim">我的订单</p>
       </RouterLink>
-      <div class="card p-5 opacity-60">
-        <p class="text-2xl font-black text-faint">P1</p>
-        <p class="mt-1 text-sm text-dim">歌单（开发中）</p>
-      </div>
+      <RouterLink to="/playlists" class="card p-5 hover:shadow-md">
+        <p class="text-2xl font-semibold text-primary">♫</p>
+        <p class="mt-1 text-sm text-dim">我的歌单</p>
+      </RouterLink>
     </div>
   </div>
 </template>

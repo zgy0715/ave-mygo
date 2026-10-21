@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import AddToPlaylistMenu from '@/components/AddToPlaylistMenu.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
@@ -192,6 +193,7 @@ function clearFilters() {
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M4 12h9M4 17h6M17 8v9M17 17l3-3M17 17l-3-3" /></svg>
           </button>
+          <AddToPlaylistMenu :song-id="s.id" />
         </div>
       </div>
     </div>
