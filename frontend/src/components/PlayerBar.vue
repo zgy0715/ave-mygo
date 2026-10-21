@@ -77,7 +77,7 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
 
 <template>
   <transition enter-active-class="transition duration-200" enter-from-class="translate-y-full">
-    <div v-if="player.current" class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
+    <div v-if="player.current && !player.barCollapsed" class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
       <!-- 队列操作提示 -->
       <transition enter-active-class="transition duration-200" enter-from-class="opacity-0 translate-y-1" leave-active-class="transition duration-200" leave-to-class="opacity-0">
         <p
@@ -91,7 +91,10 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
       <div v-if="showQueue" class="border-b border-line bg-surface">
         <div class="wrap flex items-center justify-between py-2">
           <p class="text-sm font-semibold">播放队列 <span class="text-faint">（{{ player.queue.length }}）</span></p>
-          <button class="text-xs text-faint hover:text-dim" @click="showQueue = false">收起</button>
+          <div class="flex items-center gap-3">
+            <button class="cursor-pointer text-xs text-faint transition hover:text-red-500" title="清空队列并停止播放" @click="player.stop()">清空</button>
+            <button class="cursor-pointer text-xs text-faint transition hover:text-dim" @click="showQueue = false">收起</button>
+          </div>
         </div>
         <ul class="wrap max-h-56 overflow-y-auto pb-3">
           <li
@@ -245,14 +248,14 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h11M4 12h11M4 17h7M19 8v8M17 14l2 2 2-2" /></svg>
             </button>
 
-            <!-- 关闭：清空队列、收起播放条 -->
+            <!-- 收起：只隐藏播放条，音乐继续（清空队列在抽屉里） -->
             <button
-              class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-faint transition hover:text-red-500"
-              aria-label="关闭播放器"
-              title="关闭播放器"
-              @click="player.stop()"
+              class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-faint transition hover:text-ink"
+              aria-label="收起播放条"
+              title="收起播放条（音乐继续）"
+              @click="player.collapseBar()"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
             </button>
           </div>
         </div>
@@ -278,5 +281,33 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
         </div>
       </div>
     </div>
+  </transition>
+
+  <!-- 收起态：左下角「上拉展开」小条（音乐继续播放） -->
+  <transition enter-active-class="transition duration-200" enter-from-class="opacity-0 translate-y-2">
+    <button
+      v-if="player.current && player.barCollapsed"
+      class="group fixed bottom-4 left-4 z-40 flex max-w-[min(22rem,calc(100vw-2rem))] cursor-pointer items-center gap-2.5 rounded-full border border-line bg-surface/95 py-2 pl-2 pr-4 shadow-lg backdrop-blur transition hover:shadow-xl"
+      title="展开播放条"
+      aria-label="展开播放条"
+      @click="player.expandBar()"
+    >
+      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white transition group-hover:-translate-y-0.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6" /></svg>
+      </span>
+      <CoverArt
+        :title="player.current.title"
+        :band="currentSlug"
+        :cover-url="player.current.coverUrl || ''"
+        class="hidden h-7 w-7 shrink-0 sm:flex"
+        rounded="rounded"
+      />
+      <span class="min-w-0 text-left">
+        <span class="block truncate text-xs font-medium leading-tight">{{ player.current.title }}</span>
+        <span class="tabular block text-[10px] leading-tight text-faint">
+          {{ player.isPlaying ? `播放中 ${curText}` : `已暂停 ${curText}` }}
+        </span>
+      </span>
+    </button>
   </transition>
 </template>
