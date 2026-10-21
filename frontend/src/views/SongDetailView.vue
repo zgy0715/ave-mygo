@@ -57,13 +57,19 @@ const mvLinkLabel = computed(() => {
 // 时长格式化：空/0 显示「—」，避免出现 0:00
 const fmtDur = (sec) => (sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '—')
 
-// 乐队徽标：详情里只有 bandName，按名字映射配色
+// 乐队徽标：详情里只有 bandName，按前缀归一化（库里 'MyGO!!!!' / 'MyGO!!!!!' 两种写法都有）
 const BAND_THEME = {
-  'MyGO!!!!': { color: '#2c7da0', soft: '#e3f0f7', slug: 'mygo' },
-  'Ave Mujica': { color: '#6b4fa3', soft: '#efeaf7', slug: 'ave-mujica' },
+  mygo: { color: '#2c7da0', soft: '#e3f0f7', slug: 'mygo' },
+  'ave-mujica': { color: '#6b4fa3', soft: '#efeaf7', slug: 'ave-mujica' },
   sumimi: { color: '#d4789f', soft: '#fbe9ef', slug: 'sumimi' },
 }
-const band = computed(() => BAND_THEME[song.value?.bandName] || BAND_THEME['MyGO!!!!'])
+const band = computed(() => {
+  const n = song.value?.bandName || ''
+  if (n.startsWith('MyGO')) return BAND_THEME.mygo
+  if (n.startsWith('Ave Mujica')) return BAND_THEME['ave-mujica']
+  if (n.toLowerCase().includes('sumimi')) return BAND_THEME.sumimi
+  return BAND_THEME.mygo
+})
 
 async function load() {
   loading.value = true

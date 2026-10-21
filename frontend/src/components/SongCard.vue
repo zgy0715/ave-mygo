@@ -12,13 +12,19 @@ const player = usePlayerStore()
 const auth = useAuthStore()
 const router = useRouter()
 
-const SLUG = { 'MyGO!!!!': 'mygo', 'Ave Mujica': 'ave-mujica', sumimi: 'sumimi' }
+// 库里乐队名写法不统一（'MyGO!!!!' 与 'MyGO!!!!!' 都有），按前缀归一化，别用精确匹配
+const slugOf = (name = '') => {
+  if (name.startsWith('MyGO')) return 'mygo'
+  if (name.startsWith('Ave Mujica')) return 'ave-mujica'
+  if (name.toLowerCase().includes('sumimi')) return 'sumimi'
+  return 'mygo'
+}
+const slug = computed(() => slugOf(props.song.bandName))
 const BAND_STYLE = {
-  mygo: { name: 'MyGO!!!!', color: '#2c7da0', soft: '#e3f0f7' },
+  mygo: { name: 'MyGO!!!!!', color: '#2c7da0', soft: '#e3f0f7' },
   'ave-mujica': { name: 'Ave Mujica', color: '#6b4fa3', soft: '#efeaf7' },
   sumimi: { name: 'sumimi', color: '#d4789f', soft: '#fbe9ef' },
 }
-const slug = computed(() => SLUG[props.song.bandName] || 'mygo')
 const band = computed(() => BAND_STYLE[slug.value])
 const tags = computed(() => (props.song.tags || '').split(',').filter(Boolean))
 
