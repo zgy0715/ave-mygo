@@ -142,6 +142,11 @@ watch(() => player.isPlaying, (playing) => {
         <button class="btn-primary mt-4 w-full" @click="onPlay">
           ▶ {{ song.audioUrl ? '播放试听（30 秒）' : '播放（无试听·静音演示）' }}
         </button>
+        <!-- 加入播放列表：不打断当前播放 -->
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <button class="btn-ghost !px-2 !py-1.5 !text-xs" title="加入播放列表" @click="player.addToQueue(song)">＋ 加入列表</button>
+          <button class="btn-ghost !px-2 !py-1.5 !text-xs" title="插到当前播放之后" @click="player.addToQueue(song, true)">↳ 下一首</button>
+        </div>
         <p v-if="song.audioUrl" class="mt-2 text-center text-xs text-faint">
           站内仅提供官方 30 秒试听片段（不托管完整音源）
         </p>

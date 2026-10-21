@@ -173,6 +173,26 @@ function clearFilters() {
           {{ s.bandName }}
         </span>
         <span class="tabular hidden w-12 text-right text-xs text-faint sm:block">{{ fmt(s.duration) }}</span>
+
+        <!-- 加入播放列表 / 下一首播放 -->
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-faint opacity-0 transition group-hover:opacity-100 hover:bg-base hover:text-primary"
+            aria-label="加入播放列表"
+            title="加入播放列表"
+            @click="player.addToQueue(s)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+          <button
+            class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-faint opacity-0 transition group-hover:opacity-100 hover:bg-base hover:text-primary"
+            aria-label="下一首播放"
+            title="下一首播放"
+            @click="player.addToQueue(s, true)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M4 12h9M4 17h6M17 8v9M17 17l3-3M17 17l-3-3" /></svg>
+          </button>
+        </div>
       </div>
     </div>
 

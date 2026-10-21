@@ -251,8 +251,8 @@ watch(() => band.value?.slug, () => {
         <RouterLink :to="{ path: '/songs', query: { band: band.id } }" class="micro py-1 transition hover:text-primary">歌曲库 →</RouterLink>
       </div>
       <ul class="card divide-y divide-line overflow-hidden">
-        <li v-for="(s, i) in songs" :key="s.id" v-reveal="i * 50">
-          <RouterLink :to="`/songs/${s.id}`" class="flex items-center gap-3 p-3 transition hover:bg-elevated">
+        <li v-for="(s, i) in songs" :key="s.id" v-reveal="i * 50" class="group flex items-center">
+          <RouterLink :to="`/songs/${s.id}`" class="flex min-w-0 flex-1 items-center gap-3 p-3 transition hover:bg-elevated">
             <CoverArt :title="s.title" :band="slugById(s.bandId)" :cover-url="s.coverUrl || ''" class="h-10 w-10" rounded="rounded-md" />
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium">{{ s.title }}</p>
@@ -260,6 +260,14 @@ watch(() => band.value?.slug, () => {
             </div>
             <span class="tabular text-xs text-faint">{{ s.releaseDate }}</span>
           </RouterLink>
+          <button
+            class="mr-3 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-faint opacity-0 transition group-hover:opacity-100 hover:bg-base hover:text-primary"
+            aria-label="加入播放列表"
+            title="加入播放列表"
+            @click="player.addToQueue(s)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
         </li>
       </ul>
     </section>

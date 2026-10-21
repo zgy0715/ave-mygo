@@ -77,6 +77,15 @@ const modeLabel = computed(() => ({ order: '顺序播放', repeat: '单曲循环
 <template>
   <transition enter-active-class="transition duration-200" enter-from-class="translate-y-full">
     <div v-if="player.current" class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
+      <!-- 队列操作提示 -->
+      <transition enter-active-class="transition duration-200" enter-from-class="opacity-0 translate-y-1" leave-active-class="transition duration-200" leave-to-class="opacity-0">
+        <p
+          v-if="player.notice"
+          class="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 rounded-full bg-ink/85 px-3.5 py-1.5 text-xs text-white shadow-lg"
+        >
+          {{ player.notice }}
+        </p>
+      </transition>
       <!-- 队列抽屉 -->
       <div v-if="showQueue" class="border-b border-line bg-surface">
         <div class="wrap flex items-center justify-between py-2">
