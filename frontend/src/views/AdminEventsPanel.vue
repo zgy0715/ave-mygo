@@ -1,6 +1,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import SetlistEditor from '@/components/SetlistEditor.vue'
 import { listBands } from '@/api/song'
 import {
   createAdminEvent,
@@ -73,6 +74,7 @@ const clearErr = (obj) => Object.keys(obj).forEach((k) => delete obj[k])
 
 /* ===== 展开场次 ===== */
 const expandedId = ref(null)
+const setlistTarget = ref(null)   // 正在编辑歌单的场次
 const sessions = ref([])
 const sessLoading = ref(false)
 const sessErr = ref('')
@@ -353,7 +355,8 @@ async function submitTicket() {
                   <p class="text-sm font-semibold">{{ s.name }}</p>
                   <span class="mono text-[11px] text-faint">{{ fmt(s.startTime) }} — {{ fmt(s.endTime) }}</span>
                   <StatusBadge :status="s.status" />
-                  <button class="btn-ghost ml-auto !px-2.5 !py-1 !text-xs" @click="openTicket(s)">＋ 票档</button>
+                  <button class="btn-ghost ml-auto !px-2.5 !py-1 !text-xs" @click="setlistTarget = s">歌单</button>
+                  <button class="btn-ghost !px-2.5 !py-1 !text-xs" @click="openTicket(s)">＋ 票档</button>
                 </div>
 
                 <table v-if="s.ticketTypes?.length" class="mt-2 w-full text-xs">
@@ -564,4 +567,13 @@ async function submitTicket() {
   >
     {{ toast }}
   </p>
+
+  <!-- 歌单录入抽屉 -->
+  <SetlistEditor
+    v-if="setlistTarget"
+    :session-id="setlistTarget.id"
+    :session-name="setlistTarget.name"
+    @close="setlistTarget = null"
+    @saved="setlistTarget = null"
+  />
 </template>
