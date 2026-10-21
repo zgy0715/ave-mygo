@@ -4,6 +4,7 @@ import CoverArt from '@/components/CoverArt.vue'
 import { listAlbums, listBands } from '@/api/song'
 import { createAdminSong, deleteAdminSong, listAdminSongs, updateAdminSong, uploadHeroVideo } from '@/api/admin'
 import AdminEventsPanel from './AdminEventsPanel.vue'
+import AdminOrdersPanel from './AdminOrdersPanel.vue'
 
 /**
  * 管理端 · 歌曲管理（仅 ADMIN，路由守卫拦截）。
@@ -229,7 +230,7 @@ async function submitCreate() {
     <!-- 标签页：歌曲管理 / 演出管理 -->
     <div class="mb-6 flex gap-1.5 border-b border-line pb-3">
       <button
-        v-for="t in [{ id: 'songs', label: '歌曲管理' }, { id: 'events', label: '演出管理' }]"
+        v-for="t in [{ id: 'songs', label: '歌曲管理' }, { id: 'events', label: '演出管理' }, { id: 'orders', label: '订单管理' }]"
         :key="t.id"
         class="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200"
         :class="tab === t.id ? 'bg-primary text-white' : 'text-dim hover:text-ink'"
@@ -399,6 +400,9 @@ async function submitCreate() {
 
     <!-- 演出管理标签页 -->
     <AdminEventsPanel v-if="tab === 'events'" />
+
+    <!-- 订单管理标签页 -->
+    <AdminOrdersPanel v-if="tab === 'orders'" />
 
     <!-- 新建弹窗 -->
     <Teleport to="body">
