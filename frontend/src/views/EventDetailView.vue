@@ -7,7 +7,7 @@ import PageBack from '@/components/PageBack.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getEvent, getSetlist } from '@/api/event'
 import { listBands } from '@/api/song'
-import { createOrder, payOrder, cancelOrder } from '@/api/order'
+import { createOrder, payOrder, cancelOrder, myOrders } from '@/api/order'
 
 /**
  * 演出详情（需求 3.4，购票最重页）——真接口版。
@@ -28,6 +28,8 @@ const activeSessionId = ref(null)
 const session = computed(() => event.value?.sessions.find((s) => s.id === activeSessionId.value))
 
 const quantities = ref({})          // ticketTypeId → 数量
+const boughtBySession = ref({})     // sessionId → 该用户已购张数（限购要扣掉）
+const orderExpired = ref(false)     // 倒计时归零：弹窗切"已超时"态
 const setlist = ref([])             // 当前场次歌单
 const ordering = ref(false)
 const buyErr = ref('')
@@ -54,8 +56,18 @@ const LEVEL = {
 }
 
 const qtyOf = (tt) => quantities.value[tt.id] || 1
+
+/** 本场次剩余可购 = maxPerUser - 已购（后端按场次累计限购，前端要同口径） */
+function remainingAllowance(tt) {
+  if (!session.value) return 0
+  const max = tt.maxPerUser || 4
+  const bought = boughtBySession.value[session.value.id] || 0
+  return Math.max(0, max - bought)
+}
+
 function changeQty(tt, delta) {
-  const cap = Math.min(tt.maxPerUser, tt.availableStock)
+  const cap = Math.min(remainingAllowance(tt), tt.availableStock)
+  if (cap <= 0) return
   quantities.value[tt.id] = Math.min(cap, Math.max(1, qtyOf(tt) + delta))
 }
 
@@ -70,6 +82,7 @@ async function load() {
     activeSessionId.value = data.sessions.some((s) => s.id === prev) ? prev : (data.sessions[0]?.id ?? null)
     bandSlug.value = bands.find((b) => b.name === data.bandName)?.slug || 'mygo'
     loadSetlist()
+    loadMyPurchases()
   } catch (e) {
     errMsg.value = e.message
   } finally {
@@ -82,6 +95,30 @@ load()
 watch(() => route.params.id, (id, old) => {
   if (id && id !== old) { window.scrollTo(0, 0); load() }
 })
+
+/** 登录用户在本场各场次已购数量：限购校验与数量上限都要减掉它（后端按场次累计） */
+async function loadMyPurchases() {
+  if (!auth.isLogin) return (boughtBySession.value = {})
+  try {
+    const orders = await myOrders()
+    const map = {}
+    for (const o of orders) {
+      if (o.status === 'PENDING_PAYMENT' || o.status === 'PAID') {
+        map[o.sessionId] = (map[o.sessionId] || 0) + o.quantity
+      }
+    }
+    boughtBySession.value = map
+  } catch {
+    boughtBySession.value = {}      // 拉取失败不阻塞购票，后端仍会兜底拦截
+  }
+}
+
+/** 支付/取消后刷新演出数据：余票与售罄状态必须立刻更新 */
+async function refreshEvent() {
+  try {
+    event.value = await getEvent(route.params.id)
+  } catch { /* 刷新失败保持原数据，不影响弹窗结果 */ }
+}
 
 async function loadSetlist() {
   if (!activeSessionId.value) return (setlist.value = [])
@@ -110,6 +147,7 @@ async function buy(tt) {
       quantity: qtyOf(tt),
     })
     orderInfo.value = data
+    orderExpired.value = false
     startCountdown(data.payDeadline)
   } catch (e) {
     buyErr.value = e.message          // 40901 余票不足 / 40903 超限购
@@ -120,10 +158,15 @@ async function buy(tt) {
 
 function startCountdown(deadline) {
   clearInterval(timer)
+  orderExpired.value = false
   remainSec.value = Math.max(0, Math.floor((new Date(deadline) - Date.now()) / 1000))
+  if (remainSec.value <= 0) orderExpired.value = true
   timer = setInterval(() => {
     remainSec.value--
-    if (remainSec.value <= 0) clearInterval(timer)
+    if (remainSec.value <= 0) {
+      clearInterval(timer)
+      orderExpired.value = true          // 归零：切"已超时"，禁止继续点支付
+    }
   }, 1000)
 }
 const countdownText = computed(() => {
@@ -142,6 +185,7 @@ async function cancel() {
   try {
     await cancelOrder(orderInfo.value.orderNo)
     closeOrder()
+    await refreshEvent()                                     // 取消回滚库存 → 余票刷新
   } catch (e) { buyErr.value = e.message }
 }
 
@@ -244,7 +288,10 @@ onBeforeUnmount(() => clearInterval(timer))
             <p class="tabular mt-0.5 text-xs text-faint">余 {{ tt.availableStock }}</p>
           </div>
 
-          <div v-if="stockLevel(tt) !== 'soldout' && event.status === 'PUBLISHED'" class="flex items-center gap-1 sm:ml-auto">
+          <div v-if="remainingAllowance(tt) <= 0" class="text-xs text-amber-600 sm:ml-auto">
+            本场已达限购上限（{{ tt.maxPerUser }} 张）
+          </div>
+          <div v-else-if="stockLevel(tt) !== 'soldout' && event.status === 'PUBLISHED'" class="flex items-center gap-1 sm:ml-auto">
             <button class="h-8 w-8 rounded-full border border-line text-dim hover:border-primary hover:text-primary" @click="changeQty(tt, -1)">−</button>
             <span class="tabular w-8 text-center text-sm font-medium">{{ qtyOf(tt) }}</span>
             <button class="h-8 w-8 rounded-full border border-line text-dim hover:border-primary hover:text-primary" @click="changeQty(tt, 1)">＋</button>
@@ -252,17 +299,20 @@ onBeforeUnmount(() => clearInterval(timer))
 
           <button
             class="btn-primary sm:ml-auto"
-            :disabled="stockLevel(tt) === 'soldout' || event.status !== 'PUBLISHED' || session.status !== 'ONSALE'"
+            :disabled="stockLevel(tt) === 'soldout' || event.status !== 'PUBLISHED' || session.status !== 'ONSALE' || remainingAllowance(tt) <= 0"
             @click="buy(tt)"
           >
-            {{ session.status !== 'ONSALE' ? (session.status === 'NOT_OPEN' ? '未开售' : '已结束') : stockLevel(tt) === 'soldout' ? '已售罄' : '立即购买' }}
+            {{ session.status !== 'ONSALE'
+              ? (session.status === 'NOT_OPEN' ? '未开售' : '已结束')
+              : stockLevel(tt) === 'soldout' ? '已售罄'
+              : remainingAllowance(tt) <= 0 ? '已达限购' : '立即购买' }}
           </button>
         </div>
       </div>
       <p v-if="buyErr && !orderInfo" class="mt-3 text-sm text-red-500">{{ buyErr }}</p>
     </section>
 
-    <p class="mt-4 text-xs text-faint">每人每票档限购 {{ session?.ticketTypes[0]?.maxPerUser || 4 }} 张；下单后 15 分钟内未支付将自动取消。</p>
+    <p class="mt-4 text-xs text-faint">每人每场次限购 {{ session?.ticketTypes[0]?.maxPerUser || 4 }} 张（已购数量计入）；下单后 15 分钟内未支付将自动取消。</p>
   </div>
 
   <div v-else class="wrap py-16">
@@ -284,11 +334,14 @@ onBeforeUnmount(() => clearInterval(timer))
         <p class="mono mt-1 text-[10px] tracking-[0.15em] text-faint">{{ orderInfo.orderNo }}</p>
         <p class="tabular my-5 text-5xl font-bold" :class="remainSec <= 60 ? 'text-red-500' : 'text-ink'">{{ countdownText }}</p>
         <p class="tabular text-2xl font-bold text-accent">{{ fmtPrice(orderInfo.totalAmount) }}</p>
-        <p class="mt-1 text-xs text-faint">内完成支付，逾期订单自动取消</p>
+        <p v-if="orderExpired" class="mt-2 text-sm font-medium text-red-500">已超时，该订单将自动取消，请重新下单</p>
+        <p v-else class="mt-1 text-xs text-faint">内完成支付，逾期订单自动取消</p>
 
         <p v-if="buyErr" class="mt-3 text-sm text-red-500">{{ buyErr }}</p>
 
-        <button class="btn-primary mt-5 w-full" @click="pay">模拟支付</button>
+        <button class="btn-primary mt-5 w-full" :disabled="orderExpired" @click="pay">
+          {{ orderExpired ? '订单已超时' : '模拟支付' }}
+        </button>
         <button class="btn-ghost mt-2 w-full" @click="cancel">取消订单</button>
       </template>
     </div>
