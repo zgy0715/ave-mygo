@@ -32,6 +32,19 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
             """)
     int increaseSold(@Param("id") Long id, @Param("qty") int qty);
 
+    /** 数据看板：各场次库存/已售汇总（上座率分子分母） */
+    @Query("""
+            SELECT s.id, s.name, e.title, s.startTime,
+                   COALESCE(SUM(t.totalStock), 0), COALESCE(SUM(t.soldCount), 0)
+            FROM LiveSession s
+            JOIN LiveEvent e ON e.id = s.eventId
+            JOIN TicketType t ON t.sessionId = s.id
+            WHERE t.status = 1
+            GROUP BY s.id, s.name, e.title, s.startTime
+            ORDER BY s.startTime DESC
+            """)
+    java.util.List<Object[]> sessionOccupancy();
+
     /** 库存回滚（取消/退款/超时）： sold_count 永不为负 */
     @Modifying
     @Query("""

@@ -38,6 +38,25 @@ public interface TicketOrderRepository extends JpaRepository<TicketOrder, Long> 
                                   @Param("kw") String kw,
                                   Pageable pageable);
 
+    // ---------- 数据看板聚合（只统计 PAID，退款单不计入营收） ----------
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM TicketOrder o WHERE o.status = 'PAID'")
+    java.math.BigDecimal totalRevenue();
+
+    @Query("SELECT COALESCE(SUM(o.quantity), 0) FROM TicketOrder o WHERE o.status = 'PAID'")
+    long totalTicketsSold();
+
+    long countByStatus(String status);
+
+    /** 近 N 天每日营收/订单数（按支付时间归集） */
+    @Query("""
+            SELECT FUNCTION('DATE', o.paidAt), COUNT(o), COALESCE(SUM(o.totalAmount), 0)
+            FROM TicketOrder o
+            WHERE o.status = 'PAID' AND o.paidAt >= :from
+            GROUP BY FUNCTION('DATE', o.paidAt)
+            """)
+    java.util.List<Object[]> dailyPaidSince(@Param("from") LocalDateTime from);
+
     /** 我的订单列表（按创建时间倒序） */
     List<TicketOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
 
