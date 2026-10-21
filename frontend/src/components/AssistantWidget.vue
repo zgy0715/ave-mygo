@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
-import { chatWithAssistant } from '@/api/assistant'
+import { chatStream, chatWithAssistant } from '@/api/assistant'
 
 /**
  * 「小灯」AI 助手：右下角悬浮球 + 聊天抽屉。
@@ -57,6 +57,14 @@ const loading = computed(() => thread.value.loading)
 const error = computed(() => thread.value.error)
 
 const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
+
+/** 只在「还没吐出第一个字」时显示三点，避免与流式气泡重复 */
+const waitingFirst = computed(() => {
+  if (!loading.value) return false
+  const ms = messages.value
+  const last = ms[ms.length - 1]
+  return !!last && last.role === 'assistant' && !last.text
+})
 const chipById = (id) => PERSONAS.find((p) => p.id === id)?.chip || '小灯'
 
 function switchPersona(p) {
@@ -101,19 +109,54 @@ async function send() {
   const sentPersona = persona.value
   const sentThread = t          // 飞行中切人格：回复仍落回原线程，不串台
   t.messages.push({ role: 'user', text })
+  // 助手气泡先占位，随后逐字追加（打字机）
+  const bubble = { role: 'assistant', text: '', name: chipById(sentPersona), streaming: true }
+  t.messages.push(bubble)
   input.value = ''
   t.error = ''
   t.loading = true
+  const controller = new AbortController()
+  t.controller = controller
 
   try {
-    const data = await chatWithAssistant({ message: text, sessionId: getSessionId(sentPersona), persona: sentPersona })
-    sentThread.messages.push({ role: 'assistant', text: data.reply, name: data.personaName || chipById(sentPersona) })
-  } catch {
-    sentThread.error = '小灯走神了，再问一次好不好？'
+    const meta = await chatStream({
+      message: text,
+      sessionId: getSessionId(sentPersona),
+      persona: sentPersona,
+      signal: controller.signal,
+      onDelta: (d) => {
+        bubble.text += d
+        if (sentPersona === persona.value) scrollBottom()
+      },
+    })
+    if (meta?.personaName) bubble.name = meta.personaName
+  } catch (e) {
+    // 用户主动停止：保留已生成内容，不算失败
+    if (e?.name === 'AbortError' || controller.signal.aborted) {
+      if (!bubble.text) bubble.text = '（已停止生成）'
+    } else {
+      // 流式不可用（老后端/代理不支持 SSE）→ 降级为一次性接口
+      try {
+        const data = await chatWithAssistant({ message: text, sessionId: getSessionId(sentPersona), persona: sentPersona })
+        bubble.text = data.reply
+        if (data.personaName) bubble.name = data.personaName
+        sentThread.messages.splice(sentThread.messages.indexOf(bubble), 0, { role: 'system', text: '网络不稳，已切换普通模式' })
+      } catch {
+        sentThread.messages.splice(sentThread.messages.indexOf(bubble), 1)
+        sentThread.error = '小灯走神了，再问一次好不好？'
+      }
+    }
   } finally {
+    bubble.streaming = false
     sentThread.loading = false
+    sentThread.controller = null
     if (sentPersona === persona.value) scrollBottom()
   }
+}
+
+/** 停止生成 */
+function stop() {
+  thread.value.controller?.abort()
 }
 
 function onKeydown(e) {
@@ -206,12 +249,12 @@ function onKeydown(e) {
           <!-- 助手：左对齐 card 底，顶部显示当前角色名 -->
           <div v-else class="card self-start max-w-[85%] rounded-2xl rounded-bl-sm px-3.5 py-2">
             <p v-if="m.name" class="micro-accent mb-1 !text-[9px]">{{ m.name }}</p>
-            <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ m.text }}</p>
+            <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ m.text }}<span v-if="m.streaming" class="ml-0.5 inline-block w-[2px] animate-pulse bg-primary align-middle" style="height: 1em" /></p>
           </div>
         </template>
 
         <!-- 三点 loading -->
-        <div v-if="loading" class="card flex items-center gap-1.5 self-start rounded-2xl rounded-bl-sm px-4 py-3">
+        <div v-if="waitingFirst" class="card flex items-center gap-1.5 self-start rounded-2xl rounded-bl-sm px-4 py-3">
           <span class="assistant-dot" style="animation-delay: 0s" />
           <span class="assistant-dot" style="animation-delay: .15s" />
           <span class="assistant-dot" style="animation-delay: .3s" />
@@ -231,8 +274,15 @@ function onKeydown(e) {
           @keydown="onKeydown"
         />
         <button
+          v-if="loading"
+          class="btn-ghost h-9 shrink-0 !px-3 !text-xs"
+          title="停止生成"
+          @click="stop"
+        >停止</button>
+        <button
+          v-else
           class="btn-primary h-9 w-9 shrink-0 !px-0"
-          :disabled="loading || !input.trim()"
+          :disabled="!input.trim()"
           aria-label="发送"
           @click="send"
         >
