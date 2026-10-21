@@ -225,6 +225,27 @@ class OrderConcurrencyTest {
     }
 
     @Test
+    @DisplayName("T08 草稿演出不可购票：DRAFT 演出的 ONSALE 场次下单 → 40902")
+    void t08_draftEventBlocked() {
+        // 手动构造：演出 DRAFT + 场次 ONSALE（后台允许这种组合，必须由下单接口兜住）
+        jdbc.update("INSERT INTO live_event(title,band_id,venue,status,is_deleted,created_at,updated_at) "
+                + "VALUES('[TEST] 草稿演出',1,'测试场馆','DRAFT',0,NOW(),NOW())");
+        eventId = jdbc.queryForObject("SELECT MAX(id) FROM live_event", Long.class);
+        jdbc.update("INSERT INTO live_session(event_id,name,start_time,end_time,sale_start_time,status,is_deleted,created_at,updated_at) "
+                        + "VALUES(?,'昼场',DATE_ADD(NOW(), INTERVAL 30 DAY),DATE_ADD(NOW(), INTERVAL 30 DAY),DATE_SUB(NOW(), INTERVAL 1 DAY),'ONSALE',0,NOW(),NOW())",
+                eventId);
+        sessionId = jdbc.queryForObject("SELECT MAX(id) FROM live_session", Long.class);
+        jdbc.update("INSERT INTO ticket_type(session_id,name,price,total_stock,sold_count,max_per_user,status,created_at,updated_at) "
+                + "VALUES(?,'S席',1000.00,10,0,4,1,NOW(),NOW())", sessionId);
+        ticketTypeId = jdbc.queryForObject("SELECT MAX(id) FROM ticket_type", Long.class);
+
+        assertThatThrownBy(() -> buy(9600L, 1))
+                .isInstanceOf(BizException.class)
+                .extracting("code").isEqualTo(40902);
+        assertThat(soldCount()).isZero();
+    }
+
+    @Test
     @DisplayName("T07 支付幂等：已支付订单再次支付 → 直接返回 PAID，不重复扣款")
     void t07_payIdempotent() {
         fixture(10, 4);

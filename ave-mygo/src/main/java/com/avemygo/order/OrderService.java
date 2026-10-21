@@ -1,6 +1,8 @@
 package com.avemygo.order;
 
 import com.avemygo.common.BizException;
+import com.avemygo.event.EventRepository;
+import com.avemygo.event.LiveEvent;
 import com.avemygo.event.LiveSession;
 import com.avemygo.event.LiveSessionRepository;
 import com.avemygo.event.TicketType;
@@ -36,6 +38,7 @@ public class OrderService {
     private final LiveSessionRepository sessionRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final TicketOrderRepository orderRepository;
+    private final EventRepository eventRepository;
 
     @Transactional
     public OrderCreated create(Long userId, CreateOrderRequest req) {
@@ -46,6 +49,13 @@ public class OrderService {
                 .orElseThrow(() -> new BizException(40401, "场次不存在"));
         if (!"ONSALE".equals(session.getStatus())) {
             throw new BizException(40902, "该场次当前不可购票");
+        }
+
+        // 1.1 演出必须已发布：否则草稿/已结束演出可被直接按 sessionId 购票（绕过前台隐藏）
+        LiveEvent event = eventRepository.findById(session.getEventId())
+                .orElseThrow(() -> new BizException(40401, "演出不存在"));
+        if (!"PUBLISHED".equals(event.getStatus())) {
+            throw new BizException(40902, "演出当前不可购票");
         }
 
         // 2. 票档必须属于该场次且启用
