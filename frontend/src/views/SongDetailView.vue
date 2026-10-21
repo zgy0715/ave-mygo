@@ -16,6 +16,8 @@ import { getSong, listSongs } from '@/api/song'
 const route = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
+const mvLoaded = ref(false)      // MV 播放器需手动载入：载入会暂停底部播放器，避免双音轨
+const mvNotice = ref('')         // 互斥提示（谁让谁静音）
 const auth = useAuthStore()
 
 const song = ref(null)
@@ -102,6 +104,25 @@ function onPlay() {
   // 听歌不设登录门槛（游客可试听，登录只影响购票/收藏等）
   player.play(song.value)
 }
+
+/** 载入 MV：先暂停底部播放器（B 站 iframe 无法被程序暂停，只能让播放器让路） */
+function loadMv() {
+  if (player.isPlaying) {
+    player.toggle()
+    mvNotice.value = '已暂停底部播放器，避免与 MV 声音重叠'
+  } else {
+    mvNotice.value = ''
+  }
+  mvLoaded.value = true
+}
+
+/** 反向互斥：一旦开始播放音频，卸载 MV（否则两个音轨同时响） */
+watch(() => player.isPlaying, (playing) => {
+  if (playing && mvLoaded.value) {
+    mvLoaded.value = false
+    mvNotice.value = '已卸载 MV 播放器，避免与音频重叠；想继续看 MV 请重新载入'
+  }
+})
 </script>
 
 <template>
@@ -119,9 +140,26 @@ function onPlay() {
       <div>
         <CoverArt :title="song.title" :band="band.slug" :cover-url="song.coverUrl || ''" class="aspect-square w-full shadow-md" rounded="rounded-xl" />
         <button class="btn-primary mt-4 w-full" @click="onPlay">
-          ▶ {{ song.audioUrl ? '播放试听' : '播放（演示模式）' }}
+          ▶ {{ song.audioUrl ? '播放试听（30 秒）' : '播放（无试听·静音演示）' }}
         </button>
-        <p v-if="!song.audioUrl" class="mt-2 text-center text-xs text-faint">暂无官方试听外链，可观看 MV ↓</p>
+        <p v-if="song.audioUrl" class="mt-2 text-center text-xs text-faint">
+          站内仅提供官方 30 秒试听片段（不托管完整音源）
+        </p>
+        <p v-else class="mt-2 text-center text-xs text-faint">
+          该曲暂无官方试听外链，可观看 MV 或前往官方平台
+        </p>
+
+        <!-- 听全曲：有官方外链直达，否则引导到 MV / B 站搜索 -->
+        <a v-if="song.streamUrl" :href="song.streamUrl" target="_blank" rel="noopener"
+           class="btn-ghost mt-2 w-full !py-1.5 !text-xs">收听完整版（官方平台）↗</a>
+        <button v-else-if="mvEmbedUrl" class="btn-ghost mt-2 w-full !py-1.5 !text-xs" @click="loadMv">
+          用下方 MV 听全曲 ↓
+        </button>
+        <a v-else
+           :href="`https://search.bilibili.com/all?keyword=${encodeURIComponent(song.title + ' ' + song.bandName)}`"
+           target="_blank" rel="noopener" class="btn-ghost mt-2 w-full !py-1.5 !text-xs">
+          在 B 站搜索完整版 ↗
+        </a>
       </div>
 
       <!-- 右：元信息 -->
@@ -140,11 +178,21 @@ function onPlay() {
         <div class="mt-8">
           <h2 class="mb-3 text-lg font-bold">MV</h2>
 
-          <!-- 可内嵌（player.html?bvid=…） -->
+          <!-- 可内嵌（player.html?bvid=…）：手动载入，避免与底部播放器双音轨 -->
           <template v-if="mvEmbedUrl">
-            <div class="aspect-video overflow-hidden rounded-xl border border-line">
+            <p v-if="mvNotice" class="mb-2 rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+              {{ mvNotice }}
+            </p>
+            <div v-if="mvLoaded" class="aspect-video overflow-hidden rounded-xl border border-line">
               <iframe :src="mvEmbedUrl" class="h-full w-full" allowfullscreen scrolling="no" />
             </div>
+            <button v-else class="card flex w-full items-center gap-4 p-4 text-left transition hover:shadow-md" @click="loadMv">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white">▶</span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold">载入 MV 播放器</span>
+                <span class="mt-0.5 block text-xs text-faint">载入时会自动暂停底部播放器，避免两个音轨重叠</span>
+              </span>
+            </button>
             <a :href="mvExternalUrl" target="_blank" rel="noopener" class="btn-ghost mt-2 inline-flex !py-1.5 !text-xs">
               内嵌无法播放？在 B 站打开 ↗
             </a>
