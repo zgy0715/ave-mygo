@@ -26,6 +26,15 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
     java.util.List<Object[]> nextStartByEvent(@Param("eventIds") java.util.Collection<Long> eventIds,
                                               @Param("now") LocalDateTime now);
 
+    /** 提醒用：批量取各演出「下一次开售时间」（只算还没开售的场次） */
+    @Query("""
+            SELECT s.eventId, MIN(s.saleStartTime) FROM LiveSession s
+            WHERE s.eventId IN :eventIds AND s.saleStartTime > :now
+            GROUP BY s.eventId
+            """)
+    java.util.List<Object[]> nextSaleStartByEvent(@Param("eventIds") java.util.Collection<Long> eventIds,
+                                                  @Param("now") LocalDateTime now);
+
     /** 管理端列表：演出下有几场 */
     long countByEventId(Long eventId);
 
