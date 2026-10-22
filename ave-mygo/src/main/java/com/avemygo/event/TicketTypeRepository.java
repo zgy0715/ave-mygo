@@ -53,4 +53,9 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
             WHERE t.id = :id AND t.soldCount >= :qty
             """)
     int decreaseSold(@Param("id") Long id, @Param("qty") int qty);
+
+    /** 场次级联删除：软删该场次全部票档 */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE TicketType t SET t.isDeleted = 1 WHERE t.sessionId = :sessionId")
+    int softDeleteBySessionId(@Param("sessionId") Long sessionId);
 }

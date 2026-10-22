@@ -64,4 +64,9 @@ public interface TicketOrderRepository extends JpaRepository<TicketOrder, Long> 
 
     /** 超时任务扫描：待支付且已过支付截止时间 */
     List<TicketOrder> findByStatusAndPayDeadlineBefore(String status, LocalDateTime deadline);
+
+    /** 删除前置校验：演出/场次下是否存在未完成订单（待支付或已支付） */
+    boolean existsByEventIdAndStatusIn(Long eventId, java.util.Collection<String> statuses);
+
+    boolean existsBySessionIdAndStatusIn(Long sessionId, java.util.Collection<String> statuses);
 }

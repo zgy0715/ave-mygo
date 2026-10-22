@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,9 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 管理端演出域接口（/api/v1/admin/** 仅 ADMIN）。
- * 演出：GET/POST 列表与新建，PATCH 修改
- * 场次：GET/POST /events/{id}/sessions，PATCH /sessions/{id}
- * 票档：POST /sessions/{id}/ticket-types，PATCH /ticket-types/{id}
+ * 演出：GET/POST 列表与新建，PATCH 修改，DELETE 软删（有未完成订单拒绝）
+ * 场次：GET/POST /events/{id}/sessions，PATCH /sessions/{id}，DELETE 软删并级联票档/曲目单
+ * 票档：POST /sessions/{id}/ticket-types，PATCH /ticket-types/{id}（含 status 下架/恢复）
  */
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -57,6 +58,12 @@ public class AdminEventController {
         return ApiResponse.ok(service.update(id, req));
     }
 
+    @DeleteMapping("/events/{id}")
+    public ApiResponse<Void> deleteEvent(@PathVariable Long id) {
+        service.deleteEvent(id);
+        return ApiResponse.ok();
+    }
+
     // ---------------- 场次 ----------------
 
     @GetMapping("/events/{id}/sessions")
@@ -74,6 +81,12 @@ public class AdminEventController {
     public ApiResponse<SessionView> updateSession(@PathVariable Long id,
                                                   @Valid @RequestBody SessionPatch req) {
         return ApiResponse.ok(service.updateSession(id, req));
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    public ApiResponse<Void> deleteSession(@PathVariable Long id) {
+        service.deleteSession(id);
+        return ApiResponse.ok();
     }
 
     // ---------------- 票档 ----------------

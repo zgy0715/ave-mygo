@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
@@ -21,6 +22,7 @@ import org.hibernate.annotations.UpdateTimestamp;
  */
 @Entity
 @Table(name = "ticket_type")
+@SQLRestriction("is_deleted = 0")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -55,6 +57,10 @@ public class TicketType {
     /** 1 启用 / 0 停用（停用后不可下单，已出订单不受影响） */
     @Column(nullable = false)
     private Byte status = (byte) 1;
+
+    /** 软删标记：0 正常 / 1 已删（场次级联删除时置 1） */
+    @Column(name = "is_deleted", nullable = false)
+    private Byte isDeleted = (byte) 0;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

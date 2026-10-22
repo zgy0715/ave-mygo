@@ -21,4 +21,9 @@ public interface SetlistItemRepository extends JpaRepository<SetlistItem, Long> 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM SetlistItem i WHERE i.sessionId = :sessionId")
     int deleteBySessionIdQuery(@Param("sessionId") Long sessionId);
+
+    /** 场次级联删除：软删该场次全部曲目单 */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE SetlistItem i SET i.isDeleted = 1 WHERE i.sessionId = :sessionId")
+    int softDeleteBySessionId(@Param("sessionId") Long sessionId);
 }
