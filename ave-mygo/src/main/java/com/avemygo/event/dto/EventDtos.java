@@ -23,9 +23,9 @@ public class EventDtos {
     ) {
     }
 
-    /** 场次视图（含票档） */
+    /** 场次视图（含票档）。eventId 供管理端删除场次后按演出重拉列表使用 */
     public record SessionView(
-            Long id, String name,
+            Long id, Long eventId, String name,
             LocalDateTime startTime, LocalDateTime endTime,
             String status, LocalDateTime saleStartTime,
             List<TicketTypeView> ticketTypes

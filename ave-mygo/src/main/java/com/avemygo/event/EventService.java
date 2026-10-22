@@ -92,7 +92,7 @@ public class EventService {
                 .collect(java.util.stream.Collectors.groupingBy(TicketType::getSessionId));
         List<SessionView> sessions = sessionList.stream()
                 .map(s -> new SessionView(
-                        s.getId(), s.getName(), s.getStartTime(), s.getEndTime(),
+                        s.getId(), s.getEventId(), s.getName(), s.getStartTime(), s.getEndTime(),
                         s.getStatus(), s.getSaleStartTime(),
                         typesBySession.getOrDefault(s.getId(), java.util.List.of())
                                 .stream().map(this::toView).toList()))
