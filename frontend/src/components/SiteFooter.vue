@@ -12,8 +12,6 @@ const year = new Date().getFullYear()
 const icons = {
   bilibili:
     '<path d="M8.9 5.6 6.6 2.9a.9.9 0 0 1 1.4-1.2l2.6 3.1h2.8l2.6-3.1a.9.9 0 0 1 1.4 1.2l-2.3 2.7H19A3.4 3.4 0 0 1 22.4 9v8.6A3.4 3.4 0 0 1 19 21H5a3.4 3.4 0 0 1-3.4-3.4V9A3.4 3.4 0 0 1 5 5.6h3.9z"/><rect x="7.3" y="10.8" width="2.3" height="4.4" rx="1.15" fill="var(--color-primary)"/><rect x="14.4" y="10.8" width="2.3" height="4.4" rx="1.15" fill="var(--color-primary)"/>',
-  douyin:
-    '<path d="M16.7 2.8c.4 2.7 2 4.4 4.5 4.7v3.1c-1.7 0-3.2-.5-4.5-1.4v5.7a5.8 5.8 0 1 1-5.8-5.8c.34 0 .67.03 1 .1v3.2a2.7 2.7 0 1 0 1.9 2.5V2.8h2.9z"/>',
   mygo:
     '<circle cx="12" cy="12" r="9.2"/><g fill="none" stroke="var(--color-primary)" stroke-width="1.5"><path d="M3.2 12h17.6"/><ellipse cx="12" cy="12" rx="4.2" ry="9.2"/></g>',
   mujica:
@@ -28,9 +26,8 @@ const icons = {
 
 const externalLinks = [
   { label: '哔哩哔哩 BILIBILI', href: 'https://space.bilibili.com/531846477', icon: 'bilibili' },
-  { label: '抖音 DOUYIN', href: 'https://www.douyin.com/user/MS4wLjABAAAA6dxS4T4bSlZKc5WaiQ55DJ7IShZuouv5EeV2O', icon: 'douyin' },
-  { label: 'MyGO!!!!! 官网', href: 'https://mygo-org.bang-dream.com/', icon: 'mygo' },
-  { label: 'Ave Mujica 官网', href: 'https://avemujica.bang-dream.com/', icon: 'mujica' },
+  { label: 'MyGO!!!!! 官网', href: 'https://anime.bang-dream.com/mygo/', icon: 'mygo' },
+  { label: 'Ave Mujica 官网', href: 'https://anime.bang-dream.com/avemujica/', icon: 'mujica' },
   { label: '劇場版 prima aurora', href: 'https://avemujica-movie.bang-dream.com/', icon: 'movie' },
   { label: 'Bestdori!', href: 'https://bestdori.com/', icon: 'bestdori' },
   { label: '站长 GITHUB · ZGY0715', href: 'https://github.com/zgy0715', icon: 'author' },
