@@ -14,8 +14,10 @@ import com.avemygo.event.EventRepository;
 import com.avemygo.event.LiveEvent;
 import com.avemygo.event.LiveSession;
 import com.avemygo.event.LiveSessionRepository;
+import com.avemygo.event.SetlistItemRepository;
 import com.avemygo.event.TicketType;
 import com.avemygo.event.TicketTypeRepository;
+import com.avemygo.order.TicketOrderRepository;
 import com.avemygo.song.Band;
 import com.avemygo.song.BandRepository;
 import java.time.LocalDateTime;
@@ -50,6 +52,11 @@ public class AdminEventService {
     private final LiveSessionRepository sessionRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final BandRepository bandRepository;
+    private final TicketOrderRepository orderRepository;
+    private final SetlistItemRepository setlistItemRepository;
+
+    /** 未完成订单状态：存在任一即禁止删除演出/场次（已退款/已取消/已过期不限） */
+    private static final Set<String> UNFINISHED_ORDER_STATUS = Set.of("PENDING_PAYMENT", "PAID");
 
     // ---------------- 演出 ----------------
 
@@ -100,6 +107,38 @@ public class AdminEventService {
         if (req.status() != null) e.setStatus(validEventStatus(req.status(), e.getStatus()));
         return toView(eventRepository.save(e), bandName(e.getBandId()),
                 (int) sessionRepository.countByEventId(e.getId()));
+    }
+
+    /**
+     * 删除演出（软删）。存在待支付/已支付订单时拒绝 —— 钱和票还没两清，
+     * 删了演出订单就成孤儿；已退款/已取消/已过期不拦截。
+     */
+    @Transactional
+    public void deleteEvent(Long id) {
+        LiveEvent e = eventRepository.findById(id)
+                .orElseThrow(() -> new BizException(40004, "演出不存在"));
+        if (orderRepository.existsByEventIdAndStatusIn(id, UNFINISHED_ORDER_STATUS)) {
+            throw new BizException(40903, "该演出存在待支付或已支付订单，请先处理订单后再删除");
+        }
+        e.setIsDeleted((byte) 1);
+        eventRepository.save(e);
+    }
+
+    /**
+     * 删除场次（软删），级联软删其票档与曲目单。
+     * 该场次存在未完成订单时拒绝；已退款/已取消/已过期不拦截。
+     */
+    @Transactional
+    public void deleteSession(Long id) {
+        LiveSession s = sessionRepository.findById(id)
+                .orElseThrow(() -> new BizException(40004, "场次不存在"));
+        if (orderRepository.existsBySessionIdAndStatusIn(id, UNFINISHED_ORDER_STATUS)) {
+            throw new BizException(40903, "该场次存在待支付或已支付订单，请先处理订单后再删除");
+        }
+        ticketTypeRepository.softDeleteBySessionId(id);
+        setlistItemRepository.softDeleteBySessionId(id);
+        s.setIsDeleted((byte) 1);
+        sessionRepository.save(s);
     }
 
     // ---------------- 场次 ----------------

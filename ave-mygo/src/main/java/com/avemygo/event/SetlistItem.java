@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * 演出曲表实体，对应表 setlist_item（docs/05 §3.12）。
@@ -18,6 +19,7 @@ import org.hibernate.annotations.CreationTimestamp;
  */
 @Entity
 @Table(name = "setlist_item")
+@SQLRestriction("is_deleted = 0")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,6 +44,10 @@ public class SetlistItem {
     /** 是否安可曲 */
     @Column(name = "is_encore", nullable = false)
     private Byte isEncore = (byte) 0;
+
+    /** 软删标记：0 正常 / 1 已删（场次级联删除时置 1） */
+    @Column(name = "is_deleted", nullable = false)
+    private Byte isDeleted = (byte) 0;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
