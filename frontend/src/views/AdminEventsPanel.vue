@@ -78,6 +78,7 @@ const expandedId = ref(null)
 const setlistTarget = ref(null)   // 正在编辑歌单的场次
 const confirmDel = ref(null)      // {type:'event'|'session', id, name}
 const deleting = ref(false)
+const errMsg = ref('')            // 删除弹窗内的错误提示（40903 等）
 const sessions = ref([])
 const sessLoading = ref(false)
 const sessErr = ref('')
