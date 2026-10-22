@@ -16,7 +16,7 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
-    trace: 'retain-on-failure',
+    trace: 'off',
     screenshot: 'only-on-failure',
     viewport: { width: 1366, height: 900 },
   },
