@@ -69,7 +69,12 @@ server {
     root /workspace/frontend/dist;
     index index.html;
     location / { try_files $uri /index.html; }
-    location /api/ { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        # 同源部署：置空 Origin，避免 Spring CORS 把 https(浏览器)->http(反代) 判为跨域而 403
+        proxy_set_header Origin "";
+    }
 }
 NGINX
 fi
