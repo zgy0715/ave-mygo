@@ -61,7 +61,7 @@ const externalLinks = [
 
       <!-- 版权 + 免责 -->
       <p class="display mt-10 text-sm tracking-[0.18em] sm:text-base">
-        COPYRIGHT © {{ year }} BANDORI / LIVE. ALL RIGHTS RESERVED.
+        COPYRIGHT © {{ year }} BANG DREAM! / LIVE. ALL RIGHTS RESERVED.
       </p>
       <p class="micro mt-3 !text-white/60">
         粉丝自制站点 · 与 BAN!DREAM! 项目及武士道官方无关 · 不托管任何音频文件
