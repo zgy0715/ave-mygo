@@ -39,7 +39,7 @@ const onSale = computed(() => events.value.filter((e) => e.status === 'PUBLISHED
 // 只把「售票中」的演出放进 Hero 购票位；没有在售就不显示（避免给已结束演出挂「立即购票」）
 const featured = computed(() => onSale.value[0] || null)
 const upcoming = computed(() => events.value.filter((e) => e.status !== 'ENDED').slice(0, 3))
-const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANDORI / LIVE']
+const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANG DREAM! / LIVE']
 
 /** 乐队卡 logo 加载失败 → 回退文字标题 */
 const logoErr = reactive({})
@@ -119,7 +119,7 @@ const gradientOf = (slug) =>
           : 'text-ink'"
         v-reveal="120"
       >
-        BANDORI<span class="mx-1 align-top text-[0.4em]" :class="videoActive ? 'text-white/80' : 'text-primary'">✳</span>LIVE
+        BANG DREAM!<span class="mx-1 align-top text-[0.4em]" :class="videoActive ? 'text-white/80' : 'text-primary'">✳</span>LIVE
       </h1>
       <p class="mono mt-4 text-sm tracking-[0.45em] v-reveal" :class="videoActive ? 'text-white/75' : 'text-dim'" v-reveal="240">
         MYGO!!!!! ✳ AVE MUJICA
