@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import SetlistEditor from '@/components/SetlistEditor.vue'
+import { deleteAdminEvent, deleteAdminSession } from '@/api/admin'
 import { listBands } from '@/api/song'
 import {
   createAdminEvent,
@@ -75,6 +76,8 @@ const clearErr = (obj) => Object.keys(obj).forEach((k) => delete obj[k])
 /* ===== 展开场次 ===== */
 const expandedId = ref(null)
 const setlistTarget = ref(null)   // 正在编辑歌单的场次
+const confirmDel = ref(null)      // {type:'event'|'session', id, name}
+const deleting = ref(false)
 const sessions = ref([])
 const sessLoading = ref(false)
 const sessErr = ref('')
@@ -209,6 +212,30 @@ const SESSION_STATUS = [
   { v: 'ENDED', t: '已结束 ENDED' },
 ]
 
+async function doDelete() {
+  if (!confirmDel.value || deleting.value) return
+  deleting.value = true
+  errMsg.value = ''
+  try {
+    if (confirmDel.value.type === 'event') {
+      await deleteAdminEvent(confirmDel.value.id)
+      if (expandedId.value === confirmDel.value.id) expandedId.value = null
+      sessionCache.delete(confirmDel.value.id)
+      confirmDel.value = null
+      await load()                 // 重拉列表（若当前页被删空会自然回退）
+    } else {
+      await deleteAdminSession(confirmDel.value.id)
+      const eid = confirmDel.value.eventId
+      confirmDel.value = null
+      await loadSessions(eid)      // 重拉场次并写回缓存
+    }
+  } catch (e) {
+    errMsg.value = e.message       // 典型：40903 有未完成订单
+  } finally {
+    deleting.value = false
+  }
+}
+
 function openSession(ev) {
   sessionEventId.value = ev.id
   Object.assign(sessionForm, { name: '', startTime: '', endTime: '', saleStartTime: '', status: 'ONSALE' })
@@ -339,6 +366,11 @@ async function submitTicket() {
                 <button class="btn-ghost !px-2.5 !py-1 !text-xs" @click.stop="toggleExpand(ev)">
                   {{ expandedId === ev.id ? '收起' : '场次明细' }}
                 </button>
+                <button
+                  class="btn-ghost !px-2.5 !py-1 !text-xs hover:!border-red-300 hover:!text-red-500"
+                  title="删除演出"
+                  @click.stop="confirmDel = { type: 'event', id: ev.id, name: ev.title, eventId: ev.id }"
+                >删除</button>
               </div>
             </td>
           </tr>
@@ -356,6 +388,11 @@ async function submitTicket() {
                   <span class="mono text-[11px] text-faint">{{ fmt(s.startTime) }} — {{ fmt(s.endTime) }}</span>
                   <StatusBadge :status="s.status" />
                   <button class="btn-ghost ml-auto !px-2.5 !py-1 !text-xs" @click="setlistTarget = s">歌单</button>
+                  <button
+                    class="btn-ghost !px-2.5 !py-1 !text-xs hover:!border-red-300 hover:!text-red-500"
+                    title="删除场次"
+                    @click="confirmDel = { type: 'session', id: s.id, name: s.name, eventId: s.eventId }"
+                  >删除</button>
                   <button class="btn-ghost !px-2.5 !py-1 !text-xs" @click="openTicket(s)">＋ 票档</button>
                 </div>
 
@@ -568,7 +605,29 @@ async function submitTicket() {
     {{ toast }}
   </p>
 
-  <!-- 歌单录入抽屉 -->
+  <!-- 删除确认 -->
+  <Teleport to="body">
+    <div v-if="confirmDel" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="confirmDel = null">
+      <div class="card w-full max-w-sm p-6 text-center">
+        <p class="text-sm">
+          确定{{ confirmDel.type === 'event' ? '删除演出' : '删除场次' }}
+          <span class="font-semibold">「{{ confirmDel.name }}」</span>？
+        </p>
+        <p class="mt-1 text-xs text-faint">
+          {{ confirmDel.type === 'event' ? '软删除，前台即刻不可见；有未完成订单时会被拒绝' : '其票档与歌单会一并移除；有未完成订单时会被拒绝' }}
+        </p>
+        <p v-if="errMsg" class="mt-2 text-xs text-red-500">{{ errMsg }}</p>
+        <div class="mt-5 flex justify-center gap-2">
+          <button class="btn-ghost" @click="confirmDel = null">取消</button>
+          <button class="btn-primary !bg-red-500 hover:!bg-red-600" :disabled="deleting" @click="doDelete">
+            {{ deleting ? '删除中…' : '确认删除' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- 歌单录入抽屉 -->  <!-- 歌单录入抽屉 -->
   <SetlistEditor
     v-if="setlistTarget"
     :session-id="setlistTarget.id"
