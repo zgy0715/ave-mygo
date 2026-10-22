@@ -99,7 +99,7 @@ router.beforeEach((to) => {
 
 // 页面标题 + 滚动落位
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title} — Bandori / LIVE` : 'Bandori / LIVE'
+  document.title = to.meta.title ? `${to.meta.title} — BanG Dream! / LIVE` : 'BanG Dream! / LIVE'
 
   const pop = isPopNavigation
   isPopNavigation = false

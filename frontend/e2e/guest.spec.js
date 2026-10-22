@@ -9,8 +9,8 @@ test.describe('游客旅程', () => {
   test('首页可打开且无控制台报错', async ({ page }) => {
     const errors = collectConsoleErrors(page)
     await page.goto('/')
-    await expect(page).toHaveTitle(/Bandori/)
-    await expect(page.getByRole('link', { name: 'Bandori' })).toBeVisible()
+    await expect(page).toHaveTitle(/BanG Dream!/)
+    await expect(page.getByRole('link', { name: 'BanG Dream!' })).toBeVisible()
     // 过滤掉图片 404 之类的资源噪声，只关心 JS 异常
     const jsErrors = errors.filter((e) => !/Failed to load resource|net::ERR/.test(e))
     expect(jsErrors).toEqual([])

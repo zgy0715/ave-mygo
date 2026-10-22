@@ -16,7 +16,7 @@ const route = useRoute()
     <nav class="wrap flex h-16 items-center justify-between gap-4 !pr-16 sm:!pr-24">
       <!-- Logo：衬线 + mono 双层（给右缘 MENU 页签留出位置） -->
       <RouterLink to="/" class="flex items-baseline gap-2">
-        <span class="serif text-xl font-semibold tracking-wide text-ink">Bandori</span>
+        <span class="serif text-xl font-semibold tracking-wide text-ink">BanG Dream!</span>
         <span class="micro-accent">/ LIVE</span>
       </RouterLink>
 
