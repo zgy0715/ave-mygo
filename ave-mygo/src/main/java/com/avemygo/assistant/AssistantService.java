@@ -114,10 +114,10 @@ public class AssistantService {
                 reply = llmClient.chat(buildMessages(message, facts, sessionId, persona));
             } catch (Exception e) {
                 log.warn("LLM 兜底至规则引擎: {}", e.getMessage());
-                reply = persona[0] + "：" + fallbackReply(intent, message);
+                reply = fallbackReply(intent, message, req.persona());
             }
         } else {
-            reply = persona[0] + "：" + fallbackReply(intent, message);
+            reply = fallbackReply(intent, message, req.persona());
         }
 
         // 3. 落历史（不阻塞主流程：失败仅记日志）
@@ -213,20 +213,46 @@ public class AssistantService {
         return messages;
     }
 
-    private String fallbackReply(Intent intent, String message) {
+    /**
+     * 规则引擎兜底：按人格口吻作答（与 PERSONAS 人设卡一致）。
+     * 不再拼接「人名：」前缀（气泡已有角色名），不向访客暴露 LLM 配置细节。
+     */
+    private String fallbackReply(Intent intent, String message, String personaKey) {
+        String p = personaKey == null ? "xiaodeng" : personaKey.toLowerCase();
         String facts = intent.facts();
+
         if (intent.name().equals("EVENT_RECO")) {
-            return facts.contains("暂无在售")
-                    ? "现在暂时没有在售的演出呢……有新的 LIVE 我会第一时间告诉你的。"
-                    : "现在在售的演出有这些哦：\n" + facts.replace("【站内资料 · 在售演出】\n", "")
-                    + "\n去演出页可以购票，15 分钟内记得支付！";
+            if (facts.contains("暂无在售")) {
+                return switch (p) {
+                    case "anon" -> "呜——现在没有在售的演出啦！新场次一开售，我第一个告诉你！";
+                    case "sakiko" -> "目前没有在售的场次。好戏不怕晚，静候便是。";
+                    case "mutsumi" -> "……没有。等等。";
+                    default -> "现在……没有在售的演出。新场次开售的话，我、我马上告诉你……";
+                };
+            }
+            return "现在在售的演出有这些：\n" + facts.replace("【站内资料 · 在售演出】\n", "")
+                    + "\n" + switch (p) {
+                    case "anon" -> "手慢就没票啦！冲——！";
+                    case "sakiko" -> "席位有限，欲购从速。这是基本的礼仪。";
+                    case "mutsumi" -> "……嗯。快。";
+                    default -> "购票后 15 分钟内记得支付……我、我会等你的。";
+                };
         }
         if (intent.name().equals("SONG_QA") && facts.contains("- ")) {
             return "帮你查到啦：\n" + facts.replaceFirst("【站内资料 · [^】]+】\n", "")
-                    + "\n（配置 LLM Key 后我可以回答得更详细～）";
+                    + "\n" + switch (p) {
+                    case "anon" -> "这几首都超好听的哦——不听会后悔哦？";
+                    case "sakiko" -> "皆是良品。能注意到它们，品味不错。";
+                    case "mutsumi" -> "……嗯。听。";
+                    default -> "有想听的……可以加进歌单，慢慢听……";
+                };
         }
-        return "我是小灯，本站的智能助手！你可以问我站内的歌曲、乐队成员，或者让推荐演出。"
-                + "（管理员配置 LLM Key 后我会变得更聪明哦）";
+        return switch (p) {
+            case "anon" -> "我是千早愛音！这个站的助手兼气氛担当！想听歌、看成员介绍，还是问演出？随便问——包你满意！";
+            case "sakiko" -> "丰川祥子，为本站效力。曲目、成员、演出排期——说吧，我为你解答。";
+            case "mutsumi" -> "……睦。助手。歌、成员、演出。……嗯。";
+            default -> "……我是小灯，这个站的助手。歌曲、乐队成员、演出的事……都可以问我。那个……你想听什么？";
+        };
     }
 
     // ---- 工具 ----
