@@ -225,9 +225,9 @@ async function doDelete() {
       await load()                 // 重拉列表（若当前页被删空会自然回退）
     } else {
       await deleteAdminSession(confirmDel.value.id)
-      const eid = confirmDel.value.eventId
       confirmDel.value = null
-      await loadSessions(eid)      // 重拉场次并写回缓存
+      // 场次一定属于当前展开的演出；SessionView 无 eventId 字段，用 expandedId
+      if (expandedId.value) await loadSessions(expandedId.value)
     }
   } catch (e) {
     errMsg.value = e.message       // 典型：40903 有未完成订单
