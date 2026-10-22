@@ -142,18 +142,25 @@ public class AssistantService {
         if (!hits.isEmpty()) {
             return new Intent("SONG_QA", songFacts(hits));
         }
+        if (message.matches(".*(推荐.*歌|有什么歌|听什么|点歌|歌曲推荐|歌单推荐|好听的歌).*")) {
+            List<Song> rec = songRepository.search(null, null, null,
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "id"))).getContent();
+            return new Intent("SONG_RECO", songFacts(rec));
+        }
         String memberFacts = memberFacts(message);
         if (!memberFacts.isEmpty()) {
-            return new Intent("SONG_QA", memberFacts + "\n" + bandFacts());
+            return new Intent("MEMBER_QA", memberFacts + "\n" + bandFacts());
         }
         return new Intent("GENERAL", bandFacts());
     }
 
     private String songFacts(List<Song> hits) {
+        Map<Short, String> bandNames = new java.util.HashMap<>();
+        for (Band b : bandRepository.findAll()) bandNames.put(b.getId(), b.getName());
         StringBuilder sb = new StringBuilder("【站内资料 · 相关歌曲】\n");
         for (Song s : hits) {
             sb.append("- ").append(s.getTitle())
-                    .append("（乐队id=").append(s.getBandId())
+                    .append("（").append(bandNames.getOrDefault(s.getBandId(), ""))
                     .append("，发行=").append(s.getReleaseDate() == null ? "未知" : s.getReleaseDate())
                     .append(s.getTags() == null || s.getTags().isBlank() ? "" : "，标签=" + s.getTags())
                     .append("）\n");
@@ -238,6 +245,25 @@ public class AssistantService {
                     default -> "购票后 15 分钟内记得支付……我、我会等你的。";
                 };
         }
+        if (intent.name().equals("SONG_RECO")) {
+            return "挑了几首给你：\n" + facts.replaceFirst("【站内资料 · [^】]+】\n", "")
+                    + "\n" + switch (p) {
+                    case "anon" -> "这些都是我们的歌哦——现在就去歌曲页听！";
+                    case "sakiko" -> "皆无雷曲，值得反复聆听。去听吧。";
+                    case "mutsumi" -> "……嗯。去听。";
+                    default -> "用站内播放器就能听 30 秒试听……喜欢的话，再、再点 MV 看完整版……";
+                };
+        }
+        if (intent.name().equals("MEMBER_QA")) {
+            return "说到 TA：\n" + facts.replaceFirst("【站内资料 · [^】]+】\n", "")
+                    .replace("【站内资料 · 乐队】\n", "")
+                    + "\n" + switch (p) {
+                    case "anon" -> "成员介绍页还有他们的照片和 CV 哦——快去看！";
+                    case "sakiko" -> "以上。成员之事，还请以官方资料为准。";
+                    case "mutsumi" -> "……嗯。都在上面。";
+                    default -> "成员页……有更详细的介绍……对不起，我只知道这些……";
+                };
+        }
         if (intent.name().equals("SONG_QA") && facts.contains("- ")) {
             return "帮你查到啦：\n" + facts.replaceFirst("【站内资料 · [^】]+】\n", "")
                     + "\n" + switch (p) {
@@ -248,10 +274,17 @@ public class AssistantService {
                 };
         }
         return switch (p) {
-            case "anon" -> "我是千早愛音！这个站的助手兼气氛担当！想听歌、看成员介绍，还是问演出？随便问——包你满意！";
-            case "sakiko" -> "丰川祥子，为本站效力。曲目、成员、演出排期——说吧，我为你解答。";
-            case "mutsumi" -> "……睦。助手。歌、成员、演出。……嗯。";
-            default -> "……我是小灯，这个站的助手。歌曲、乐队成员、演出的事……都可以问我。那个……你想听什么？";
+            case "anon" -> "我是千早愛音！这个站的助手兼气氛担当！本站现在收录了：\n"
+                    + facts.replace("【站内资料 · 乐队】\n", "")
+                    + "想听歌、看成员介绍，还是问演出？随便问——包你满意！";
+            case "sakiko" -> "丰川祥子，为本站效力。本站收录：\n"
+                    + facts.replace("【站内资料 · 乐队】\n", "")
+                    + "曲目、成员、演出排期——说吧，我为你解答。";
+            case "mutsumi" -> "……睦。助手。\n" + facts.replace("【站内资料 · 乐队】\n", "")
+                    + "歌、成员、演出。……嗯。";
+            default -> "……我是小灯，这个站的助手。站里现在有：\n"
+                    + facts.replace("【站内资料 · 乐队】\n", "")
+                    + "歌曲、乐队成员、演出的事……都可以问我。那个……你想听什么？";
         };
     }
 
