@@ -414,9 +414,6 @@ async function submitCreate() {
     <!-- 用户管理标签页 -->
     <AdminUsersPanel v-if="tab === 'users'" />
 
-    <!-- 用户管理标签页 -->
-    <AdminUsersPanel v-if="tab === 'users'" />
-
     <!-- 新建弹窗 -->
     <Teleport to="body">
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" @click.self="showCreate = false">

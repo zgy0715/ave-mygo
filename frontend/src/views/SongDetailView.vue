@@ -260,7 +260,5 @@ watch(() => player.isPlaying, (playing) => {
 
   <div v-else class="wrap py-16">
     <EmptyState icon="🤔" text="歌曲不存在或已下架" action-text="回到歌曲库" @action="router.push('/songs')" />
-    <!-- 评论区 -->
-    <SongComments :song-id="song.id" />
   </div>
 </template>
