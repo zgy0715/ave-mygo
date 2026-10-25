@@ -292,13 +292,10 @@ public class AssistantService {
 
     private Long currentUserOrNull() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated()
-                && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.User u) {
-            try {
-                return Long.parseLong(u.getUsername());
-            } catch (NumberFormatException ignored) {
-                // principal.username 非数字 → 匿名或表单登录，视为游客
-            }
+        // JwtAuthFilter 盖章的 principal 是 Long userId（非 UserDetails），
+        // 匿名/游客为 "anonymousUser" 字符串或 null
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof Long id) {
+            return id;
         }
         return null;
     }

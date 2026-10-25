@@ -3,8 +3,8 @@
 对无 MV / 非官方源的歌：尝试 B 站搜索接口，列出候选（不修改数据）。
 输出 .audit/mv.json
 """
-import json
 import os
+import json
 import re
 import subprocess
 import urllib.parse
@@ -19,7 +19,7 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Referer": "htt
 OFFICIAL_HINTS = ["BanG Dream", "MyGO", "Ave Mujica", "バンドリ", "ブシロード", "Bushiroad", "bilibili"]
 
 def sql(q):
-    out = subprocess.run([M, "-u", "root", "-p20040715", "--default-character-set=utf8mb4",
+    out = subprocess.run([M, "-u", "root", "-p" + os.environ.get("DB_PASSWORD", ""), "--default-character-set=utf8mb4",
                           "bandori_live", "-N", "-B", "-e", q], capture_output=True)
     return [l.rstrip("\r").split("\t") for l in out.stdout.decode("utf-8", "ignore").strip().split("\n") if l.strip()]
 

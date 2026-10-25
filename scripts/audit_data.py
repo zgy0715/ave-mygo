@@ -4,6 +4,7 @@
 3) 每个 MV 的 B 站视频是否可用、标题是否对得上、UP 主是否官方
 输出：/tmp/audit.json + 控制台摘要
 """
+import os
 import json
 import re
 import subprocess
@@ -18,7 +19,7 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Referer": "htt
 
 
 def sql(q):
-    out = subprocess.run([M, "-u", "root", "-p20040715", "--default-character-set=utf8mb4",
+    out = subprocess.run([M, "-u", "root", "-p" + os.environ.get("DB_PASSWORD", ""), "--default-character-set=utf8mb4",
                           DB, "-N", "-B", "-e", q], capture_output=True)
     return [line.rstrip("\r").split("\t") for line in out.stdout.decode("utf-8", "ignore").strip().split("\n") if line.strip()]
 
@@ -144,7 +145,6 @@ with ThreadPoolExecutor(max_workers=6) as pool:
     details = list(pool.map(work, songs))
 
 report = {"integrity": integrity, "songs": details}
-import os
 os.makedirs(os.path.join(os.path.dirname(__file__), "..", ".audit"), exist_ok=True)
 with open(os.path.join(os.path.dirname(__file__), "..", ".audit", "audit.json"), "w", encoding="utf-8") as f:
     json.dump(report, f, ensure_ascii=False, indent=1)

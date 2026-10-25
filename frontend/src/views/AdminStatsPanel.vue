@@ -137,11 +137,11 @@ onBeforeUnmount(() => {
 
 /** 上座率配色：>90% 红、<30% 灰、其余主色 */
 function occClass(o) {
-  if (o >= 0.9) return 'bg-red-500'
-  if (o < 0.3) return 'bg-line-strong'
+  if (o >= 90) return 'bg-red-500'
+  if (o < 30) return 'bg-line-strong'
   return 'bg-primary'
 }
-const pct = (o) => `${Math.round((o || 0) * 100)}%`
+const pct = (o) => `${Math.round(o || 0)}%`   // 后端已给 0-100 百分数
 </script>
 
 <template>
@@ -214,9 +214,9 @@ const pct = (o) => `${Math.round((o || 0) * 100)}%`
               <td class="px-4 py-2.5">
                 <div class="flex items-center gap-2">
                   <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-line/60">
-                    <div class="h-full rounded-full transition-[width]" :class="occClass(s.occupancy)" :style="{ width: Math.min(100, (s.occupancy || 0) * 100) + '%' }" />
+                    <div class="h-full rounded-full transition-[width]" :class="occClass(s.occupancy)" :style="{ width: Math.min(100, s.occupancy || 0) + '%' }" />
                   </div>
-                  <span class="tabular w-10 text-right text-xs" :class="s.occupancy >= 0.9 ? 'text-red-500' : 'text-dim'">{{ pct(s.occupancy) }}</span>
+                  <span class="tabular w-10 text-right text-xs" :class="s.occupancy >= 90 ? 'text-red-500' : 'text-dim'">{{ pct(s.occupancy) }}</span>
                 </div>
               </td>
             </tr>

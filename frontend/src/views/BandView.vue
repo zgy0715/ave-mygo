@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { usePlayerStore } from '@/stores/player'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CoverArt from '@/components/CoverArt.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -14,6 +15,7 @@ import { listSongs } from '@/api/song'
  * 真接口版：GET /bands/{id} → {band, members, albums} + GET /songs?bandId=。
  * 头图：滚动展开（Apple 式 zoom-out reveal）——初始放大裁切，下拉一屏逐渐完整呈现。
  */
+const player = usePlayerStore()
 const route = useRoute()
 const router = useRouter()
 
