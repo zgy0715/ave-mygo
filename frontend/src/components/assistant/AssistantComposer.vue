@@ -78,17 +78,17 @@ function useChip(s) {
         @input="onInput"
         @keydown="onKeydown"
       />
-      <span class="tabular absolute bottom-1.5 right-2.5 text-[10px]" :class="over ? 'text-red-500' : 'text-faint'">
-        {{ modelValue.length }}/{{ MAX }}
-      </span>
     </div>
 
     <button
       v-if="loading && mode === 'chat'"
-      class="btn-ghost h-9 shrink-0 !px-3 !text-xs"
+      class="btn-ghost flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center !px-0"
       title="停止生成"
+      aria-label="停止生成"
       @click="emit('stop')"
-    >停止</button>
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+    </button>
     <button
       v-else
       class="btn-primary h-9 w-9 shrink-0 !px-0"
