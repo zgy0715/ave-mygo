@@ -116,6 +116,24 @@ describe('AssistantWidget（v2 融合版）', () => {
     expect(agentChat).toHaveBeenCalledTimes(1)   // 仍是 1 次（游客没走 agent）
   })
 
+  it('切人格可用：点 Anon 后展示愛音问候（回归 persona=undefined 导致线程丢失）', async () => {
+    const w = await mountWidget('USER')
+    const panel = await openPanel(w)
+    expect(w.text()).toContain('我是小灯')
+
+    await panel.findAll('button').find((b) => b.text() === 'Anon').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('千早愛音')          // 该人格的问候语已渲染
+
+    await panel.findAll('button').find((b) => b.text() === '小祥').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('豊川祥子')
+
+    await panel.findAll('button').find((b) => b.text() === '睦子米').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('睦')
+  })
+
   it('Esc 逐级退出：最大化→还原→关闭', async () => {
     const w = await mountWidget('ADMIN')
     const ball = w.find('button[aria-label*="AI 助手"]')
