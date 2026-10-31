@@ -231,6 +231,20 @@ function stop() {
   thread.value.controller?.abort()
 }
 
+/* ---- 面板打开期间锁定背景滚动（防止滚轮穿透到主页面）；补偿滚动条宽度防布局跳动 ---- */
+function setBodyScrollLock(lock) {
+  const el = document.documentElement
+  if (lock) {
+    const sw = window.innerWidth - el.clientWidth
+    el.style.overflow = 'hidden'
+    if (sw > 0) document.body.style.paddingRight = `${sw}px`
+  } else {
+    el.style.overflow = ''
+    document.body.style.paddingRight = ''
+  }
+}
+watch(open, (v) => setBodyScrollLock(v))
+
 /* ---- Esc 逐级退出：先退最大化，再关面板 ---- */
 function onGlobalKey(e) {
   if (!open.value || e.key !== 'Escape') return
@@ -239,6 +253,7 @@ function onGlobalKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onBeforeUnmount(() => {
+  setBodyScrollLock(false)
   window.removeEventListener('keydown', onGlobalKey)
   clearTimeout(opsTimer)
   clearTimeout(persistTimer)
