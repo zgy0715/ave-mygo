@@ -136,15 +136,16 @@ async function send(text, opts = {}) {
     /* ===== 运营链路：非流式，一次性返回 ===== */
     const bubble = { id: ++msgSeq, role: 'assistant', mode: 'ops', name: '小灯', text: '', at: Date.now() }
     t.messages.push(bubble)
+    const rb = t.messages[t.messages.length - 1]   // 响应式代理；直接改裸对象不触发渲染
     opsSlow.value = false
     clearTimeout(opsTimer)
     opsTimer = setTimeout(() => (opsSlow.value = true), 20_000)
     try {
       const data = await agentChat(content, opsConversationId)
-      bubble.text = data.content || ''
-      bubble.tools = data.toolCalls || []
+      rb.text = data.content || ''
+      rb.tools = data.toolCalls || []
       if (data.type === 'pending_confirmation') {
-        bubble.pending = { token: data.token, toolName: data.toolName, arguments: data.arguments || {}, state: 'PENDING', result: '' }
+        rb.pending = { token: data.token, toolName: data.toolName, arguments: data.arguments || {}, state: 'PENDING', result: '' }
       }
     } catch (e) {
       const msg = String(e.message)
@@ -168,6 +169,7 @@ async function send(text, opts = {}) {
   /* ===== 问答链路：SSE 流式 ===== */
   const bubble = { id: ++msgSeq, role: 'assistant', mode: 'chat', name: chipById(sentPersona), text: '', at: Date.now(), streaming: true }
   t.messages.push(bubble)
+  const rb = t.messages[t.messages.length - 1]   // 响应式代理（打字机逐字必须走代理）
   const controller = new AbortController()
   t.controller = controller
   try {
@@ -176,25 +178,25 @@ async function send(text, opts = {}) {
       sessionId: getSessionId(sentPersona),
       persona: sentPersona,
       signal: controller.signal,
-      onDelta: (d) => { bubble.text += d },
+      onDelta: (d) => { rb.text += d },
     })
-    if (meta?.personaName) bubble.name = meta.personaName
+    if (meta?.personaName) rb.name = meta.personaName
   } catch (e) {
     if (e?.name === 'AbortError' || controller.signal.aborted) {
-      if (!bubble.text) bubble.text = '（已停止生成）'
+      if (!rb.text) rb.text = '（已停止生成）'
     } else {
       // SSE 不可用 → 降级一次性；再失败 → 系统提示 + 重试
       try {
         const data = await chatWithAssistant({ message: content, sessionId: getSessionId(sentPersona), persona: sentPersona })
-        bubble.text = data.reply
-        if (data.personaName) bubble.name = data.personaName
+        rb.text = data.reply
+        if (data.personaName) rb.name = data.personaName
       } catch {
         t.messages.splice(t.messages.indexOf(bubble), 1)
         pushSystem('小灯走神了，发送失败。', 'chat', { action: 'retry', payload: content })
       }
     }
   } finally {
-    bubble.streaming = false
+    rb.streaming = false
     sentThread.loading = false
     sentThread.controller = null
   }
