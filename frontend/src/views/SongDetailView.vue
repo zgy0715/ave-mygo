@@ -43,7 +43,14 @@ const mvIsBangumi = computed(
 const mvEmbedUrl = computed(() => {
   const u = song.value?.mvUrl || ''
   if (song.value?.mvPlatform === 'BILIBILI_PAGE') return '' // 番剧页永不 iframe
-  return /player\.bilibili\.com/.test(u) && /[?&]bvid=/.test(u) ? u : ''
+  if (!(/player\.bilibili\.com/.test(u) && /[?&]bvid=/.test(u))) return ''
+  // 内嵌播放器默认画质偏低（游客常落到 360/480P），显式要高画质 + 关弹幕 + 宽屏
+  const url = new URL(u)
+  url.searchParams.set('high_quality', '1')
+  url.searchParams.set('danmaku', '0')
+  url.searchParams.set('as_wide', '1')
+  url.searchParams.set('autoplay', '0')
+  return url.toString()
 })
 const mvExternalUrl = computed(() => {
   const u = song.value?.mvUrl || ''
