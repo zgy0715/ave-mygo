@@ -102,9 +102,9 @@ const TOOL_LABEL = {
       </p>
     </div>
 
-    <!-- 文本气泡 -->
+    <!-- 文本气泡：没吐出第一个字时不渲染（由三点 loading 代表），避免空框 + 三点双框 -->
     <div
-      v-if="msg.text || msg.streaming"
+      v-if="msg.text"
       class="card relative max-w-full rounded-2xl rounded-bl-sm px-3.5 py-2"
     >
       <p class="whitespace-pre-wrap break-words text-sm leading-relaxed">
