@@ -16,3 +16,5 @@ export const agentChat = (message, conversationId) =>
 /** 确认/取消待执行写操作：{ status:'EXECUTED'|'REJECTED'|'FAILED', result } */
 export const agentConfirm = (token, approve) =>
   request.post('/admin/agent/confirm', { token, approve }, { timeout: 60_000 })
+
+// 超时说明：运营模式一次请求内部跑多轮 LLM（20~60s），共享 axios 默认 10s 会误杀
