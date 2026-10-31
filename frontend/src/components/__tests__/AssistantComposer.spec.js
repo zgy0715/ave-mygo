@@ -24,10 +24,10 @@ describe('AssistantComposer', () => {
     expect(w.emitted('send')).toHaveLength(1)
   })
 
-  it('500 字上限：超限红色计数且发送禁用', async () => {
+  it('500 字上限：超限发送禁用（计数器已按设计移除，仅静默限制）', async () => {
     const long = 'a'.repeat(501)
     const w = mountC({ modelValue: long })
-    expect(w.text()).toContain('501/500')
+    expect(w.text()).not.toContain('/500')                      // 不再显示字数
     const sendBtn = w.findAll('button').find((b) => b.attributes('aria-label') === '发送')
     expect(sendBtn.attributes('disabled')).toBeDefined()
   })
@@ -48,11 +48,11 @@ describe('AssistantComposer', () => {
     expect(w.emitted('update:modelValue')[0]).toEqual(['推荐演出'])
   })
 
-  it('loading 且 chat 模式 → 显示停止按钮；ops 模式不显示（不可停止）', async () => {
+  it('loading 且 chat 模式 → 停止图标按钮；ops 模式不显示（不可停止）', async () => {
     const chat = mountC({ loading: true, mode: 'chat' })
-    expect(chat.text()).toContain('停止')
+    expect(chat.find('button[aria-label="停止生成"]').exists()).toBe(true)
 
     const ops = mountC({ loading: true, mode: 'ops' })
-    expect(ops.text()).not.toContain('停止')
+    expect(ops.find('button[aria-label="停止生成"]').exists()).toBe(false)
   })
 })
