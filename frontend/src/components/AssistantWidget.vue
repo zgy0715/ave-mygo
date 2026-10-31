@@ -102,9 +102,10 @@ function clearThread() {
   t.sessionId = ''
   t.error = ''
 }
-function switchPersona(p) {
-  if (persona.value === p.id) return
-  persona.value = p.id
+function switchPersona(id) {
+  // 传入的是人格 id 字符串（AssistantHeader 通过 update:personaId 抛出）
+  if (!id || persona.value === id || !threads[id]) return
+  persona.value = id
 }
 
 /* ---- waitingFirst：只在该吐第一个字前显示三点 ---- */
