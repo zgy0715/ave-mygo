@@ -233,6 +233,19 @@ function stop() {
 
 /* ---- 面板打开期间锁定背景滚动（防止滚轮穿透到主页面）；补偿滚动条宽度防布局跳动 ---- */
 function setBodyScrollLock(lock) {
+  // 站点用 Lenis 平滑滚动：它接管 wheel 事件，光锁 overflow 无效 → stop 并掐掉惯性残量
+  try {
+    const lenis = window.__lenis
+    if (lenis) {
+      if (lock) {
+        lenis.stop?.()
+        const y = lenis.actualScroll ?? lenis.scroll ?? window.scrollY
+        lenis.scrollTo?.(y, { immediate: true, force: true })   // 立即定格，避免惯性尾巴继续推页面
+      } else {
+        lenis.start?.()
+      }
+    }
+  } catch { /* 忽略 */ }
   const el = document.documentElement
   if (lock) {
     const sw = window.innerWidth - el.clientWidth
@@ -292,6 +305,7 @@ onBeforeUnmount(() => {
         opsMode ? 'border-amber-300' : 'border-line',
       ]"
       role="dialog"
+      data-lenis-prevent
       :aria-label="opsMode ? '小灯运营模式' : '小灯 AI 助手'"
     >
       <AssistantHeader
