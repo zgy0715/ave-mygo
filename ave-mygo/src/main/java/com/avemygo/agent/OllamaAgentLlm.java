@@ -35,7 +35,40 @@ public class OllamaAgentLlm implements AgentLlm {
     @Value("${llm.model:}")
     private String model;
 
+    /** 启动后异步预热（加载模型到内存），避免第一条运营指令等 60s；可用 agent.warmup=false 关闭 */
+    @Value("${agent.warmup:true}")
+    private boolean warmupEnabled;
+
     private volatile String detectedModel;
+
+    /**
+     * 预热：应用就绪后异步发一个最小请求，把模型加载进内存。
+     * 不阻塞启动、失败只记日志——Ollama 没开时预热失败不影响应用运行。
+     */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void warmup() {
+        if (!warmupEnabled) return;
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            long start = System.currentTimeMillis();
+            try {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("model", resolveModel());
+                body.put("messages", List.of(Map.of("role", "user", "content", "hi")));
+                body.put("stream", false);
+                body.put("max_tokens", 1);
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl))
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofSeconds(120))
+                        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+                        .build();
+                http.send(req, HttpResponse.BodyHandlers.ofString());
+                log.info("Agent 模型预热完成，用时 {} ms", System.currentTimeMillis() - start);
+            } catch (Exception e) {
+                log.info("Agent 模型预热跳过（Ollama 未就绪？）：{}", e.getMessage());
+            }
+        });
+    }
 
     @Override
     public Turn chat(List<Map<String, Object>> messages, List<Map<String, Object>> tools) throws Exception {
