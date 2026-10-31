@@ -32,7 +32,6 @@ function autoGrow() {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px'
 }
 watch(() => props.modelValue, () => nextTick(autoGrow))
-onMounted?.()
 
 function onKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
