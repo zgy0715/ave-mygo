@@ -60,6 +60,7 @@ class AgentApiTest {
     }
 
     private void cleanup() {
+        jdbc.update("DELETE FROM agent_messages");
         jdbc.update("DELETE FROM agent_tool_calls");
         jdbc.update("DELETE FROM ticket_order");
         jdbc.update("DELETE FROM setlist_item");
@@ -314,6 +315,74 @@ class AgentApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"删掉所有演出\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---------------- 多轮上下文 ----------------
+
+    @Test
+    @DisplayName("A12 多轮上下文：第二轮请求带上第一轮问答，且消息落库")
+    void a12_multiTurnContext() throws Exception {
+        Mockito.when(agentLlm.chat(ArgumentMatchers.any(), ArgumentMatchers.any()))
+                .thenReturn(new AgentLlm.Turn(null, List.of(
+                                new AgentLlm.ToolCall("c1", "list_events", "{}"))),
+                        new AgentLlm.Turn("当前共有 2 场演出。", List.of()),
+                        new AgentLlm.Turn("你指的是 Ave Mujica 那场。", List.of()));
+
+        String body = "{\"message\":\"列出所有演出\",\"conversationId\":\"ctx-1\"}";
+        mvc.perform(post("/api/v1/admin/agent/chat").header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(jsonPath("$.data.type").value("reply"));
+
+        // 第二轮：同一 conversationId
+        mvc.perform(post("/api/v1/admin/agent/chat").header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"那场是哪场\",\"conversationId\":\"ctx-1\"}"))
+                .andExpect(jsonPath("$.code").value(0));
+
+        // 第二轮发给 LLM 的 messages 必须包含第一轮的问答
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<Map<String, Object>>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        Mockito.verify(agentLlm, Mockito.atLeast(3)).chat(captor.capture(), ArgumentMatchers.any());
+        List<Map<String, Object>> lastCall = captor.getAllValues().get(captor.getAllValues().size() - 1);
+        String joined = lastCall.toString();
+        assertThat(joined).contains("列出所有演出");       // 第一轮用户消息
+        assertThat(joined).contains("当前共有 2 场演出");   // 第一轮助手回复
+        assertThat(joined).contains("那场是哪场");         // 本轮用户消息
+
+        Integer rows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM agent_messages WHERE conversation_id = 'ctx-1'", Integer.class);
+        assertThat(rows).isEqualTo(4);   // 2 轮 × (用户 + 助手)
+    }
+
+    @Test
+    @DisplayName("A13 确认执行后补记结果进会话，可支撑后续追问")
+    void a13_confirmAppendsContext() throws Exception {
+        long eventId = createEventWithSession();
+        long sessionId = jdbc.queryForObject(
+                "SELECT id FROM live_session WHERE event_id = ? LIMIT 1", Long.class, eventId);
+
+        Mockito.when(agentLlm.chat(ArgumentMatchers.any(), ArgumentMatchers.any()))
+                .thenReturn(new AgentLlm.Turn(null, List.of(
+                        new AgentLlm.ToolCall("c1", "delete_session", "{\"sessionId\":" + sessionId + "}"))));
+
+        MvcResult res = mvc.perform(post("/api/v1/admin/agent/chat")
+                        .header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"删掉这个场次\",\"conversationId\":\"ctx-2\"}"))
+                .andReturn();
+        String token = mapper.readTree(res.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .path("data").path("token").asText();
+
+        mvc.perform(post("/api/v1/admin/agent/confirm").header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\",\"approve\":true}"))
+                .andExpect(jsonPath("$.data.status").value("EXECUTED"));
+
+        String lastAssistant = jdbc.queryForObject(
+                "SELECT content FROM agent_messages WHERE conversation_id = 'ctx-2' AND role = 'ASSISTANT' "
+                        + "ORDER BY id DESC LIMIT 1", String.class);
+        assertThat(lastAssistant).contains("工具执行结果").contains("已删除");
     }
 
     // ---------------- 帮助方法 ----------------

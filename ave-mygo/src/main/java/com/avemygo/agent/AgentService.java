@@ -35,6 +35,8 @@ public class AgentService {
     private static final int PENDING_TTL_MINUTES = 10;
     /** 结果落库/回填的截断长度 */
     private static final int RESULT_LIMIT = 2000;
+    /** 多轮上下文：带入最近 N 条人机对话（工具输出不入上下文，避免淹没指令） */
+    private static final int HISTORY_LIMIT = 8;
 
     private static final String SYSTEM_PROMPT = """
             你是「小灯」，本管理端的运营专员，可以调用工具读写站内数据（BanG Dream! Live 粉丝站）。
@@ -49,6 +51,7 @@ public class AgentService {
     private final AgentLlm llm;
     private final AgentToolRegistry registry;
     private final AgentToolCallRepository auditRepository;
+    private final AgentMessageRepository messageRepository;
     private final ObjectMapper mapper = new ObjectMapper();
 
     // ---------------- 对话主循环 ----------------
@@ -60,7 +63,10 @@ public class AgentService {
 
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
+        // 多轮上下文：把本会话最近几条人机对话放进 messages，让"刚才那场""为什么没删掉"有据可依
+        appendHistory(conv, messages);
         messages.add(Map.of("role", "user", "content", message));
+        persist(conv, userId, AgentMessage.USER, message);
 
         List<AgentToolTrace> traces = new ArrayList<>();
 
@@ -70,6 +76,7 @@ public class AgentService {
             if (!turn.hasToolCalls()) {
                 String content = turn.content() == null || turn.content().isBlank()
                         ? "（没有更多可执行的动作了）" : turn.content();
+                persist(conv, userId, AgentMessage.ASSISTANT, content);
                 return new AgentChatResponse("reply", content, null, null, null, traces);
             }
 
@@ -96,8 +103,9 @@ public class AgentService {
                     record(conv, userId, tool.name(), tool.risk().name(), argsJson,
                             null, AgentToolCall.PENDING, token);
                     traces.add(new AgentToolTrace(tool.name(), "PENDING", summarize(tool, args)));
-                    return new AgentChatResponse("pending_confirmation",
-                            "准备执行：" + summarize(tool, args) + "。请确认后我才会动手。",
+                    String plan = "准备执行：" + summarize(tool, args) + "。请确认后我才会动手。";
+                    persist(conv, userId, AgentMessage.ASSISTANT, plan);
+                    return new AgentChatResponse("pending_confirmation", plan,
                             token, tool.name(), args, traces);
                 }
 
@@ -118,9 +126,9 @@ public class AgentService {
             }
         }
 
-        return new AgentChatResponse("reply",
-                "任务步数超过上限（" + MAX_STEPS + " 步），请把指令拆成更小的一步再试。",
-                null, null, null, traces);
+        String limitMsg = "任务步数超过上限（" + MAX_STEPS + " 步），请把指令拆成更小的一步再试。";
+        persist(conv, userId, AgentMessage.ASSISTANT, limitMsg);
+        return new AgentChatResponse("reply", limitMsg, null, null, null, traces);
     }
 
     // ---------------- 确认门控 ----------------
@@ -145,6 +153,8 @@ public class AgentService {
         if (!approve) {
             row.setStatus(AgentToolCall.REJECTED);
             auditRepository.save(row);
+            persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
+                    "（工具执行结果）已取消，未修改任何数据");
             return new AgentConfirmResponse(AgentToolCall.REJECTED, "已取消，未修改任何数据");
         }
 
@@ -161,12 +171,17 @@ public class AgentService {
             row.setStatus(AgentToolCall.EXECUTED);
             row.setResult(truncate(result));
             auditRepository.save(row);
+            // 补记结果进会话：之后追问"刚才删掉了吗"能答上
+            persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
+                    "（工具执行结果）" + result);
             return new AgentConfirmResponse(AgentToolCall.EXECUTED, result);
         } catch (Exception e) {
             String msg = "执行失败：" + rootMessage(e);
             row.setStatus(AgentToolCall.FAILED);
             row.setResult(truncate(msg));
             auditRepository.save(row);
+            persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
+                    "（工具执行结果）" + msg);
             return new AgentConfirmResponse(AgentToolCall.FAILED, msg);
         }
     }
@@ -245,6 +260,38 @@ public class AgentService {
         } catch (Exception e) {
             // 审计失败不能拖垮主流程，但要留痕
             log.error("Agent 审计写入失败 tool={} status={}: {}", toolName, status, e.getMessage());
+        }
+    }
+
+    /** 多轮上下文：把本会话最近 N 条人机对话追加进消息列表（时间正序） */
+    private void appendHistory(String conv, List<Map<String, Object>> messages) {
+        try {
+            List<AgentMessage> recent = messageRepository.findByConversationIdOrderByIdDesc(
+                    conv, org.springframework.data.domain.PageRequest.of(0, HISTORY_LIMIT));
+            List<AgentMessage> chronological = new ArrayList<>(recent);
+            java.util.Collections.reverse(chronological);
+            for (AgentMessage m : chronological) {
+                String role = AgentMessage.USER.equals(m.getRole()) ? "user" : "assistant";
+                messages.add(Map.of("role", role, "content", m.getContent()));
+            }
+        } catch (Exception e) {
+            // 历史读失败不影响本次指令
+            log.warn("Agent 历史载入失败: {}", e.getMessage());
+        }
+    }
+
+    private void persist(String conv, Long userId, String role, String content) {
+        if (conv == null || content == null || content.isBlank()) return;
+        try {
+            AgentMessage m = new AgentMessage();
+            m.setConversationId(conv);
+            m.setUserId(userId == null ? 0L : userId);
+            m.setRole(role);
+            m.setContent(truncate(content));
+            messageRepository.save(m);
+        } catch (Exception e) {
+            // 落库失败不能拖垮对话主流程
+            log.warn("Agent 会话消息写入失败: {}", e.getMessage());
         }
     }
 
