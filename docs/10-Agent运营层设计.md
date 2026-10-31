@@ -95,7 +95,7 @@
 |---|---|---|---|---|---|
 | 1 | `search_songs` | READ | `keyword?`, `band?`, `limit?` | 按歌名/乐队模糊搜索 | `SongRepository.search` |
 | 2 | `get_song` | READ | `songId` | 歌曲详情（含 MV/音源/标签） | `SongRepository.findById` |
-| 3 | `list_events` | READ | `status?` | 演出列表（含草稿） | `EventRepository.searchAdmin` |
+| 3 | `list_events` | READ | 无 | 最近 10 场演出（含草稿/已发布/已结束，每条带状态） | `EventRepository.searchAdmin` |
 | 4 | `list_sessions` | READ | `eventId` | 某演出的场次与票档 | `LiveSessionRepository` + `TicketTypeRepository` |
 | 5 | `update_song_mv` | **WRITE** | `songId`, `mvUrl` | 修改歌曲 MV 地址 | `SongRepository.save` |
 | 6 | `set_ticket_status` | **WRITE** | `ticketTypeId`, `status(0/1)` | 票档下架/恢复 | `AdminEventService.updateTicketType` |
@@ -402,3 +402,17 @@ CREATE TABLE agent_tool_calls (
 - 效果：第一条运营指令从 ~60s（冷启动加载 5.2G 模型）降到 ~20s（纯推理）
 - 开关：`agent.warmup=false` 可关闭；Ollama 未就绪时预热失败只记日志，不影响应用启动
 - 不做：不阻塞启动、不在请求路径里等待、不反复重试
+
+---
+
+## 17. 一个「结构优于提示」的教训（2026-10-31）
+
+**现象**：用户说「列出所有演出」，小灯只报出 1 场（漏掉已结束的 Ave Mujica），因为它自作主张给 `list_events` 传了 `status=PUBLISHED`。
+
+**先试了提示词**：在 SYSTEM_PROMPT 加「用户说'所有/全部'时不要附加状态过滤」——8B 模型**没有遵守**。
+
+**最终修法**：把 `status` 参数**从工具 Schema 里删掉**，工具只能列全部（每条记录自带状态）。这样"过滤错"在结构上不可能发生，不依赖模型听话。
+
+**可复用的原则**：
+> 对 LLM 的行为约束，优先级是「结构不可为 > 参数校验 > 提示词」。
+> 提示词是最弱的一层，小模型经常不遵守；能用 Schema/白名单/必填校验堵住的，不要指望它自觉。

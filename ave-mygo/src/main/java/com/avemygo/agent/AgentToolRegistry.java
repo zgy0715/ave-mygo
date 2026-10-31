@@ -93,14 +93,14 @@ public class AgentToolRegistry {
                             s.getMvUrl() == null ? "无" : s.getMvUrl());
                 }));
 
+        // 刻意不提供 status 参数：8B 模型会把「所有演出」自作主张加成 status=PUBLISHED，
+        // 漏掉已结束的场次。去掉参数 = 结构上不可能过滤错（每条记录自带状态，用户自己看）
         register(new AgentTool("list_events",
-                "列出演出（管理视角，含草稿）。可按状态筛选：DRAFT/PUBLISHED/ENDED。",
+                "列出最近 10 场演出（管理视角，含草稿/已发布/已结束，每条都带状态）。无需任何参数。",
                 AgentTool.Risk.READ,
-                schema(Map.of("status", Map.of("type", "string",
-                        "description", "状态筛选，可省略")), List.of()),
+                schema(Map.of(), List.of()),
                 args -> {
-                    String status = optStr(args, "status");
-                    var page = eventRepository.searchAdmin(blankToNull(status), null,
+                    var page = eventRepository.searchAdmin(null, null,
                             PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id")));
                     if (page.isEmpty()) return "当前没有演出记录。";
                     List<String> lines = new ArrayList<>();
