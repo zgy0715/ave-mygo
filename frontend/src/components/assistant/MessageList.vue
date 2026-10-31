@@ -76,7 +76,7 @@ defineExpose({ scrollBottom })
 
 <template>
   <div class="relative min-h-0 flex-1">
-    <div ref="listEl" class="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4" aria-live="polite">
+    <div ref="listEl" class="flex h-full flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4" aria-live="polite">
       <!-- 空态 -->
       <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center gap-2.5 text-center">
         <p class="serif text-base text-dim">💡 试试：</p>
