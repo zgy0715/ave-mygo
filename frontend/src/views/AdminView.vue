@@ -234,7 +234,7 @@ async function submitCreate() {
     <!-- 标签页：歌曲管理 / 演出管理 -->
     <div class="mb-6 flex gap-1.5 border-b border-line pb-3">
       <button
-        v-for="t in [{ id: 'stats', label: '数据看板' }, { id: 'songs', label: '歌曲管理' }, { id: 'events', label: '演出管理' }, { id: 'orders', label: '订单管理' }, { id: 'users', label: '用户管理' }}]"
+        v-for="t in [{ id: 'stats', label: '数据看板' }, { id: 'songs', label: '歌曲管理' }, { id: 'events', label: '演出管理' }, { id: 'orders', label: '订单管理' }, { id: 'users', label: '用户管理' }]"
         :key="t.id"
         class="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200"
         :class="tab === t.id ? 'bg-primary text-white' : 'text-dim hover:text-ink'"
