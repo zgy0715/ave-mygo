@@ -86,15 +86,16 @@ import request from './request'
 
 /** Agent 对话：返回 { type:'reply'|'pending_confirmation', content, token, toolName, arguments, toolCalls } */
 export const agentChat = (message, conversationId) =>
-  request.post('/admin/agent/chat', { message, conversationId })
+  request.post('/admin/agent/chat', { message, conversationId }, { timeout: 180_000 })
 
 /** 确认/取消待执行写操作 */
 export const agentConfirm = (token, approve) =>
-  request.post('/admin/agent/confirm', { token, approve })
+  request.post('/admin/agent/confirm', { token, approve }, { timeout: 60_000 })
 ```
 
 要求：
 - 复用 `src/api/request.js`（自动带 token、剥壳、统一错误），**不要新建 axios 实例**
+- **必须单独放开超时**：共享实例默认 10s，而 Agent 一次请求内部要跑多轮 LLM（工具调用 → 回填 → 回答），本地 8B 模型冷启动可达 60s+。实测沿用 10s 会稳定报「请求超时」，看起来像功能坏了（2026-10-31 踩过）
 - 不要写任何 `localhost` 硬编码
 
 ### 文件 2：`frontend/src/components/AgentConsole.vue`
