@@ -142,4 +142,23 @@ describe('MessageBubble（v2）', () => {
     // 时间只出现一次（meta 内），不再在气泡外多一行
     expect((w.text().match(/\d{2}:\d{2}/g) || []).length).toBe(1)
   })
+
+  it('轻排版：**粗体** 渲染为 <strong>，不残留星号', () => {
+    const w = mountBubble(mkMsg({ text: '结论：**今天有 6 场**。' }))
+    expect(w.find('strong').text()).toBe('今天有 6 场')
+    expect(w.text()).not.toContain('**')
+  })
+
+  it('轻排版：编号列表按 marker 渲染，不吞文字', () => {
+    const w = mountBubble(mkMsg({ text: '成员：\n1. 高松燈\n2. 千早愛音' }))
+    expect(w.text()).toContain('1.')
+    expect(w.text()).toContain('高松燈')
+    expect(w.text()).toContain('千早愛音')
+  })
+
+  it('禁止 HTML 注入：<img onerror> 不产生真实元素', () => {
+    const w = mountBubble(mkMsg({ text: '<img src=x onerror=alert(1)>' }))
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.text()).toContain('<img src=x onerror=alert(1)>')
+  })
 })

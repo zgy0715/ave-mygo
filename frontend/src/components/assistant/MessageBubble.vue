@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import RichText from './RichText.vue'
 
 /**
  * 单条消息气泡（docs/12 · 消息三类型：text / tool / confirm 全在这一条里渲染）
@@ -133,13 +134,8 @@ const cardCls = computed(() => {
       data-bubble
       class="relative max-w-[85%] rounded-2xl rounded-bl-sm border border-line bg-base px-3.5 py-2.5 text-sm leading-relaxed"
     >
-      <p class="whitespace-pre-wrap break-words">
-        {{ shownText }}<span
-          v-if="msg.streaming"
-          class="ml-0.5 inline-block w-[2px] animate-pulse bg-primary align-middle"
-          style="height: 1em"
-        />
-      </p>
+      <!-- 安全轻排版：只认 **加粗** 与列表，全程插值渲染（无 v-html） -->
+      <RichText :text="shownText" :streaming="msg.streaming" />
       <button
         v-if="longText && !expanded"
         class="mt-1 cursor-pointer text-[11px] text-primary"
