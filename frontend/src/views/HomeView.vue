@@ -2,8 +2,9 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventCard from '@/components/EventCard.vue'
+import PastEventCard from '@/components/PastEventCard.vue'
 import SongCard from '@/components/SongCard.vue'
-import { listEvents } from '@/api/event'
+import { listEvents, getEvent } from '@/api/event'
 import { listSongs, listBands } from '@/api/song'
 
 /**
@@ -20,6 +21,8 @@ onMounted(async () => {
   try {
     const [ev, so, bd] = await Promise.all([
       listEvents({ page: 1, pageSize: 6 }),
+      loadPast(),
+      loadPast(),
       listSongs({ page: 1, pageSize: 8, sort: 'release_desc' }),
       listBands(),
     ])
@@ -39,6 +42,35 @@ const onSale = computed(() => events.value.filter((e) => e.status === 'PUBLISHED
 // 只把「售票中」的演出放进 Hero 购票位；没有在售就不显示（避免给已结束演出挂「立即购票」）
 const featured = computed(() => onSale.value[0] || null)
 const upcoming = computed(() => events.value.filter((e) => e.status !== 'ENDED').slice(0, 3))
+
+/* ---- 往期回顾：独立请求取 ENDED，按「最后一场时间」倒序取 4 场（docs/16） ---- */
+const past = ref([])
+const pastLoaded = ref(false)
+async function loadPast() {
+  try {
+    const resp = await listEvents({ status: 'ENDED', pageSize: 12 })
+    const list = resp.content || []
+    const withDate = await Promise.all(
+      list.map(async (ev) => {
+        try {
+          const d = await getEvent(ev.id)
+          const times = (d.sessions || []).map((s) => s.startTime).filter(Boolean).sort()
+          return { ...ev, lastSessionAt: times.length ? times[times.length - 1] : null }
+        } catch {
+          return { ...ev, lastSessionAt: null }   // 详情取不到也照常渲染，只是不显示日期
+        }
+      }),
+    )
+    past.value = withDate
+      .sort((a, b) => String(b.lastSessionAt || '').localeCompare(String(a.lastSessionAt || '')))
+      .slice(0, 4)
+  } catch {
+    past.value = []   // 静默失败：整块不渲染
+  } finally {
+    pastLoaded.value = true
+  }
+}
+
 const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '迷子でもいい、迷子でも進む', 'BANG DREAM! / LIVE']
 
 /** 乐队卡 logo 加载失败 → 回退文字标题 */
@@ -182,11 +214,26 @@ const gradientOf = (slug) =>
     <p v-else class="py-6 text-sm text-faint">演出日程整理中，敬请期待。</p>
   </section>
 
+  <!-- 02 往期回顾 -->
+  <section v-if="past.length" class="wrap py-14">
+    <div class="section-head" v-reveal>
+      <div>
+        <p class="micro-accent mb-1.5">02 — PAST LIVES</p>
+        <h2 class="serif text-2xl font-semibold">往期回顾</h2>
+      </div>
+      <RouterLink to="/events" class="micro py-1 transition hover:text-primary">全部 →</RouterLink>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <PastEventCard v-for="(e, i) in past" :key="e.id" :event="e" v-reveal="(i % 4) * 90" />
+    </div>
+  </section>
+
+
   <!-- 02 新曲速递 -->
   <section class="wrap pb-14">
     <div class="section-head" v-reveal>
       <div>
-        <p class="micro-accent mb-1.5">02 — DISCOGRAPHY</p>
+        <p class="micro-accent mb-1.5">03 — DISCOGRAPHY</p>
         <h2 class="serif text-2xl font-semibold">新曲速递</h2>
       </div>
       <RouterLink to="/songs" class="micro py-1 transition hover:text-primary">歌曲库 →</RouterLink>
@@ -201,7 +248,7 @@ const gradientOf = (slug) =>
   <section class="wrap pb-20">
     <div class="section-head" v-reveal>
       <div>
-        <p class="micro-accent mb-1.5">03 — BANDS</p>
+        <p class="micro-accent mb-1.5">04 — BANDS</p>
         <h2 class="serif text-2xl font-semibold">乐队</h2>
       </div>
       <RouterLink to="/bands" class="micro py-1 transition hover:text-primary">全部 →</RouterLink>
