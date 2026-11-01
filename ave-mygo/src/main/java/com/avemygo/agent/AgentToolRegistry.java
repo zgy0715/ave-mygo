@@ -345,6 +345,51 @@ public class AgentToolRegistry {
         validate();   // 注册完立刻自检（单方法内调用，避免 @PostConstruct 顺序不确定）
     }
 
+    /**
+     * 把写操作的参数翻译成人类可读的描述（小灯 v2 确认卡片用，docs/13 §4 处方 3）。
+     * 例如 update_song_mv(songId=1) → 「《迷星叫》的 MV 地址」而不是「id=1」。
+     * 查不到对象时返回 null，由调用方回退到「对象 id=N」。
+     */
+    public String describe(String toolName, Map<String, Object> args) {
+        try {
+            return switch (toolName) {
+                case "update_song_mv" -> songLabel(args) + " 的 MV 地址";
+                case "update_song_tags" -> songLabel(args) + " 的标签";
+                case "set_song_status" -> songLabel(args);
+                case "set_ticket_status" -> ticketLabel(args);
+                case "delete_session" -> sessionLabel(args);
+                case "delete_event" -> eventLabel(args);
+                case "update_event_info" -> eventLabel(args);
+                case "update_session_time" -> sessionLabel(args);
+                default -> null;
+            };
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String songLabel(Map<String, Object> args) {
+        long id = reqLong(args, "songId");
+        return songRepository.findById(id).map(x -> "《" + x.getTitle() + "》").orElse(null);
+    }
+
+    private String eventLabel(Map<String, Object> args) {
+        long id = reqLong(args, "eventId");
+        return eventRepository.findById(id).map(x -> "《" + x.getTitle() + "》").orElse(null);
+    }
+
+    private String sessionLabel(Map<String, Object> args) {
+        long id = reqLong(args, "sessionId");
+        return sessionRepository.findById(id)
+                .map(x -> "场次「" + x.getName() + "」").orElse(null);
+    }
+
+    private String ticketLabel(Map<String, Object> args) {
+        long id = reqLong(args, "ticketTypeId");
+        return ticketTypeRepository.findById(id)
+                .map(x -> "票档「" + x.getName() + "」").orElse(null);
+    }
+
     /** 启动自检：坏的工具定义应该在启动时就炸，而不是等 LLM 调用时才发现 */
     void validate() {
         if (tools.size() != 15) throw new IllegalStateException("工具数量应为 15，实际 " + tools.size());
