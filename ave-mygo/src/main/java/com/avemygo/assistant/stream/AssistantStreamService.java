@@ -40,6 +40,13 @@ public class AssistantStreamService {
     /** 同一工具连续失败多少次就停下来问用户 */
     private static final int MAX_SAME_TOOL_FAILS = 2;
 
+    /**
+     * 事实类意图：涉及成员 / 担当 / CV / 人数。
+     * 这类问题 8B 模型极容易用训练记忆作答（实测编出"楽奈是鼓手、立希是键盘"，CV 也错），
+     * 而粉丝向事实错误在这个站是红线 → 直接预取站内数据注入上下文，模型无从编造。
+     */
+    private static final Pattern MEMBER_FACT = Pattern.compile(".*(成员|担当|声优|CV|cv|几人|几个人|阵容).*");
+
     /** 纯寒暄：不挂工具，直接秒回（省掉一次工具决策的 3~6 秒） */
     private static final Pattern GREETING = Pattern.compile(
             "^(你好|您好|hi|hello|哈喽|嗨|在吗|在不在|早上好|晚上好|早|谢谢|多谢|感谢|再见|拜拜)[!！。.~～\\s]*$",
@@ -61,14 +68,21 @@ public class AssistantStreamService {
             · 查站内数据：歌曲（搜索/MV/专辑/标签）、乐队、成员（含 CV）、演出、场次、票档与余票
             · 若调用方给了写工具：改 MV、改标签、上下架歌曲、票档上下架、改演出标题/场馆、改场次时间、删场次/演出
             【回答规则】
-            1. 需要站内数据时必须先调用工具，不要凭印象编；工具没返回的就说不确定。
+            1. 需要站内数据时必须先调用工具；**若上下文已给出【站内资料】，一律以资料为准**，
+               不得用训练记忆补充或改写（成员担当、CV、日期、价格尤其严格）；资料没写的就说不确定。
             2. 涉及具体对象的修改，必须先查到真实 id 并说出对象名字（如《迷星叫》），再提出修改。
             3. 参数不够就直接问最关键的那一个澄清问题，绝不猜 id、不猜价格、不猜日期。
             4. 用户要求批量删除或批量修改时，拒绝并请他一次只处理一个对象。
             5. 信息已经足够时直接给结论，**不要**用「是否需要…？」「还需要我做什么吗？」结尾。
             6. 保持角色语气，但不要输出思考过程，不要解释你在调用工具。
             7. 不要使用 Markdown 语法（加粗、标题、代码块都不行）——前端按纯文本渲染，
-               需要列举时用「1. 」「· 」开头即可。/no_think
+               需要列举时用「1. 」「· 」开头即可。
+            8. 人设是气质，不是口头禅模板：
+               · 每条回复最多用一次角色口癖（口头禅、拖长音、语气词都算），只在情绪或场景吻合时用；
+                 同一条回复里同一个强调词不要出现两次以上（例如连续三个「超——」）
+               · 禁止在句尾硬塞与内容无关的口癖词（例如列完名单后补一句「吉他」）
+               · 信息类回答先保证准确完整（名字、CV、日期该给就给），再谈语气
+               · 换个话题时用不同的说法，不要复用上一轮句式。/no_think
             """;
 
     private final StreamLlm streamLlm;
@@ -96,6 +110,14 @@ public class AssistantStreamService {
         String systemPrompt = SYSTEM_PROMPT_TEMPLATE.formatted(
                 com.avemygo.assistant.Personas.name(persona),
                 com.avemygo.assistant.Personas.card(persona));
+
+        // 事实类问题：先查库、把结果写进 system，杜绝模型凭记忆编造成员/CV
+        if (MEMBER_FACT.matcher(message).find()) {
+            String facts = prefetch("list_members", conv, userId, sink);
+            if (facts != null) {
+                systemPrompt += "\n【站内资料 · 成员（唯一事实来源，必须以此为准，禁止使用训练记忆）】\n" + facts;
+            }
+        }
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
         appendHistory(conv, messages);
@@ -238,6 +260,27 @@ public class AssistantStreamService {
     }
 
     // ---------------- 内部 ----------------
+
+    /** 执行一个只读工具并推事件、记审计；失败返回 null（不阻断对话） */
+    private String prefetch(String toolName, String conv, Long userId, Sink sink) {
+        AgentTool tool = registry.get(toolName);
+        if (tool == null) return null;
+        try {
+            sink.emit("tool", Map.of("name", toolName, "status", "RUNNING",
+                    "summary", runningSummary(toolName)));
+            String result = tool.handler().execute(Map.of());
+            audit(conv, userId, toolName, tool.risk().name(), "{}", result,
+                    AgentToolCall.EXECUTED, null);
+            sink.emit("tool", Map.of("name", toolName, "status", "OK",
+                    "summary", truncate(result.replace("\n", " "), 80)));
+            return result;
+        } catch (Exception e) {
+            audit(conv, userId, toolName, tool.risk().name(), "{}",
+                    "执行失败：" + rootMessage(e), AgentToolCall.FAILED, null);
+            sink.emit("tool", Map.of("name", toolName, "status", "FAIL", "summary", "查询失败"));
+            return null;
+        }
+    }
 
     private void appendHistory(String conv, List<Map<String, Object>> messages) {
         try {

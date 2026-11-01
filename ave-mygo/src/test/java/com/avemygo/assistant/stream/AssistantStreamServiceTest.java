@@ -212,6 +212,32 @@ class AssistantStreamServiceTest {
     }
 
     @Test
+    @DisplayName("V11 成员类问题预取事实：system 里注入真实 CV，避免模型凭记忆编造")
+    void v11_prefetchMemberFacts() throws Exception {
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenReturn(new StreamLlm.Turn("五位。", List.of()));
+
+        service.chat("MyGO有哪些成员？", null, "anon", 1L, false, sink());
+
+        List<List<Map<String, Object>>> calls = new ArrayList<>();
+        org.mockito.Mockito.verify(streamLlm).stream(
+                org.mockito.ArgumentMatchers.argThat(msgs -> {
+                    calls.add((List<Map<String, Object>>) msgs);
+                    return true;
+                }), anyList(), any());
+
+        String system = String.valueOf(calls.get(0).get(0).get("content"));
+        assertThat(system).contains("站内资料 · 成员");
+        assertThat(system).contains("羊宮妃那");          // 高松燈的真实 CV（库里的事实）
+        assertThat(system).contains("禁止使用训练记忆");
+        // 预取也应推给前端一条工具事件
+        assertThat(events.stream()
+                .filter(e -> "tool".equals(e.get("__type")))
+                .map(e -> e.get("name") + ":" + e.get("status")))
+                .contains("list_members:RUNNING", "list_members:OK");
+    }
+
+    @Test
     @DisplayName("V10 人设：persona 不同则 system 提示词不同（修复 ANON 说客服话）")
     void v10_personaInjected() throws Exception {
         when(streamLlm.stream(anyList(), anyList(), any()))
@@ -233,7 +259,8 @@ class AssistantStreamServiceTest {
         String fallbackSystem = String.valueOf(calls.get(2).get(0).get("content"));
 
         assertThat(anonSystem).contains("千早愛音").contains("那个那个").contains("角色：愛音");
-        assertThat(mutsumiSystem).contains("若葉睦").contains("回答极短");
+        assertThat(anonSystem).contains("口癖·有节制");
+        assertThat(mutsumiSystem).contains("若葉睦").contains("要点式").contains("口癖·有节制");
         // 未知 key 回退小灯
         assertThat(fallbackSystem).contains("高松燈").contains("角色：小灯");
         // 三条都必须带运营规则，不能因为人设丢能力
