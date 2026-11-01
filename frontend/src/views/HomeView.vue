@@ -21,8 +21,6 @@ onMounted(async () => {
   try {
     const [ev, so, bd] = await Promise.all([
       listEvents({ page: 1, pageSize: 6 }),
-      loadPast(),
-      loadPast(),
       listSongs({ page: 1, pageSize: 8, sort: 'release_desc' }),
       listBands(),
     ])
@@ -30,6 +28,9 @@ onMounted(async () => {
     newSongs.value = so.content
     bands.value = bd
   } catch { /* 各区块独立降级 */ }
+
+  // 往期回顾：独立请求，失败也只影响本区块
+  void loadPast()
 
   // 成员总数：两支乐队详情各取一次（固定 2 次，不随数据量增长）
   try {
