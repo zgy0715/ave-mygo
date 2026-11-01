@@ -1,54 +1,66 @@
 import { expect, test } from '@playwright/test'
-import { apiUp, loginAs, API } from './helpers'
+import { API, loginAs } from './helpers'
 
 /**
- * 旅程 5｜小灯 Agent 运营能力（docs/12 v2：从悬浮球进入，不再有管理端运营台页面）
- *
- * 依赖：后端 + 本地 LLM（Ollama qwen3:8b）。
- * 没有 LLM 时后端返回 50301，本用例自动 skip——Agent 不做规则兜底，这是设计行为。
- * 只走「只读指令」和「写操作→取消」两条安全路径，不修改任何业务数据。
+ * 小灯 v2 旅程（docs/15）：悬浮球 → 直接对话（无运营开关）
+ * - 只读用例：任意登录用户（含游客）都能用
+ * - 写操作用例：需要 E2E_ADMIN_TOKEN（管理员 JWT）；未提供则 skip，
+ *   因为普通账号后端不会开放写工具，卡片自然不会出现（这是设计，不是 bug）
  */
-test.setTimeout(300_000)   // 真 LLM：单步 20~60s
+test.setTimeout(300_000)
 
-test.describe('小灯内融合运营', () => {
-  test('悬浮球内：运营开关/琥珀态 + 只读指令 + 写操作确认可取消', async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), '后端未启动，跳过运营台用例')
+const ADMIN_TOKEN = process.env.E2E_ADMIN_TOKEN || ''
 
+async function llmReady(request, token) {
+  const res = await request.post(`${API}/assistant/chat/v2`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { message: '你好', conversationId: 'e2e-probe' },
+  })
+  const body = await res.text()
+  return !/50301/.test(body)
+}
+
+test.describe('小灯 v2', () => {
+  test('面板无运营开关；只读提问出工具条目与回答', async ({ page, request }) => {
     const auth = await loginAs(page, request, 'e2e_admin', 'e2e_admin_pw')
-
-    // LLM 探活：无 LLM 时后端返回 50301，直接跳过（不是失败）
-    const probe = await request.post(`${API}/admin/agent/chat`, {
-      headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
-      data: { message: '你好', conversationId: 'e2e-probe' },
-    })
-    const probeBody = await probe.json()
-    test.skip(probeBody.code === 50301, 'LLM 未就绪（50301），跳过运营台用例')
+    test.skip(!(await llmReady(request, auth.token)), 'LLM 未就绪（50301），跳过')
 
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/')
+    await page.locator('button[aria-label*="AI 助手"]').click()
+    const panel = page.locator('[role="dialog"]')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByText('运营')).toHaveCount(0)
 
-    // 从悬浮球进入（全站唯一 AI 入口）
+    await panel.locator('textarea').fill('站里现在有几场演出')
+    await panel.locator('textarea').press('Enter')
+    await expect(panel.getByText('🔧').first()).toBeVisible({ timeout: 120_000 })
+    await expect(panel.getByText(/场演出|共 ?\d+ ?场/).first()).toBeVisible({ timeout: 120_000 })
+  })
+
+  test('管理员写指令出确认卡片，取消后不落库', async ({ page, request }) => {
+    test.skip(!ADMIN_TOKEN, '需要 E2E_ADMIN_TOKEN（管理员 JWT）')
+    test.skip(!(await llmReady(request, ADMIN_TOKEN)), 'LLM 未就绪（50301），跳过')
+
+    await page.addInitScript(([t]) => {
+      sessionStorage.setItem('token', t)
+      sessionStorage.setItem('user', JSON.stringify({ id: 1, username: 'admin', nickname: '站长', role: 'ADMIN' }))
+    }, [ADMIN_TOKEN])
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/')
     await page.locator('button[aria-label*="AI 助手"]').click()
     const panel = page.locator('[role="dialog"]')
     await expect(panel).toBeVisible()
 
-    // 管理员才有运营开关；打开后琥珀态 + placeholder 变化
-    await panel.locator('button[aria-pressed]').click()
-    await expect(panel.locator('textarea')).toHaveAttribute('placeholder', /下达运营指令/)
-
-    // 1) 只读指令：工具条目 + EXECUTED
-    await panel.locator('textarea').fill('列出所有演出')
+    await panel.locator('textarea').fill('把迷星叫的 MV 换成 https://example.com/e2e-check')
     await panel.locator('textarea').press('Enter')
-    await expect(panel.getByText('🔧').first()).toBeVisible({ timeout: 180_000 })
-    await expect(panel.getByText('EXECUTED').first()).toBeVisible({ timeout: 180_000 })
+    const card = panel.getByText(/待确认：/).first()
+    await expect(card).toBeVisible({ timeout: 120_000 })
+    // 标题必须是人类可读的对象名，而不是工具名
+    await expect(panel.getByText(/待确认：.*《/).first()).toBeVisible()
 
-    // 2) 写指令：确认卡片出现，此时数据未动
-    await panel.locator('textarea').fill('把歌曲 id=1 的 MV 换成 https://example.com/e2e-check')
-    await panel.locator('textarea').press('Enter')
-    await expect(panel.getByText(/待确认：修改歌曲 MV/).first()).toBeVisible({ timeout: 180_000 })
-
-    // 3) 点取消：卡片变「已取消」
     await panel.getByRole('button', { name: '取消' }).first().click()
-    await expect(panel.getByText('🚫 已取消')).toBeVisible({ timeout: 30_000 })
+    await expect(panel.getByText('已取消').first()).toBeVisible({ timeout: 30_000 })
   })
 })
