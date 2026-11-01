@@ -8,6 +8,8 @@ import com.avemygo.event.LiveSession;
 import com.avemygo.event.LiveSessionRepository;
 import com.avemygo.event.TicketType;
 import com.avemygo.event.TicketTypeRepository;
+import com.avemygo.song.Album;
+import com.avemygo.song.AlbumRepository;
 import com.avemygo.song.Band;
 import com.avemygo.song.BandRepository;
 import com.avemygo.song.Member;
@@ -39,6 +41,7 @@ public class AgentToolRegistry {
     private final SongRepository songRepository;
     private final BandRepository bandRepository;
     private final MemberRepository memberRepository;
+    private final AlbumRepository albumRepository;
     private final EventRepository eventRepository;
     private final LiveSessionRepository sessionRepository;
     private final TicketTypeRepository ticketTypeRepository;
@@ -64,10 +67,12 @@ public class AgentToolRegistry {
                     if (page.isEmpty()) return "没有找到匹配的歌曲。";
                     Map<Short, String> bands = bandNames();
                     List<String> lines = new ArrayList<>();
+                    Map<Long, String> albums = albumNames();
                     for (Song s : page.getContent()) {
-                        lines.add("- id=%d 《%s》 %s MV=%s".formatted(
+                        lines.add("- id=%d 《%s》 %s / 专辑《%s》 MV=%s".formatted(
                                 s.getId(), s.getTitle(),
                                 bands.getOrDefault(s.getBandId(), ""),
+                                s.getAlbumId() == null ? "未归档" : albums.getOrDefault(s.getAlbumId(), "未归档"),
                                 s.getMvUrl() == null || s.getMvUrl().isBlank() ? "无" : "有"));
                     }
                     return "共 %d 首：\n%s".formatted(page.getNumberOfElements(), String.join("\n", lines));
@@ -82,14 +87,18 @@ public class AgentToolRegistry {
                     long id = reqLong(args, "songId");
                     Song s = songRepository.findById(id)
                             .orElseThrow(() -> new IllegalArgumentException("歌曲 id=" + id + " 不存在"));
+                    String albumName = s.getAlbumId() == null ? "（未归档）"
+                            : albumRepository.findById(s.getAlbumId())
+                                    .map(Album::getName).orElse("（未归档）");
                     return """
                             id=%d 《%s》
                             乐队：%s
+                            专辑：《%s》
                             发行：%s
                             标签：%s
                             音源：%s
                             MV：%s""".formatted(s.getId(), s.getTitle(),
-                            bandNames().getOrDefault(s.getBandId(), ""),
+                            bandNames().getOrDefault(s.getBandId(), ""), albumName,
                             s.getReleaseDate() == null ? "未知" : s.getReleaseDate(),
                             s.getTags() == null || s.getTags().isBlank() ? "无" : s.getTags(),
                             s.getAudioUrl() == null ? "无" : s.getAudioUrl(),
@@ -493,6 +502,12 @@ public class AgentToolRegistry {
 
     private static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private Map<Long, String> albumNames() {
+        Map<Long, String> m = new HashMap<>();
+        for (Album a : albumRepository.findAll()) m.put(a.getId(), a.getName());
+        return m;
     }
 
     private Map<Short, String> bandNames() {
