@@ -2,24 +2,21 @@
 import { computed, nextTick, ref, watch } from 'vue'
 
 /**
- * 输入区：快捷提问 chips（按模式）+ 自适应输入框（1~5 行）+ 字数 + 发送/停止 + 运营态标识
+ * 输入区：快捷提问 chips + 自适应输入框（1~5 行）+ 发送/停止（docs/15：不再分模式）
  * docs/12 §AssistantComposer
  */
 const props = defineProps({
   modelValue: { type: String, default: '' },
   loading: { type: Boolean, default: false },
-  mode: { type: String, default: 'chat' },          // 'chat' | 'ops'
   personaChip: { type: String, default: '小灯' },
-  slow: { type: Boolean, default: false },          // 运营模式 >20s
 })
 const emit = defineEmits(['update:modelValue', 'send', 'stop'])
 
 const MAX = 500
 const ta = ref(null)
 
-const CHAT_CHIPS = ['推荐演出', '春日影是哪张专辑', 'MyGO 叫怎么读']
-const OPS_CHIPS = ['列出所有演出', '把 id=1 的 MV 换成 https://example.com/x']
-const chips = computed(() => (props.mode === 'ops' ? OPS_CHIPS : CHAT_CHIPS))
+// docs/15：不再分模式，固定一组快捷提问
+const CHAT_CHIPS = ['推荐演出', '春日影是哪张专辑', 'MyGO 有哪些成员']
 
 const over = computed(() => props.modelValue.length > MAX)
 const canSend = computed(() => !props.loading && !!props.modelValue.trim() && !over.value)
@@ -52,21 +49,18 @@ function useChip(s) {
 </script>
 
 <template>
-  <!-- 快捷提问：按模式切换文案 -->
+  <!-- 快捷提问 -->
   <div class="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
-    <span class="text-[11px] text-faint">💡 {{ mode === 'ops' ? '运营示例：' : '推荐提问：' }}</span>
+    <span class="text-[11px] text-faint">💡 推荐提问：</span>
     <button
-      v-for="s in chips"
+      v-for="s in CHAT_CHIPS"
       :key="s"
       class="max-w-[16rem] cursor-pointer truncate rounded-full border border-line px-2.5 py-1 text-[11px] text-dim transition hover:border-primary hover:text-primary"
       @click="useChip(s)"
     >{{ s }}</button>
   </div>
 
-  <div
-    class="flex items-end gap-2 border-t p-3 transition-colors"
-    :class="mode === 'ops' ? 'border-amber-300' : 'border-line'"
-  >
+  <div class="flex items-end gap-2 border-t border-line p-3">
     <div class="relative min-w-0 flex-1">
       <textarea
         ref="ta"
@@ -74,14 +68,14 @@ function useChip(s) {
         rows="1"
         maxlength="600"
         class="input max-h-[120px] w-full resize-none pr-12"
-        :placeholder="mode === 'ops' ? '下达运营指令…（Enter 发送 / Shift+Enter 换行）' : `问${personaChip}点什么…（Enter 发送 / Shift+Enter 换行）`"
+        :placeholder="`问${personaChip}点什么…（Enter 发送 / Shift+Enter 换行）`"
         @input="onInput"
         @keydown="onKeydown"
       />
     </div>
 
     <button
-      v-if="loading && mode === 'chat'"
+      v-if="loading"
       class="btn-ghost flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center !px-0"
       title="停止生成"
       aria-label="停止生成"
@@ -92,7 +86,6 @@ function useChip(s) {
     <button
       v-else
       class="btn-primary h-9 w-9 shrink-0 !px-0"
-      :class="mode === 'ops' && '!bg-amber-500 hover:!bg-amber-600'"
       :disabled="!canSend"
       aria-label="发送"
       @click="emit('send')"
@@ -100,13 +93,6 @@ function useChip(s) {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21 23 12 2 3l4.5 7L14 12l-7.5 2z" /></svg>
     </button>
 
-    <div class="absolute bottom-1 right-14 flex items-center gap-2 sm:static sm:right-auto">
-      <span v-if="mode === 'ops'" class="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">⚙ 运营中</span>
-    </div>
   </div>
 
-  <!-- 运营模式慢提示 -->
-  <p v-if="slow && mode === 'ops' && loading" class="px-3 pb-2 text-[11px] text-faint">
-    本地模型较慢，请稍候（约 30~60s）
-  </p>
 </template>

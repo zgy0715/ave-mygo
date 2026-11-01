@@ -1,58 +1,56 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 /**
- * AssistantComposer 用例（docs/12 §九）：
- * - 字数 500 上限：超限禁用发送 + 红色计数
+ * AssistantComposer 用例（docs/15 版本，已无「模式」概念）：
  * - Enter 发送 / Shift+Enter 换行
- * - 快捷提问按模式切换（chat vs ops）
+ * - 500 字上限静默限制（不显示计数器）
+ * - 快捷提问固定一组；点 chip 回填文本
+ * - loading 时出现停止按钮（图标）
+ * - 面板内不出现「运营」字样（docs/15 验收）
  */
 const { default: AssistantComposer } = await import('@/components/assistant/AssistantComposer.vue')
 
 const mountC = (props = {}) =>
-  mount(AssistantComposer, {
-    props: { modelValue: '', loading: false, mode: 'chat', personaChip: '小灯', ...props },
-  })
+  mount(AssistantComposer, { props: { modelValue: '', loading: false, personaChip: '小灯', ...props } })
 
-describe('AssistantComposer', () => {
-  it('Enter 触发 send（带当前文本）；Shift+Enter 不触发', async () => {
+describe('AssistantComposer（v2）', () => {
+  it('Enter 触发 send；Shift+Enter 不触发', async () => {
     const w = mountC({ modelValue: '你好' })
     await w.find('textarea').trigger('keydown', { key: 'Enter' })
     expect(w.emitted('send')).toHaveLength(1)
-
     await w.find('textarea').trigger('keydown', { key: 'Enter', shiftKey: true })
     expect(w.emitted('send')).toHaveLength(1)
   })
 
-  it('500 字上限：超限发送禁用（计数器已按设计移除，仅静默限制）', async () => {
-    const long = 'a'.repeat(501)
-    const w = mountC({ modelValue: long })
-    expect(w.text()).not.toContain('/500')                      // 不再显示字数
+  it('500 字上限：超限禁用发送且不显示计数器', async () => {
+    const w = mountC({ modelValue: 'a'.repeat(501) })
+    expect(w.text()).not.toContain('/500')
     const sendBtn = w.findAll('button').find((b) => b.attributes('aria-label') === '发送')
     expect(sendBtn.attributes('disabled')).toBeDefined()
   })
 
-  it('快捷提问按模式切换：chat 推荐演出 / ops 列出所有演出', async () => {
-    const chat = mountC({ mode: 'chat' })
-    expect(chat.text()).toContain('推荐演出')
-    expect(chat.text()).not.toContain('列出所有演出')
-
-    const ops = mountC({ mode: 'ops' })
-    expect(ops.text()).toContain('列出所有演出')
-    expect(ops.text()).toContain('⚙ 运营中')
-  })
-
-  it('点快捷提问 → update:modelValue 回填文本', async () => {
-    const w = mountC({ mode: 'chat' })
+  it('快捷提问固定一组，点 chip 回填', async () => {
+    const w = mountC()
+    expect(w.text()).toContain('推荐演出')
+    expect(w.text()).toContain('春日影是哪张专辑')
+    expect(w.text()).toContain('MyGO 有哪些成员')
     await w.findAll('button').find((b) => b.text() === '推荐演出').trigger('click')
     expect(w.emitted('update:modelValue')[0]).toEqual(['推荐演出'])
   })
 
-  it('loading 且 chat 模式 → 停止图标按钮；ops 模式不显示（不可停止）', async () => {
-    const chat = mountC({ loading: true, mode: 'chat' })
-    expect(chat.find('button[aria-label="停止生成"]').exists()).toBe(true)
+  it('loading → 停止图标按钮；否则发送键', async () => {
+    const loading = mountC({ loading: true })
+    expect(loading.find('button[aria-label="停止生成"]').exists()).toBe(true)
+    expect(loading.find('button[aria-label="发送"]').exists()).toBe(false)
 
-    const ops = mountC({ loading: true, mode: 'ops' })
-    expect(ops.find('button[aria-label="停止生成"]').exists()).toBe(false)
+    const idle = mountC({ modelValue: 'x' })
+    expect(idle.find('button[aria-label="发送"]').exists()).toBe(true)
+  })
+
+  it('不再出现「运营」字样与琥珀色边框（docs/15 验收）', () => {
+    const w = mountC({ modelValue: 'hi' })
+    expect(w.text()).not.toContain('运营')
+    expect(w.html()).not.toContain('amber')
   })
 })
