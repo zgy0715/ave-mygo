@@ -1,31 +1,36 @@
 import request from './request'
 
 /**
- * AI 助手（对应后端 AssistantController，公开接口无需登录）
- * body: { message: string(≤500字), sessionId: string(前端生成，后端凭它续会话) }
- * 返回: { reply, intent: 'SONG_QA'|'EVENT_RECO'|'GENERAL'|'FALLBACK' }
+ * AI 助手「小灯」（对应后端 AssistantController）
+ * v2（docs/15）：POST /assistant/chat/v2 事件流；身份由 token 决定能力
+ *   - 游客 / 普通用户：只读工具
+ *   - ADMIN：全部工具（写操作会下发 confirm 事件，人工确认后才执行）
  */
-// 大模型首答可能较慢（本地模型加载），单独放宽到 60s
-export const chatWithAssistant = (body) => request.post('/assistant/chat', body, { timeout: 60_000 })
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1'
 
 /**
- * 流式问答（SSE）：POST /assistant/chat/stream
- * 返回 text/event-stream，逐条 data: {"delta":"..."} … 最后 data: {"done":true,...}
- * 用 fetch + ReadableStream 解析（EventSource 不支持 POST）
- * @param {object} p { message, sessionId, persona, onDelta(text), signal }
- * @returns {Promise<object>} 结束帧（含 intent / personaName）
+ * v2 对话流（SSE over POST）
+ * 事件：status(phase=thinking) / delta(text) / tool(name,status:RUNNING|OK|FAIL,summary) /
+ *      confirm(token,toolName,title,arguments,preview) / done(usedTools,elapsedMs,pending?) /
+ *      error(code,message)
+ *
+ * 注意：不要用 EventSource（只支持 GET）；不要给这个请求设短超时
+ *      （多轮工具可能 20~30s），只在用户点「停止」时 abort。
+ *
+ * @param {object} p { message, conversationId, onEvent(evt), signal }
+ * @returns {Promise<object>} done 事件
  */
-export async function chatStream({ message, sessionId, persona, onDelta, signal }) {
-  const base = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1'
+export async function chatV2({ message, conversationId, onEvent, signal }) {
   const token = sessionStorage.getItem('token')
-  const res = await fetch(`${base}/assistant/chat/stream`, {
+  const res = await fetch(`${API_BASE}/assistant/chat/v2`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, sessionId, persona }),
+    body: JSON.stringify({ message, conversationId }),
     signal,
   })
   if (!res.ok || !res.body) throw new Error(`stream failed: ${res.status}`)
@@ -33,25 +38,31 @@ export async function chatStream({ message, sessionId, persona, onDelta, signal 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
-  let meta = null
+  let doneEvt = null
 
   while (true) {
     const { value, done } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
-    // SSE 事件以空行分隔；最后一段可能不完整，留在 buffer
-    const chunks = buffer.split('\n\n')
-    buffer = chunks.pop() || ''
-    for (const chunk of chunks) {
-      const line = chunk.split('\n').find((l) => l.startsWith('data:'))
+    // 事件以空行分隔；最后一段可能被 TCP 切断，留在 buffer 等下一个 chunk
+    const frames = buffer.split('\n\n')
+    buffer = frames.pop() || ''
+    for (const frame of frames) {
+      const line = frame.split('\n').find((l) => l.startsWith('data:'))
       if (!line) continue
       const raw = line.slice(5).trim()
       if (!raw) continue
-      let obj
-      try { obj = JSON.parse(raw) } catch { continue }
-      if (obj.delta) onDelta?.(obj.delta)
-      if (obj.done) meta = obj
+      let evt
+      try { evt = JSON.parse(raw) } catch { continue }
+      if (evt.type === 'done') doneEvt = evt
+      onEvent?.(evt)
     }
   }
-  return meta || {}
+  return doneEvt || {}
 }
+
+/**
+ * v1 一次性问答：v2 流不可用时的兜底（老后端 / 代理不支持流式）
+ * 返回 { reply, intent, personaName }
+ */
+export const chatWithAssistant = (body) => request.post('/assistant/chat', body, { timeout: 60_000 })

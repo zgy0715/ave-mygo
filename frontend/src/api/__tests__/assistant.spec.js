@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { chatStream } from '@/api/assistant'
+import { chatV2 } from '@/api/assistant'
 
 /**
- * SSE 解析测试：用假的 ReadableStream 模拟后端分片，
- * 重点验证「一个事件被 TCP 切成两半」时也能正确拼接。
+ * chatV2 解析单测（docs/15 §五）：
+ * - 喂固定 SSE 文本，断言事件序列（status → tool×2 → delta×2 → done）
+ * - 事件被 TCP 拆成两半也能拼回
+ * - HTTP 非 2xx 抛错（供上层提示离线）
+ * - 写操作：confirm 事件解析出 title / arguments / preview
  */
 function sseResponse(parts) {
   const encoder = new TextEncoder()
@@ -16,36 +19,81 @@ function sseResponse(parts) {
   return { ok: true, status: 200, body: stream }
 }
 
-describe('chatStream（SSE）', () => {
-  it('按 delta 逐段回调，并在 done 帧返回元信息', async () => {
+describe('chatV2（事件流解析）', () => {
+  it('按顺序回调 status/tool/delta/done', async () => {
     global.fetch = vi.fn(async () =>
       sseResponse([
-        'data:{"delta":"小灯："}\n\n',
-        'data:{"delta":"你好"}\n\n',
-        'data:{"done":true,"intent":"GENERAL","persona":"xiaodeng","personaName":"小灯"}\n\n',
+        'data:{"type":"status","phase":"thinking"}\n\n',
+        'data:{"type":"tool","name":"search_songs","status":"RUNNING","summary":"正在查歌曲…"}\n\n',
+        'data:{"type":"tool","name":"search_songs","status":"OK","summary":"共 1 首"}\n\n',
+        'data:{"type":"delta","text":"《春日影》出自"}\n\n',
+        'data:{"type":"delta","text":"专辑《迷跡波》。"}\n\n',
+        'data:{"type":"done","usedTools":1,"conversationId":"v2-q1","elapsedMs":10203}\n\n',
       ]),
     )
-    const deltas = []
-    const meta = await chatStream({ message: 'hi', sessionId: 's', persona: 'xiaodeng', onDelta: (d) => deltas.push(d) })
-    expect(deltas.join('')).toBe('小灯：你好')
-    expect(meta).toMatchObject({ done: true, personaName: '小灯' })
+    const seen = []
+    let text = ''
+    const done = await chatV2({
+      message: '春日影是哪张专辑',
+      conversationId: 'v2-q1',
+      onEvent: (e) => {
+        seen.push(e.type)
+        if (e.type === 'delta') text += e.text
+      },
+    })
+
+    expect(seen).toEqual(['status', 'tool', 'tool', 'delta', 'delta', 'done'])
+    expect(text).toBe('《春日影》出自专辑《迷跡波》。')
+    expect(done).toMatchObject({ usedTools: 1, elapsedMs: 10203 })
   })
 
-  it('事件被拆到两个分片里也能正确解析', async () => {
+  it('事件被 TCP 拆成两半也能解析', async () => {
     global.fetch = vi.fn(async () =>
       sseResponse([
-        'data:{"del',            // 半个事件
-        'ta":"A"}\n\ndata:{"delta":"B"}\n\n',
-        'data:{"done":true}\n\n',
+        'data:{"type":"del',
+        'ta","text":"A"}\n\ndata:{"type":"delta","text":"B"}\n\n',
+        'data:{"type":"done"}\n\n',
       ]),
     )
-    const deltas = []
-    await chatStream({ message: 'x', sessionId: 's', persona: 'anon', onDelta: (d) => deltas.push(d) })
-    expect(deltas.join('')).toBe('AB')
+    let text = ''
+    await chatV2({
+      message: 'x',
+      conversationId: 'c',
+      onEvent: (e) => { if (e.type === 'delta') text += e.text },
+    })
+    expect(text).toBe('AB')
   })
 
-  it('HTTP 非 2xx 时抛错（供调用方降级到普通接口）', async () => {
+  it('写操作：confirm 事件带 title / arguments / preview', async () => {
+    global.fetch = vi.fn(async () =>
+      sseResponse([
+        'data:{"type":"confirm","token":"8f3c","toolName":"update_song_mv","title":"《迷星叫》 的 MV 地址","arguments":{"songId":1,"mvUrl":"https://x"},"preview":"《迷星叫》 的 MV 地址 → mvUrl=https://x，songId=1"}\n\n',
+        'data:{"type":"done","usedTools":1,"conversationId":"v2-q2","pending":true,"elapsedMs":9600}\n\n',
+      ]),
+    )
+    let card = null
+    const done = await chatV2({
+      message: '换 MV',
+      conversationId: 'v2-q2',
+      onEvent: (e) => { if (e.type === 'confirm') card = e },
+    })
+    expect(card.title).toBe('《迷星叫》 的 MV 地址')
+    expect(card.arguments.songId).toBe(1)
+    expect(card.preview).toContain('→')
+    expect(done.pending).toBe(true)
+  })
+
+  it('error 事件原样透给上层（50301 LLM 未就绪）', async () => {
+    global.fetch = vi.fn(async () =>
+      sseResponse(['data:{"type":"error","code":50301,"message":"Agent 需要 LLM"}\n\n']),
+    )
+    let err = null
+    await chatV2({ message: 'x', conversationId: 'c', onEvent: (e) => { if (e.type === 'error') err = e } })
+    expect(err.code).toBe(50301)
+  })
+
+  it('HTTP 非 2xx → 抛错（上层提示离线/重试）', async () => {
     global.fetch = vi.fn(async () => ({ ok: false, status: 502, body: null }))
-    await expect(chatStream({ message: 'x', sessionId: 's', persona: 'anon' })).rejects.toThrow(/stream failed/)
+    await expect(chatV2({ message: 'x', conversationId: 'c' })).rejects.toThrow(/stream failed/)
   })
 })
