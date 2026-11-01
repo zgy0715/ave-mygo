@@ -1,18 +1,17 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
-import { useAuthStore } from '@/stores/auth'
-import { chatStream, chatWithAssistant } from '@/api/assistant'
-import { agentChat, agentConfirm } from '@/api/agent'
+import { chatV2, chatWithAssistant } from '@/api/assistant'
+import { agentConfirm } from '@/api/agent'
 import AssistantHeader from '@/components/assistant/AssistantHeader.vue'
 import MessageList from '@/components/assistant/MessageList.vue'
 import AssistantComposer from '@/components/assistant/AssistantComposer.vue'
 
 /**
- * 「小灯」AI 助手 v2（docs/12）：悬浮球 + 一个窗口融合问答与运营
- * - 问答（默认）：SSE 流式，/assistant/chat/stream，可停止
- * - 运营（仅 ADMIN 手动开）：/admin/agent/chat 非流式（20~60s），写操作出确认卡片
- * - 切模式不清空消息；消息用 mode 标记所属链路
+ * 「小灯」AI 助手 v2（docs/15）：悬浮球 + 单一窗口
+ * - 只连 POST /assistant/chat/v2 一条链路（SSE over POST，首字 0.8~1.5s）
+ * - 能力由后端按 token 身份决定：游客/普通用户只读；ADMIN 可直接下写指令 → confirm 卡片
+ * - 前端不再有「运营开关 / 模式切换」
  * - 尺寸三态：常规 720×82vh / 最大化 / 收起；Esc 先退最大化再关闭
  */
 
@@ -25,20 +24,17 @@ const PERSONAS = [
 ]
 
 const player = usePlayerStore()
-const auth = useAuthStore()
 const open = ref(false)
 const input = ref('')
 const maximized = ref(false)
-const opsMode = ref(false)
 const confirming = ref(false)
-const opsSlow = ref(false)
 
-const isAdmin = computed(() => auth.user?.role === 'ADMIN')
-const mode = computed(() => (opsMode.value && isAdmin.value ? 'ops' : 'chat'))
+/** 多轮上下文标识：整页一个（后端按它聚合会话） */
+const conversationId = crypto.randomUUID?.() || `c-${Date.now()}`
 
-/* ---- 线程：按人格分；消息带 mode 标记 ---- */
+/* ---- 线程：按人格分，各自独立 ---- */
 let msgSeq = 0
-const mkGreeting = (p) => ({ id: ++msgSeq, role: 'assistant', mode: 'chat', name: p.chip, text: p.greeting, at: Date.now() })
+const mkGreeting = (p) => ({ id: ++msgSeq, role: 'assistant', name: p.chip, text: p.greeting, at: Date.now() })
 
 const threads = reactive(Object.fromEntries(PERSONAS.map((p) => [p.id, {
   messages: [mkGreeting(p)],
@@ -54,7 +50,7 @@ const error = computed(() => thread.value.error)
 const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
 const chipById = (id) => PERSONAS.find((p) => p.id === id)?.chip || '小灯'
 
-/* ---- 持久化（P1）：按人格存最近 50 条到 sessionStorage（不存 token） ---- */
+/* ---- 持久化：按人格存最近 50 条（不存 token） ---- */
 const PERSIST_KEY = (pid) => `assistant_thread:${pid}`
 function persist(pid) {
   try {
@@ -73,7 +69,7 @@ function restore() {
         msgSeq = Math.max(msgSeq, ...saved.messages.map((m) => m.id || 0))
         threads[p.id].sessionId = saved.sessionId || ''
       }
-    } catch { /* 损坏则忽略 */ }
+    } catch { /* 损坏忽略 */ }
   }
 }
 restore()
@@ -83,17 +79,16 @@ watch(threads, () => {
   persistTimer = setTimeout(() => PERSONAS.forEach((p) => persist(p.id)), 400)
 }, { deep: true })
 
-/* ---- 会话 ID：每个人格独立；运营 conversationId 整页一个 ---- */
+/* ---- 人格线程的兜底 sessionId（老接口降级时用） ---- */
 function getSessionId(pid) {
   const key = `assistant_session:${pid}`
   let id = sessionStorage.getItem(key)
   if (!id) {
-    id = crypto.randomUUID?.() || `s-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    id = crypto.randomUUID?.() || `s-${Date.now()}`
     sessionStorage.setItem(key, id)
   }
   return id
 }
-const opsConversationId = crypto.randomUUID?.() || `ops-${Date.now()}`
 
 /* ---- 清空 / 切人格 ---- */
 function clearThread() {
@@ -103,12 +98,11 @@ function clearThread() {
   t.error = ''
 }
 function switchPersona(id) {
-  // 传入的是人格 id 字符串（AssistantHeader 通过 update:personaId 抛出）
   if (!id || persona.value === id || !threads[id]) return
   persona.value = id
 }
 
-/* ---- waitingFirst：只在该吐第一个字前显示三点 ---- */
+/* ---- 「思考中」三点：还没出首个字时显示 ---- */
 const waitingFirst = computed(() => {
   if (!loading.value) return false
   const ms = messages.value
@@ -116,84 +110,93 @@ const waitingFirst = computed(() => {
   return !!last && last.role === 'assistant' && !last.text && !last.pending
 })
 
-/* ---- 发送：按模式路由 ---- */
-let opsTimer = null
+/** 工具事件：同名 RUNNING → 后续 OK/FAIL 就地更新，避免条目翻倍 */
+function upsertTool(tools, evt) {
+  if (evt.status === 'RUNNING') {
+    tools.push({ name: evt.name, status: 'RUNNING', summary: evt.summary || '' })
+    return
+  }
+  for (let i = tools.length - 1; i >= 0; i--) {
+    if (tools[i].name === evt.name && tools[i].status === 'RUNNING') {
+      tools[i].status = evt.status
+      tools[i].summary = evt.summary || tools[i].summary
+      return
+    }
+  }
+  tools.push({ name: evt.name, status: evt.status, summary: evt.summary || '' })
+}
+
+function pushSystem(text, extra = {}) {
+  thread.value.messages.push({ id: ++msgSeq, role: 'system', text, at: Date.now(), ...extra })
+}
+
+/* ---- 发送（唯一链路：v2 事件流） ---- */
 async function send(text, opts = {}) {
   const t = thread.value
   const content = (text ?? input.value).trim()
   if (!content || t.loading) return
-  if (content.length > 500) { t.error = '消息太长啦，控制在 500 字以内'; return }
 
-  const sentPersona = persona.value
   const sentThread = t
-  const m = mode.value
-
-  if (!opts.retry) t.messages.push({ id: ++msgSeq, role: 'user', mode: m, text: content, at: Date.now() })
+  if (!opts.retry) t.messages.push({ id: ++msgSeq, role: 'user', text: content, at: Date.now() })
   input.value = ''
   t.error = ''
   t.loading = true
 
-  if (m === 'ops') {
-    /* ===== 运营链路：非流式，一次性返回 ===== */
-    const bubble = { id: ++msgSeq, role: 'assistant', mode: 'ops', name: '小灯', text: '', at: Date.now() }
-    t.messages.push(bubble)
-    const rb = t.messages[t.messages.length - 1]   // 响应式代理；直接改裸对象不触发渲染
-    opsSlow.value = false
-    clearTimeout(opsTimer)
-    opsTimer = setTimeout(() => (opsSlow.value = true), 20_000)
-    try {
-      const data = await agentChat(content, opsConversationId)
-      rb.text = data.content || ''
-      rb.tools = data.toolCalls || []
-      if (data.type === 'pending_confirmation') {
-        rb.pending = { token: data.token, toolName: data.toolName, arguments: data.arguments || {}, state: 'PENDING', result: '' }
-      }
-    } catch (e) {
-      const msg = String(e.message)
-      t.messages.splice(t.messages.indexOf(bubble), 1)
-      if (/LLM|50301/.test(msg)) {
-        pushSystem('运营模式需要 LLM 服务（Ollama 未启动）。', 'ops', { action: 'chat' })
-      } else if (/403|管理员/.test(msg)) {
-        pushSystem('需要管理员权限。', 'ops')
-        opsMode.value = false
-      } else {
-        pushSystem(`出错了：${msg}`)
-      }
-    } finally {
-      clearTimeout(opsTimer)
-      opsSlow.value = false
-      t.loading = false
-    }
-    return
-  }
-
-  /* ===== 问答链路：SSE 流式 ===== */
-  const bubble = { id: ++msgSeq, role: 'assistant', mode: 'chat', name: chipById(sentPersona), text: '', at: Date.now(), streaming: true }
+  const bubble = { id: ++msgSeq, role: 'assistant', name: chipById(persona.value), text: '', at: Date.now(), streaming: true, tools: [] }
   t.messages.push(bubble)
-  const rb = t.messages[t.messages.length - 1]   // 响应式代理（打字机逐字必须走代理）
+  // 关键：push 后取数组里的响应式代理，直接改裸对象不会触发渲染
+  const rb = t.messages[t.messages.length - 1]
+
   const controller = new AbortController()
   t.controller = controller
+
   try {
-    const meta = await chatStream({
+    await chatV2({
       message: content,
-      sessionId: getSessionId(sentPersona),
-      persona: sentPersona,
+      conversationId,
       signal: controller.signal,
-      onDelta: (d) => { rb.text += d },
+      onEvent: (evt) => {
+        switch (evt.type) {
+          case 'delta':
+            rb.text += evt.text || ''
+            break
+          case 'tool':
+            upsertTool(rb.tools, evt)
+            break
+          case 'confirm':
+            rb.pending = {
+              token: evt.token,
+              toolName: evt.toolName,
+              title: evt.title || evt.toolName,
+              arguments: evt.arguments || {},
+              preview: evt.preview || '',
+              state: 'PENDING',
+              result: '',
+            }
+            break
+          case 'error':
+            // 50301 = LLM 未就绪：给明确提示，不白屏
+            pushSystem(String(evt.code) === '50301' || evt.code === 50301
+              ? '小灯暂时离线（LLM 服务未就绪），稍后再试。'
+              : `出错了：${evt.message || evt.code || '未知错误'}`)
+            break
+          default:
+            break
+        }
+      },
     })
-    if (meta?.personaName) rb.name = meta.personaName
   } catch (e) {
     if (e?.name === 'AbortError' || controller.signal.aborted) {
-      if (!rb.text) rb.text = '（已停止生成）'
+      if (!rb.text && !rb.pending) rb.text = '（已停止生成）'
     } else {
-      // SSE 不可用 → 降级一次性；再失败 → 系统提示 + 重试
+      // v2 流不可用（老后端 / 代理不支持流式）→ 降级 v1 一次性
       try {
-        const data = await chatWithAssistant({ message: content, sessionId: getSessionId(sentPersona), persona: sentPersona })
+        const data = await chatWithAssistant({ message: content, sessionId: getSessionId(persona.value), persona: persona.value })
         rb.text = data.reply
         if (data.personaName) rb.name = data.personaName
       } catch {
-        t.messages.splice(t.messages.indexOf(bubble), 1)
-        pushSystem('小灯走神了，发送失败。', 'chat', { action: 'retry', payload: content })
+        t.messages.splice(t.messages.indexOf(rb), 1)
+        pushSystem('小灯走神了，发送失败。', { action: 'retry', payload: content })
       }
     }
   } finally {
@@ -203,11 +206,7 @@ async function send(text, opts = {}) {
   }
 }
 
-function pushSystem(text, m = 'chat', extra = {}) {
-  thread.value.messages.push({ id: ++msgSeq, role: 'system', mode: m, text, at: Date.now(), ...extra })
-}
-
-/** 确认卡片：绑各自的 pending（不在全局找） */
+/** 确认卡片：绑定各自的 pending 对象，不猜全局 */
 async function confirm(pending, approve) {
   if (!pending || pending.state !== 'PENDING' || confirming.value) return
   confirming.value = true
@@ -232,16 +231,15 @@ function stop() {
   thread.value.controller?.abort()
 }
 
-/* ---- 面板打开期间锁定背景滚动（防止滚轮穿透到主页面）；补偿滚动条宽度防布局跳动 ---- */
+/* ---- 面板打开时锁背景滚动（站点用 Lenis，必须 stop 才有效） ---- */
 function setBodyScrollLock(lock) {
-  // 站点用 Lenis 平滑滚动：它接管 wheel 事件，光锁 overflow 无效 → stop 并掐掉惯性残量
   try {
     const lenis = window.__lenis
     if (lenis) {
       if (lock) {
         lenis.stop?.()
         const y = lenis.actualScroll ?? lenis.scroll ?? window.scrollY
-        lenis.scrollTo?.(y, { immediate: true, force: true })   // 立即定格，避免惯性尾巴继续推页面
+        lenis.scrollTo?.(y, { immediate: true, force: true })   // 掐掉惯性尾巴
       } else {
         lenis.start?.()
       }
@@ -269,7 +267,6 @@ onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onBeforeUnmount(() => {
   setBodyScrollLock(false)
   window.removeEventListener('keydown', onGlobalKey)
-  clearTimeout(opsTimer)
   clearTimeout(persistTimer)
 })
 </script>
@@ -277,8 +274,8 @@ onBeforeUnmount(() => {
 <template>
   <!-- 悬浮球：播放条出现时上移避开进度条 -->
   <button
-    class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full text-white shadow-xl transition-all duration-300 hover:scale-105"
-    :class="[player.current && !player.barCollapsed ? 'bottom-24' : 'bottom-6', opsMode ? 'bg-amber-500' : 'bg-primary']"
+    class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
+    :class="player.current && !player.barCollapsed ? 'bottom-24' : 'bottom-6'"
     :aria-expanded="open"
     :aria-label="currentPersona.chip + ' AI 助手'"
     style="transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1)"
@@ -296,29 +293,25 @@ onBeforeUnmount(() => {
   <Transition name="assistant">
     <div
       v-if="open"
-      class="fixed z-[42] flex flex-col overflow-hidden rounded-xl border bg-surface shadow-2xl"
+      class="fixed z-[42] flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-2xl"
       :class="[
         maximized
           ? 'bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-1/2 h-[90vh] w-[min(1200px,92vw)] translate-x-1/2'
           : 'right-6 h-[min(820px,82vh)] w-[720px] max-w-[calc(100vw-2rem)]',
         !maximized && (player.current && !player.barCollapsed ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'),
         'max-sm:!bottom-0 max-sm:!right-0 max-sm:!h-[100dvh] max-sm:!w-full max-sm:!translate-x-0 max-sm:!rounded-none',
-        opsMode ? 'border-amber-300' : 'border-line',
       ]"
       role="dialog"
       data-lenis-prevent
-      :aria-label="opsMode ? '小灯运营模式' : '小灯 AI 助手'"
+      :aria-label="currentPersona.chip + ' AI 助手'"
     >
       <AssistantHeader
         :persona="currentPersona"
         :personas="PERSONAS"
         :persona-id="persona"
         :threads="threads"
-        :is-admin="isAdmin"
-        :ops-mode="opsMode"
         :maximized="maximized"
         @update:persona-id="switchPersona($event)"
-        @update:ops-mode="opsMode = $event"
         @toggle-max="maximized = !maximized"
         @close="open = false"
         @clear="clearThread"
@@ -329,7 +322,7 @@ onBeforeUnmount(() => {
         :loading="loading"
         :waiting-first="waitingFirst"
         :confirming="confirming"
-        :empty-hint="mode === 'ops' ? ['列出所有演出'] : ['推荐演出', '春日影是哪张专辑']"
+        :empty-hint="['推荐演出', '春日影是哪张专辑', 'MyGO 有哪些成员']"
         @confirm="confirm"
         @retry="(text) => send(text, { retry: true })"
         @send="(s) => send(s)"
@@ -338,9 +331,7 @@ onBeforeUnmount(() => {
       <AssistantComposer
         v-model="input"
         :loading="loading"
-        :mode="mode"
         :persona-chip="currentPersona.chip"
-        :slow="opsSlow"
         @send="send()"
         @stop="stop"
       />
