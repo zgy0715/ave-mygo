@@ -151,8 +151,12 @@ async function send(text, opts = {}) {
   t.controller = controller
 
   try {
+    // v2 后端暂不接收 persona：非小灯人格时在消息前注入口吻提示（后端支持后移除）
+    const cue = persona.value === 'xiaodeng'
+      ? ''
+      : `（请全程用「${chipById(persona.value)}」的口吻和人称回答）`
     await chatV2({
-      message: content,
+      message: cue + content,
       conversationId,
       signal: controller.signal,
       onEvent: (evt) => {

@@ -124,7 +124,6 @@ function toggleTool(i) {
           :key="i"
           class="flex cursor-pointer items-baseline gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] leading-5"
           :class="toolCls(tc.status)"
-          :title="tc.summary || tc.name"
           @click="toggleTool(i)"
         >
           <span class="shrink-0">🔧</span>
@@ -137,6 +136,8 @@ function toggleTool(i) {
             class="ml-1 min-w-0 flex-1 opacity-80"
             :class="toolOpen(i) ? 'whitespace-normal break-words' : 'truncate'"
           >{{ tc.summary }}</span>
+
+            <span v-if="tc.summary" class="shrink-0 opacity-60">{{ toolOpen(i) ? '▴' : '▾' }}</span>
         </p>
       </div>
 
