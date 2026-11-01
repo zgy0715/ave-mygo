@@ -21,7 +21,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1'
  * @param {object} p { message, conversationId, onEvent(evt), signal }
  * @returns {Promise<object>} done 事件
  */
-export async function chatV2({ message, conversationId, onEvent, signal }) {
+export async function chatV2({ message, conversationId, persona, onEvent, signal }) {
   const token = sessionStorage.getItem('token')
   const res = await fetch(`${API_BASE}/assistant/chat/v2`, {
     method: 'POST',
@@ -30,7 +30,7 @@ export async function chatV2({ message, conversationId, onEvent, signal }) {
       Accept: 'text/event-stream',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, conversationId }),
+    body: JSON.stringify({ message, conversationId, persona }),
     signal,
   })
   if (!res.ok || !res.body) throw new Error(`stream failed: ${res.status}`)
