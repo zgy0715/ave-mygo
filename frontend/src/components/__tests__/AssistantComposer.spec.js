@@ -53,4 +53,30 @@ describe('AssistantComposer（v2）', () => {
     expect(w.text()).not.toContain('运营')
     expect(w.html()).not.toContain('amber')
   })
+
+  it('maxlength 与 MAX 一致（500），不再有 600 的漂移', () => {
+    expect(mountC().find('textarea').attributes('maxlength')).toBe('500')
+  })
+
+  it('不再有无效的 pr-12（.input 的 padding 简写本来就会覆盖它）', () => {
+    expect(mountC().find('textarea').classes()).not.toContain('pr-12')
+  })
+
+  it('自适应高度补 2px 边框，触顶改为内部滚动（修右侧竖条）', async () => {
+    const w = mountC({ modelValue: 'a' })
+    const ta = w.find('textarea')
+    Object.defineProperty(ta.element, 'scrollHeight', { value: 100, configurable: true })
+    await ta.setValue('a\nb')
+    await w.vm.$nextTick()
+    await w.vm.$nextTick()
+    expect(ta.element.style.height).toBe('102px')
+    expect(ta.element.style.overflowY).toBe('hidden')
+
+    Object.defineProperty(ta.element, 'scrollHeight', { value: 200, configurable: true })
+    await ta.setValue('a\nb\nc')
+    await w.vm.$nextTick()
+    await w.vm.$nextTick()
+    expect(ta.element.style.height).toBe('120px')
+    expect(ta.element.style.overflowY).toBe('auto')
+  })
 })
