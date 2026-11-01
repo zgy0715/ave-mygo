@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,8 +41,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final boolean enabled;
     private final Map<String, Window> buckets = new ConcurrentHashMap<>();
 
-    public RateLimitFilter(@Value("${app.rate-limit.enabled:true}") boolean enabled) {
+    /** 各分组每分钟额度（可配置：本地跑 E2E 时要放宽，否则 20 次登录就打满） */
+    private final int authLimit;
+    private final int orderLimit;
+    private final int assistantLimit;
+    private final int defaultLimit;
+
+    /** CORS 白名单：429 也要带跨域头，否则浏览器只会报"CORS 错误"，真因被掩盖 */
+    private final List<String> allowedOrigins;
+
+    public RateLimitFilter(@Value("${app.rate-limit.enabled:true}") boolean enabled,
+                           @Value("${app.rate-limit.auth:10}") int authLimit,
+                           @Value("${app.rate-limit.order:20}") int orderLimit,
+                           @Value("${app.rate-limit.assistant:20}") int assistantLimit,
+                           @Value("${app.rate-limit.default-limit:120}") int defaultLimit,
+                           @Value("${app.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
         this.enabled = enabled;
+        this.authLimit = authLimit;
+        this.orderLimit = orderLimit;
+        this.assistantLimit = assistantLimit;
+        this.defaultLimit = defaultLimit;
+        this.allowedOrigins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(x -> !x.isEmpty()).toList();
     }
 
     private record Window(long startMs, AtomicInteger count) {
@@ -60,6 +81,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         if (!allow(key, limit)) {
             log.warn("限流命中 ip={} path={} limit={}/min", clientIp(request), path, limit);
+            // 关键：429 必须带跨域头，否则浏览器把它显示成 CORS 错误，排查会完全跑偏
+            String origin = request.getHeader("Origin");
+            if (origin != null && allowedOrigins.contains(origin)) {
+                response.setHeader("Access-Control-Allow-Origin", origin);
+                response.setHeader("Vary", "Origin");
+            }
+            response.setHeader("Retry-After", "60");
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
             response.getOutputStream().write(
@@ -94,10 +122,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private int limitOf(String path) {
         return switch (group(path)) {
-            case "auth" -> 10;
-            case "order" -> 20;
-            case "assistant" -> 20;
-            default -> 120;
+            case "auth" -> authLimit;
+            case "order" -> orderLimit;
+            case "assistant" -> assistantLimit;
+            default -> defaultLimit;
         };
     }
 
