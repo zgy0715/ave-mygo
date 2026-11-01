@@ -212,6 +212,36 @@ class AssistantStreamServiceTest {
     }
 
     @Test
+    @DisplayName("V10 人设：persona 不同则 system 提示词不同（修复 ANON 说客服话）")
+    void v10_personaInjected() throws Exception {
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenReturn(new StreamLlm.Turn("嗯。", List.of()));
+
+        service.chat("你好", null, "anon", 1L, false, sink());
+        service.chat("你好", null, "mutsumi", 1L, false, sink());
+        service.chat("你好", null, "不存在的角色", 1L, false, sink());
+
+        List<List<Map<String, Object>>> calls = new ArrayList<>();
+        org.mockito.Mockito.verify(streamLlm, org.mockito.Mockito.times(3))
+                .stream(org.mockito.ArgumentMatchers.argThat(msgs -> {
+                    calls.add((List<Map<String, Object>>) msgs);
+                    return true;
+                }), anyList(), any());
+
+        String anonSystem = String.valueOf(calls.get(0).get(0).get("content"));
+        String mutsumiSystem = String.valueOf(calls.get(1).get(0).get("content"));
+        String fallbackSystem = String.valueOf(calls.get(2).get(0).get("content"));
+
+        assertThat(anonSystem).contains("千早愛音").contains("那个那个").contains("角色：愛音");
+        assertThat(mutsumiSystem).contains("若葉睦").contains("回答极短");
+        // 未知 key 回退小灯
+        assertThat(fallbackSystem).contains("高松燈").contains("角色：小灯");
+        // 三条都必须带运营规则，不能因为人设丢能力
+        assertThat(anonSystem).contains("必须先调用工具");
+        assertThat(mutsumiSystem).contains("必须先调用工具");
+    }
+
+    @Test
     @DisplayName("V09 markdown 兜底：模型输出 **id=19** 时，流里不出现星号")
     void v09_markdownStripped() throws Exception {
         when(streamLlm.stream(anyList(), anyList(), any())).thenAnswer(inv -> {

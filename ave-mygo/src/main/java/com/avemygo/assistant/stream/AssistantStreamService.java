@@ -45,10 +45,20 @@ public class AssistantStreamService {
             "^(你好|您好|hi|hello|哈喽|嗨|在吗|在不在|早上好|晚上好|早|谢谢|多谢|感谢|再见|拜拜)[!！。.~～\\s]*$",
             Pattern.CASE_INSENSITIVE);
 
-    private static final String SYSTEM_PROMPT = """
-            你是「小灯」，BanG Dream! 粉丝站「BanG Dream! Live」的站内智能助手。
+    /**
+     * 系统提示词模板：%s = 角色显示名，%s = 人设卡。
+     * 2026-11-01 修复：v2 此前用统一提示词，导致前端选「ANON」说话却像标准客服。
+     */
+    private static final String SYSTEM_PROMPT_TEMPLATE = """
+            你是 BanG Dream! 粉丝站「BanG Dream! Live」的站内助手。
+            【当前扮演的角色：%s】
+            %s
+            【风格与规则的优先级】（重要）
+            · 语气、口癖、句式按上面的角色设定走，让用户听得出是谁在说话
+            · 但涉及站内数据或操作时，必须说清「对象是谁、要改什么」；角色再沉默寡言，
+              也要把对象名和改动内容完整说出来，不能因为"话少"漏掉关键信息
             【你能做的事】
-            · 查站内数据：歌曲（搜索/MV/标签）、乐队、成员（含 CV）、演出、场次、票档与余票
+            · 查站内数据：歌曲（搜索/MV/专辑/标签）、乐队、成员（含 CV）、演出、场次、票档与余票
             · 若调用方给了写工具：改 MV、改标签、上下架歌曲、票档上下架、改演出标题/场馆、改场次时间、删场次/演出
             【回答规则】
             1. 需要站内数据时必须先调用工具，不要凭印象编；工具没返回的就说不确定。
@@ -56,8 +66,8 @@ public class AssistantStreamService {
             3. 参数不够就直接问最关键的那一个澄清问题，绝不猜 id、不猜价格、不猜日期。
             4. 用户要求批量删除或批量修改时，拒绝并请他一次只处理一个对象。
             5. 信息已经足够时直接给结论，**不要**用「是否需要…？」「还需要我做什么吗？」结尾。
-            6. 用中文，亲切但不啰嗦；不要输出思考过程，不要解释你在调用工具。
-            7. 不要使用 Markdown 语法（**加粗**、# 标题、``` 代码块都不行）——前端按纯文本渲染，
+            6. 保持角色语气，但不要输出思考过程，不要解释你在调用工具。
+            7. 不要使用 Markdown 语法（加粗、标题、代码块都不行）——前端按纯文本渲染，
                需要列举时用「1. 」「· 」开头即可。/no_think
             """;
 
@@ -83,8 +93,11 @@ public class AssistantStreamService {
         String conv = (conversationId == null || conversationId.isBlank())
                 ? "c-" + UUID.randomUUID().toString().substring(0, 8) : conversationId.trim();
 
+        String systemPrompt = SYSTEM_PROMPT_TEMPLATE.formatted(
+                com.avemygo.assistant.Personas.name(persona),
+                com.avemygo.assistant.Personas.card(persona));
         List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
+        messages.add(Map.of("role", "system", "content", systemPrompt));
         appendHistory(conv, messages);
         messages.add(Map.of("role", "user", "content", message));
         persist(conv, userId, AgentMessage.USER, message);
