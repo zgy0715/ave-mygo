@@ -18,9 +18,9 @@ import AssistantComposer from '@/components/assistant/AssistantComposer.vue'
 /* ---- 人格 ---- */
 const PERSONAS = [
   { id: 'xiaodeng', chip: '小灯', gradient: 'linear-gradient(135deg, #2c7da0, #6b4fa3)', greeting: '我是小灯，本站的智能助手✳ 你可以问我站内的歌曲、乐队成员，或者让推荐演出哦。' },
-  { id: 'anon', chip: 'Anon', gradient: 'linear-gradient(135deg, #e8618c, #f89)', greeting: '嗨嗨～我是千早愛音✳ 本站的歌曲、成员、演出，想聊什么都可以哦！先说好，MyGO 的票可是超——推荐的说！' },
-  { id: 'sakiko', chip: '小祥', gradient: 'linear-gradient(135deg, #5d1031, #aa1656)', greeting: '……豊川祥子。本站的事，问我便是。歌曲、成员、演出——吧台后面的事，也可以问哦。' },
-  { id: 'mutsumi', chip: '睦子米', gradient: 'linear-gradient(135deg, #4a5568, #86a397)', greeting: '……睦。歌曲的事，演出的事……想知道的话，说吧。我都在。' },
+  { id: 'anon', chip: 'Anon', avatar: '/img/member-mygo-2.png', gradient: 'linear-gradient(135deg, #e8618c, #f89)', greeting: '嗨嗨～我是千早愛音✳ 本站的歌曲、成员、演出，想聊什么都可以哦！先说好，MyGO 的票可是超——推荐的说！' },
+  { id: 'sakiko', chip: '小祥', avatar: '/img/member-mujica-5.png', gradient: 'linear-gradient(135deg, #5d1031, #aa1656)', greeting: '……豊川祥子。本站的事，问我便是。歌曲、成员、演出——吧台后面的事，也可以问哦。' },
+  { id: 'mutsumi', chip: '睦子米', avatar: '/img/member-mujica-3.png', gradient: 'linear-gradient(135deg, #4a5568, #86a397)', greeting: '……睦。歌曲的事，演出的事……想知道的话，说吧。我都在。' },
 ]
 
 const player = usePlayerStore()
