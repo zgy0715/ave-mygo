@@ -14,26 +14,27 @@ const emit = defineEmits(['update:personaId', 'toggle-max', 'close', 'clear'])
 </script>
 
 <template>
-  <div class="shrink-0 border-b border-line px-4 py-3">
+  <div class="shrink-0 border-b border-line px-4 pb-2.5 pt-3">
     <div class="flex items-center justify-between gap-2">
       <div class="flex min-w-0 items-center gap-3">
         <div
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
           :style="{ background: persona.gradient }"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
             <rect x="9.4" y="18.8" width="5.2" height="1.7" rx="0.85" />
             <rect x="10.2" y="21.1" width="3.6" height="1.4" rx="0.7" />
           </svg>
         </div>
         <div class="min-w-0">
-          <p class="truncate text-sm font-bold leading-tight">
-            {{ persona.chip }}
-            <span class="micro-accent !text-[9px]">✳ AI 助手</span>
+          <p class="flex min-w-0 items-baseline gap-1.5">
+            <span class="truncate text-sm font-bold leading-tight">{{ persona.chip }}</span>
+            <span class="h-2.5 w-px shrink-0 bg-line-strong" aria-hidden="true" />
+            <span class="shrink-0 font-mono text-[9px] uppercase tracking-[0.14em] text-faint">AI 助手</span>
           </p>
-          <p class="micro mt-0.5 flex items-center gap-1.5">
-            <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />在线 ONLINE
+          <p class="mt-0.5 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-faint">
+            <span class="inline-block h-1 w-1 rounded-full bg-green-500" />在线 ONLINE
           </p>
         </div>
       </div>
@@ -58,23 +59,25 @@ const emit = defineEmits(['update:personaId', 'toggle-max', 'close', 'clear'])
     </div>
 
     <!-- 人格 chips -->
-    <div class="mt-2.5 flex items-center gap-1.5">
+    <div class="mt-2 flex items-center gap-1.5">
       <button
         v-for="p in personas"
         :key="p.id"
-        class="flex cursor-pointer items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200"
-        :class="personaId === p.id ? 'bg-primary text-white' : 'bg-base text-dim hover:text-ink'"
+        class="flex cursor-pointer items-center rounded-full border px-2.5 py-[3px] text-[11px] font-medium transition-colors duration-200"
+        :class="personaId === p.id
+          ? 'border-primary bg-primary text-white'
+          : 'border-line bg-surface text-dim hover:border-line-strong hover:text-ink'"
         @click="emit('update:personaId', p.id)"
       >
         {{ p.chip }}
         <span
           v-if="threads[p.id]?.messages.length > 1"
-          class="ml-1 inline-block h-1.5 w-1.5 rounded-full"
+          class="ml-1.5 inline-block h-1 w-1 rounded-full"
           :class="personaId === p.id ? 'bg-white/80' : 'bg-primary'"
         />
       </button>
       <button
-        class="ml-auto cursor-pointer text-xs text-faint transition hover:text-ink"
+        class="ml-auto cursor-pointer text-[11px] text-faint transition hover:text-ink"
         title="清空当前对话"
         aria-label="清空当前对话"
         @click="emit('clear')"

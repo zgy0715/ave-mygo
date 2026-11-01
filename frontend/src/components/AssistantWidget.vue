@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
   <Transition name="assistant">
     <div
       v-if="open"
-      class="fixed z-[42] flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-2xl"
+      class="fixed z-[42] flex min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
       :class="[
         maximized
           ? 'bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-1/2 h-[90vh] w-[min(1200px,92vw)] translate-x-1/2'

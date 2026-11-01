@@ -75,21 +75,21 @@ defineExpose({ scrollBottom })
 </script>
 
 <template>
-  <div class="relative min-h-0 flex-1">
-    <div ref="listEl" class="flex h-full flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4" aria-live="polite">
+  <div class="relative min-h-0 flex-1 overflow-hidden">
+    <div ref="listEl" class="flex h-full flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-3 pt-3.5" aria-live="polite">
       <!-- 空态 -->
       <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center gap-2.5 text-center">
         <p class="serif text-base text-dim">💡 试试：</p>
         <button
           v-for="s in emptyHint"
           :key="s"
-          class="max-w-full cursor-pointer truncate rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-dim transition hover:border-primary hover:text-ink"
+          class="max-w-full cursor-pointer truncate rounded-xl border border-line bg-surface px-3.5 py-1.5 text-xs text-dim transition hover:border-primary hover:text-ink"
           @click="emit('send', s)"
         >{{ s }}</button>
       </div>
 
       <template v-for="row in rows" :key="row.id">
-        <p v-if="row.type === 'date'" class="self-center text-[10px] text-faint">{{ row.label }}</p>
+        <p v-if="row.type === 'date'" class="self-center py-0.5 font-mono text-[10px] tracking-[0.14em] text-faint">{{ row.label }}</p>
         <MessageBubble
           v-else
           :msg="row.msg"
@@ -100,7 +100,7 @@ defineExpose({ scrollBottom })
       </template>
 
       <!-- 三点 loading（等首字 / 运营执行中） -->
-      <div v-if="waitingFirst" class="card flex w-24 items-center justify-center gap-1.5 self-start rounded-2xl rounded-bl-sm px-4 py-3">
+      <div v-if="waitingFirst" class="flex w-[72px] items-center justify-center gap-1.5 self-start rounded-2xl rounded-bl-sm border border-line bg-base px-3 py-2.5">
         <span class="assistant-dot" style="animation-delay: 0s" />
         <span class="assistant-dot" style="animation-delay: .15s" />
         <span class="assistant-dot" style="animation-delay: .3s" />
@@ -110,7 +110,7 @@ defineExpose({ scrollBottom })
     <!-- 回到底部浮标 -->
     <button
       v-if="!stickToBottom"
-      class="absolute bottom-3 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-md transition hover:text-ink"
+      class="absolute bottom-3 right-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-sm transition hover:text-ink"
       aria-label="回到底部"
       @click="scrollBottom(); stickToBottom = true"
     >
