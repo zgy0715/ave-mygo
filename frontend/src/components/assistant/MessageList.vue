@@ -110,7 +110,7 @@ defineExpose({ scrollBottom })
     <!-- 回到底部浮标 -->
     <button
       v-if="!stickToBottom"
-      class="absolute bottom-3 right-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-sm transition hover:text-ink"
+      class="absolute bottom-4 right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-sm transition hover:text-ink"
       aria-label="回到底部"
       @click="scrollBottom(); stickToBottom = true"
     >

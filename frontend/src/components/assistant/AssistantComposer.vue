@@ -58,12 +58,12 @@ function useChip(s) {
 
 <template>
   <!-- 快捷提问 -->
-  <div class="flex shrink-0 flex-wrap items-center gap-1.5 px-3 pb-2 pt-2.5">
-    <span class="text-[11px] text-faint">💡 推荐提问：</span>
+  <div class="flex shrink-0 items-center gap-1.5 overflow-x-auto px-3 pb-2 pt-2.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
+    <span class="hidden shrink-0 text-[11px] text-faint sm:inline">💡 推荐提问：</span>
     <button
       v-for="s in CHAT_CHIPS"
       :key="s"
-      class="max-w-[16rem] cursor-pointer truncate rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] text-dim transition hover:border-primary hover:text-primary"
+      class="shrink-0 cursor-pointer whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] text-dim transition hover:border-primary hover:text-primary"
       @click="useChip(s)"
     >{{ s }}</button>
   </div>
@@ -76,7 +76,8 @@ function useChip(s) {
         rows="1"
         :maxlength="MAX"
         class="input max-h-[120px] w-full resize-none overflow-hidden !rounded-lg"
-        :placeholder="`问${personaChip}点什么…（Enter 发送 / Shift+Enter 换行）`"
+        :placeholder="`问${personaChip}点什么…`"
+        title="Enter 发送 / Shift+Enter 换行"
         @input="onInput"
         @keydown="onKeydown"
       />

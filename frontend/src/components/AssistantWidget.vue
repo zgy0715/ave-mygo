@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
 <template>
   <!-- 悬浮球：播放条出现时上移避开进度条 -->
   <button
-    class="fixed right-6 z-[42] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
+    class="fixed right-6 z-[60] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all duration-300 hover:scale-105"
     :class="player.current && !player.barCollapsed ? 'bottom-24' : 'bottom-6'"
     :aria-expanded="open"
     :aria-label="currentPersona.chip + ' AI 助手'"
@@ -293,13 +293,13 @@ onBeforeUnmount(() => {
   <Transition name="assistant">
     <div
       v-if="open"
-      class="fixed z-[42] flex min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
+      class="fixed z-[60] flex min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
       :class="[
         maximized
           ? 'bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-1/2 h-[90vh] w-[min(1200px,92vw)] translate-x-1/2'
           : 'right-6 h-[min(820px,82vh)] w-[720px] max-w-[calc(100vw-2rem)]',
         !maximized && (player.current && !player.barCollapsed ? 'bottom-[10.5rem]' : 'bottom-[6.5rem]'),
-        'max-sm:!bottom-0 max-sm:!right-0 max-sm:!h-[100dvh] max-sm:!w-full max-sm:!translate-x-0 max-sm:!rounded-none',
+        'max-sm:!bottom-0 max-sm:!right-0 max-sm:!h-[100dvh] max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!rounded-none',
       ]"
       role="dialog"
       data-lenis-prevent
