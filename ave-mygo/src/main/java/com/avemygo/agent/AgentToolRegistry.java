@@ -10,6 +10,8 @@ import com.avemygo.event.TicketType;
 import com.avemygo.event.TicketTypeRepository;
 import com.avemygo.song.Band;
 import com.avemygo.song.BandRepository;
+import com.avemygo.song.Member;
+import com.avemygo.song.MemberRepository;
 import com.avemygo.song.Song;
 import com.avemygo.song.SongRepository;
 import jakarta.annotation.PostConstruct;
@@ -36,6 +38,7 @@ public class AgentToolRegistry {
 
     private final SongRepository songRepository;
     private final BandRepository bandRepository;
+    private final MemberRepository memberRepository;
     private final EventRepository eventRepository;
     private final LiveSessionRepository sessionRepository;
     private final TicketTypeRepository ticketTypeRepository;
@@ -133,6 +136,63 @@ public class AgentToolRegistry {
                     return sb.toString();
                 }));
 
+        register(new AgentTool("list_members",
+                "列出乐队成员（姓名 / 担当 / CV）。可按乐队名筛选，如 MyGO、Ave Mujica。",
+                AgentTool.Risk.READ,
+                schema(Map.of("band", Map.of("type", "string",
+                        "description", "乐队名关键词，可省略")), List.of()),
+                args -> {
+                    String band = optStr(args, "band");
+                    List<String> lines = new ArrayList<>();
+                    for (Member m : memberRepository.findAll()) {
+                        if (m.getIsDeleted() != null && m.getIsDeleted() != 0) continue;
+                        String bandName = bandNames().getOrDefault(m.getBandId(), "");
+                        if (band != null && !band.isBlank() && !bandName.contains(band)) continue;
+                        lines.add("- %s（%s · %s · CV.%s）".formatted(
+                                m.getNameJa(), bandName, m.getPosition(), m.getCv()));
+                    }
+                    return lines.isEmpty() ? "没有找到匹配的成员。" : "共 %d 位：\n%s".formatted(lines.size(), String.join("\n", lines));
+                }));
+
+        register(new AgentTool("list_bands",
+                "列出站内收录的乐队及各自收录曲数。无需参数。",
+                AgentTool.Risk.READ,
+                schema(Map.of(), List.of()),
+                args -> {
+                    List<String> lines = new ArrayList<>();
+                    for (Band b : bandRepository.findAll()) {
+                        long songs = songRepository.countByBandIdAndStatus(b.getId(), (byte) 1);
+                        lines.add("- id=%d %s（收录 %d 首）".formatted(b.getId(), b.getName(), songs));
+                    }
+                    return "共 %d 支乐队：\n%s".formatted(lines.size(), String.join("\n", lines));
+                }));
+
+        register(new AgentTool("get_event",
+                "查看某个演出的详情：状态、场馆、场次数、票档数与余票合计。",
+                AgentTool.Risk.READ,
+                schema(Map.of("eventId", Map.of("type", "integer", "description", "演出 id")),
+                        List.of("eventId")),
+                args -> {
+                    long id = reqLong(args, "eventId");
+                    LiveEvent e = eventRepository.findById(id)
+                            .orElseThrow(() -> new IllegalArgumentException("演出 id=" + id + " 不存在"));
+                    List<LiveSession> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(id);
+                    int ticketCount = 0;
+                    int remaining = 0;
+                    for (LiveSession s : sessions) {
+                        List<TicketType> tts = ticketTypeRepository.findBySessionIdOrderByIdAsc(s.getId());
+                        ticketCount += tts.size();
+                        for (TicketType t : tts) remaining += Math.max(0, t.getTotalStock() - t.getSoldCount());
+                    }
+                    return """
+                            id=%d 《%s》
+                            状态：%s
+                            场馆：%s
+                            场次：%d 个
+                            票档：%d 个，余票合计 %d""".formatted(e.getId(), e.getTitle(), e.getStatus(),
+                            e.getVenue(), sessions.size(), ticketCount, remaining);
+                }));
+
         // ---------- 写工具（必须人工确认） ----------
         register(new AgentTool("update_song_mv",
                 "修改指定歌曲的 MV 地址（B 站播放页或 iframe 链接）。写操作，执行前需人工确认。",
@@ -194,12 +254,100 @@ public class AgentToolRegistry {
                     return "演出 id=%d 已删除".formatted(id);
                 }));
 
+        register(new AgentTool("update_song_tags",
+                "修改歌曲标签（逗号分隔，如「Live,MyGO」）。写操作，需确认。",
+                AgentTool.Risk.WRITE,
+                schema(Map.of(
+                        "songId", Map.of("type", "integer", "description", "歌曲 id"),
+                        "tags", Map.of("type", "string", "description", "新标签，逗号分隔，可为空字符串")
+                ), List.of("songId", "tags")),
+                args -> {
+                    long id = reqLong(args, "songId");
+                    String tags = reqStr(args, "tags").trim();
+                    Song s = songRepository.findById(id)
+                            .orElseThrow(() -> new IllegalArgumentException("歌曲 id=" + id + " 不存在"));
+                    String old = s.getTags();
+                    s.setTags(tags);
+                    songRepository.save(s);
+                    return "已更新《%s》的标签：%s → %s".formatted(s.getTitle(),
+                            old == null || old.isBlank() ? "（空）" : old, tags.isBlank() ? "（空）" : tags);
+                }));
+
+        register(new AgentTool("set_song_status",
+                "歌曲上架或下架：status=1 上架，status=0 下架。写操作，需确认。",
+                AgentTool.Risk.WRITE,
+                schema(Map.of(
+                        "songId", Map.of("type", "integer", "description", "歌曲 id"),
+                        "status", Map.of("type", "integer", "description", "1 上架 / 0 下架")
+                ), List.of("songId", "status")),
+                args -> {
+                    long id = reqLong(args, "songId");
+                    long status = reqLong(args, "status");
+                    if (status != 0 && status != 1) throw new IllegalArgumentException("status 只能是 0 或 1");
+                    Song s = songRepository.findById(id)
+                            .orElseThrow(() -> new IllegalArgumentException("歌曲 id=" + id + " 不存在"));
+                    s.setStatus((byte) status);
+                    songRepository.save(s);
+                    return "《%s》已%s".formatted(s.getTitle(), status == 1 ? "上架" : "下架");
+                }));
+
+        register(new AgentTool("update_event_info",
+                "修改演出的标题或场馆（只传要改的字段）。写操作，需确认。",
+                AgentTool.Risk.WRITE,
+                schema(Map.of(
+                        "eventId", Map.of("type", "integer", "description", "演出 id"),
+                        "title", Map.of("type", "string", "description", "新标题，可省略"),
+                        "venue", Map.of("type", "string", "description", "新场馆，可省略")
+                ), List.of("eventId")),
+                args -> {
+                    long id = reqLong(args, "eventId");
+                    String title = optStr(args, "title");
+                    String venue = optStr(args, "venue");
+                    if ((title == null || title.isBlank()) && (venue == null || venue.isBlank())) {
+                        throw new IllegalArgumentException("至少要提供 title 或 venue 之一");
+                    }
+                    LiveEvent e = eventRepository.findById(id)
+                            .orElseThrow(() -> new IllegalArgumentException("演出 id=" + id + " 不存在"));
+                    StringBuilder sb = new StringBuilder("已更新演出 id=" + id + "：");
+                    if (title != null && !title.isBlank()) {
+                        sb.append("标题「%s」→「%s」 ".formatted(e.getTitle(), title));
+                        e.setTitle(title);
+                    }
+                    if (venue != null && !venue.isBlank()) {
+                        sb.append("场馆「%s」→「%s」".formatted(e.getVenue(), venue));
+                        e.setVenue(venue);
+                    }
+                    eventRepository.save(e);
+                    return sb.toString().trim();
+                }));
+
+        register(new AgentTool("update_session_time",
+                "修改场次的开演与结束时间，格式 yyyy-MM-dd HH:mm（如 2026-11-14 18:00）。写操作，需确认。",
+                AgentTool.Risk.WRITE,
+                schema(Map.of(
+                        "sessionId", Map.of("type", "integer", "description", "场次 id"),
+                        "startTime", Map.of("type", "string", "description", "开演时间 yyyy-MM-dd HH:mm"),
+                        "endTime", Map.of("type", "string", "description", "结束时间 yyyy-MM-dd HH:mm")
+                ), List.of("sessionId", "startTime", "endTime")),
+                args -> {
+                    long id = reqLong(args, "sessionId");
+                    var start = parseDateTime(reqStr(args, "startTime"));
+                    var end = parseDateTime(reqStr(args, "endTime"));
+                    if (!end.isAfter(start)) throw new IllegalArgumentException("结束时间必须晚于开演时间");
+                    LiveSession s = sessionRepository.findById(id)
+                            .orElseThrow(() -> new IllegalArgumentException("场次 id=" + id + " 不存在"));
+                    s.setStartTime(start);
+                    s.setEndTime(end);
+                    sessionRepository.save(s);
+                    return "场次「%s」时间已改为 %s ~ %s".formatted(s.getName(), start, end);
+                }));
+
         validate();   // 注册完立刻自检（单方法内调用，避免 @PostConstruct 顺序不确定）
     }
 
     /** 启动自检：坏的工具定义应该在启动时就炸，而不是等 LLM 调用时才发现 */
     void validate() {
-        if (tools.size() != 8) throw new IllegalStateException("工具数量应为 8，实际 " + tools.size());
+        if (tools.size() != 15) throw new IllegalStateException("工具数量应为 15，实际 " + tools.size());
         for (AgentTool t : tools.values()) {
             if (t.parameters() == null || !"object".equals(t.parameters().get("type"))) {
                 throw new IllegalStateException("工具 " + t.name() + " 的 parameters 必须是 object schema");
@@ -216,6 +364,17 @@ public class AgentToolRegistry {
 
     public List<Map<String, Object>> schemas() {
         return tools.values().stream().map(AgentTool::toOpenAiSchema).toList();
+    }
+
+    /**
+     * 按身份取工具清单（小灯 v2 的身份闸门，docs/13 §3.3）：
+     * 普通用户/游客只能拿到只读工具，写工具根本不出现在清单里——模型无从调用。
+     */
+    public List<Map<String, Object>> schemas(boolean includeWrite) {
+        return tools.values().stream()
+                .filter(t -> includeWrite || !t.isWrite())
+                .map(AgentTool::toOpenAiSchema)
+                .toList();
     }
 
     public int size() {
@@ -270,6 +429,21 @@ public class AgentToolRegistry {
     private static String optStr(Map<String, Object> args, String key) {
         Object v = args == null ? null : args.get(key);
         return v == null ? null : String.valueOf(v);
+    }
+
+    /** 解析 yyyy-MM-dd HH:mm / yyyy-MM-ddTHH:mm，容忍"2026-11-14 18:00:00" */
+    private static java.time.LocalDateTime parseDateTime(String raw) {
+        String v = raw.trim().replace('T', ' ');
+        String[] patterns = {"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm"};
+        for (String p : patterns) {
+            try {
+                return java.time.LocalDateTime.parse(v,
+                        java.time.format.DateTimeFormatter.ofPattern(p));
+            } catch (Exception ignored) {
+                // 试下一个格式
+            }
+        }
+        throw new IllegalArgumentException("时间格式应为 yyyy-MM-dd HH:mm，收到：" + raw);
     }
 
     private static String blankToNull(String s) {

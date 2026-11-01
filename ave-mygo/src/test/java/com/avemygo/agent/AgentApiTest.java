@@ -74,11 +74,21 @@ class AgentApiTest {
     @Test
     @DisplayName("A01 注册表：8 个工具、名称唯一、Schema 合法、写工具带说明")
     void a01_registry() {
-        assertThat(registry.size()).isEqualTo(8);
+        assertThat(registry.size()).isEqualTo(15);
         List<Map<String, Object>> schemas = registry.schemas();
-        assertThat(schemas).hasSize(8);
+        assertThat(schemas).hasSize(15);
         assertThat(schemas.stream().map(s -> ((Map<?, ?>) s.get("function")).get("name")).distinct().count())
-                .isEqualTo(8);
+                .isEqualTo(15);
+        // 身份闸门：非管理员拿不到任何写工具
+        List<Map<String, Object>> readOnly = registry.schemas(false);
+        assertThat(readOnly).hasSize(7);
+        for (String writeTool : List.of("update_song_mv", "set_ticket_status", "delete_session",
+                "delete_event", "update_song_tags", "set_song_status", "update_event_info",
+                "update_session_time")) {
+            assertThat(readOnly.stream()
+                    .map(x -> ((Map<?, ?>) x.get("function")).get("name").toString()))
+                    .doesNotContain(writeTool);
+        }
         for (Map<String, Object> s : schemas) {
             Map<?, ?> fn = (Map<?, ?>) s.get("function");
             Map<?, ?> params = (Map<?, ?>) fn.get("parameters");
