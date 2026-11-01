@@ -85,7 +85,7 @@ function useChip(s) {
 
     <button
       v-if="loading"
-      class="btn-ghost flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center !px-0"
+      class="btn-primary h-9 w-9 shrink-0 !px-0"
       title="停止生成"
       aria-label="停止生成"
       @click="emit('stop')"
@@ -94,7 +94,7 @@ function useChip(s) {
     </button>
     <button
       v-else
-      class="btn-primary h-9 w-9 shrink-0 !px-0 disabled:!bg-elevated disabled:!text-faint disabled:!opacity-100 disabled:!shadow-none"
+      class="btn-primary h-9 w-9 shrink-0 !px-0 disabled:!bg-primary-soft disabled:!text-primary/60 disabled:!opacity-100 disabled:!shadow-none disabled:!cursor-default"
       :disabled="!canSend"
       aria-label="发送"
       @click="emit('send')"

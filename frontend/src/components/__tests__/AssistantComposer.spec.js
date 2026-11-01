@@ -39,6 +39,32 @@ describe('AssistantComposer（v2）', () => {
     expect(w.emitted('update:modelValue')[0]).toEqual(['推荐演出'])
   })
 
+  it('停止按钮与发送键同风格（主色成套）', async () => {
+    const loading = mountC({ loading: true })
+    const stop = loading.find('button[aria-label="停止生成"]')
+    expect(stop.classes()).toContain('btn-primary')          // 主色实心，不是白底黑块
+  })
+
+  it('发送键禁用态是「待激活」：primary-soft 底 + 主色图标，不是灰块', () => {
+    const w = mountC()
+    const sendBtn = w.findAll('button').find((b) => b.attributes('aria-label') === '发送')
+    expect(sendBtn.classes().join(' ')).toContain('bg-primary-soft')
+    expect(sendBtn.classes().join(' ')).not.toContain('bg-elevated')
+  })
+
+  it('停止按钮与发送键同风格（主色成套）', async () => {
+    const loading = mountC({ loading: true })
+    const stop = loading.find('button[aria-label="停止生成"]')
+    expect(stop.classes()).toContain('btn-primary')          // 主色实心，不是白底黑块
+  })
+
+  it('发送键禁用态是「待激活」：primary-soft 底 + 主色图标，不是灰块', () => {
+    const w = mountC()
+    const sendBtn = w.findAll('button').find((b) => b.attributes('aria-label') === '发送')
+    expect(sendBtn.classes().join(' ')).toContain('bg-primary-soft')
+    expect(sendBtn.classes().join(' ')).not.toContain('bg-elevated')
+  })
+
   it('loading → 停止图标按钮；否则发送键', async () => {
     const loading = mountC({ loading: true })
     expect(loading.find('button[aria-label="停止生成"]').exists()).toBe(true)
