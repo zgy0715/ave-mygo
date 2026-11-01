@@ -96,6 +96,8 @@ public class AssistantStreamService {
 
         int usedTools = 0;
         Map<String, Integer> toolFails = new HashMap<>();
+        // 流式出口的 markdown 清洗器：模型不听话时由代码兜底（前端纯文本渲染，星号会裸露）
+        MarkdownStripper stripper = new MarkdownStripper();
 
         for (int round = 1; round <= MAX_ROUNDS; round++) {
             StreamLlm.Turn turn;
@@ -108,7 +110,8 @@ public class AssistantStreamService {
 
                     @Override
                     public void onContent(String delta) {
-                        sink.emit("delta", Map.of("text", delta));
+                        String clean = stripper.push(delta);
+                        if (!clean.isEmpty()) sink.emit("delta", Map.of("text", clean));
                     }
 
                     @Override
@@ -125,7 +128,7 @@ public class AssistantStreamService {
 
             // 无工具调用 = 本轮就是最终回答
             if (!turn.hasToolCalls()) {
-                String content = turn.content() == null ? "" : turn.content();
+                String content = MarkdownStripper.strip(turn.content() == null ? "" : turn.content());
                 persist(conv, userId, AgentMessage.ASSISTANT, content);
                 sink.emit("done", Map.of("usedTools", usedTools, "conversationId", conv,
                         "elapsedMs", System.currentTimeMillis() - startedAt));
@@ -232,7 +235,7 @@ public class AssistantStreamService {
             for (AgentMessage m : chronological) {
                 messages.add(Map.of(
                         "role", AgentMessage.USER.equals(m.getRole()) ? "user" : "assistant",
-                        "content", m.getContent()));
+                        "content", MarkdownStripper.strip(m.getContent())));
             }
         } catch (Exception e) {
             log.warn("v2 历史载入失败: {}", e.getMessage());

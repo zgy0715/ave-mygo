@@ -212,6 +212,26 @@ class AssistantStreamServiceTest {
     }
 
     @Test
+    @DisplayName("V09 markdown 兜底：模型输出 **id=19** 时，流里不出现星号")
+    void v09_markdownStripped() throws Exception {
+        when(streamLlm.stream(anyList(), anyList(), any())).thenAnswer(inv -> {
+            StreamLlm.Listener l = inv.getArgument(2);
+            l.onContent("1. **id=19** 《MyGO!!!!! 9th》\n## 列表\n用 `search_songs` 查");
+            return new StreamLlm.Turn("1. **id=19** 《MyGO!!!!! 9th》\n## 列表\n用 `search_songs` 查", List.of());
+        });
+
+        service.chat("列一下", null, null, null, false, sink());
+
+        String text = textOfDeltas();
+        assertThat(text).doesNotContain("*").doesNotContain("`").doesNotContain("##");
+        assertThat(text).contains("1. id=19").contains("search_songs");
+        // 落库的历史同样干净（避免下一轮把 markdown 再喂回模型）
+        String stored = jdbc.queryForObject(
+                "SELECT content FROM agent_messages WHERE role='ASSISTANT' ORDER BY id DESC LIMIT 1", String.class);
+        assertThat(stored).doesNotContain("**");
+    }
+
+    @Test
     @DisplayName("V08 同一工具连错两次：停下来问用户，不再无限重试")
     void v08_stopAfterTwoFails() throws Exception {
         // get_song 缺必填参数 → 每次都抛异常
