@@ -20,11 +20,6 @@ const copyTimer = ref(null)
 const expanded = ref(false)
 
 /** 人格名 → 渐变（与 AssistantWidget.PERSONAS 保持一致） */
-const NAME_AVATAR = {
-  'Anon': '/img/member-mygo-2.png',
-  '小祥': '/img/member-mujica-5.png',
-  '睦子米': '/img/member-mujica-3.png',
-}
 const NAME_BG = {
   '小灯': 'linear-gradient(135deg, #2c7da0, #6b4fa3)',
   'Anon': 'linear-gradient(135deg, #e8618c, #f89)',
@@ -108,11 +103,10 @@ function toggleTool(i) {
   <!-- 助手：头像 + 气泡 -->
   <div v-else class="msg-in group/msg flex w-full items-start gap-2">
     <span
-      class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-white shadow-sm"
-      :style="msg.name && NAME_AVATAR[msg.name] ? {} : { background: NAME_BG[msg.name] || NAME_BG['小灯'] }"
+      class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+      :style="{ background: NAME_BG[msg.name] || NAME_BG['小灯'] }"
     >
-      <img v-if="msg.name && NAME_AVATAR[msg.name]" :src="NAME_AVATAR[msg.name]" :alt="msg.name" class="h-full w-full object-cover" />
-      <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2a7 7 0 0 0-4.1 12.7c.6.5 1.1 1.4 1.1 2.3v.5h6v-.5c0-.9.5-1.8 1.1-2.3A7 7 0 0 0 12 2z" />
       </svg>
     </span>
