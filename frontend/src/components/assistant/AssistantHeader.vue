@@ -14,7 +14,7 @@ const emit = defineEmits(['update:personaId', 'toggle-max', 'close', 'clear'])
 </script>
 
 <template>
-  <div class="border-b border-line px-4 py-3">
+  <div class="shrink-0 border-b border-line px-4 py-3">
     <div class="flex items-center justify-between gap-2">
       <div class="flex min-w-0 items-center gap-3">
         <div
