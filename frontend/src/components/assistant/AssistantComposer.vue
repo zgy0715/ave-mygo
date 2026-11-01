@@ -72,7 +72,7 @@ function useChip(s) {
           :value="modelValue"
           rows="1"
           :maxlength="MAX"
-          class="input max-h-[120px] w-full resize-none overflow-hidden !rounded-2xl !px-4 !py-2.5 !pr-4"
+          class="input block max-h-[120px] w-full resize-none overflow-hidden !rounded-2xl !px-4 !py-2.5"
           :placeholder="`问${personaChip}点什么…`"
           title="Enter 发送 / Shift+Enter 换行"
           @input="onInput"
@@ -82,7 +82,7 @@ function useChip(s) {
 
       <button
         v-if="loading"
-        class="btn-primary h-10 w-10 shrink-0 rounded-full !px-0"
+        class="btn-primary h-[42px] w-[42px] shrink-0 rounded-full !px-0"
         title="停止生成"
         aria-label="停止生成"
         @click="emit('stop')"
@@ -91,7 +91,7 @@ function useChip(s) {
       </button>
       <button
         v-else
-        class="btn-primary h-10 w-10 shrink-0 rounded-full !px-0 disabled:!bg-primary-soft disabled:!text-primary/60 disabled:!opacity-100 disabled:!shadow-none disabled:!cursor-default"
+        class="btn-primary h-[42px] w-[42px] shrink-0 rounded-full !px-0 disabled:!bg-primary-soft disabled:!text-primary/60 disabled:!opacity-100 disabled:!shadow-none disabled:!cursor-default"
         :disabled="!canSend"
         aria-label="发送"
         @click="emit('send')"
