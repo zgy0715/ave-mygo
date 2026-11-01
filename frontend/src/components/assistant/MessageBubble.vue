@@ -42,10 +42,10 @@ async function copyText() {
   } catch { /* 剪贴板不可用（非 https 等）静默 */ }
 }
 
-/** 工具状态 → 颜色 */
+/** 工具状态 → 颜色（v2 事件：RUNNING 进行中 / OK 成功 / FAIL 失败） */
 const toolCls = (s) =>
-  s === 'FAILED' ? 'text-red-500'
-    : s === 'PENDING' ? 'text-amber-600'
+  s === 'FAIL' || s === 'FAILED' ? 'text-red-500'
+    : s === 'RUNNING' || s === 'PENDING' ? 'text-dim animate-pulse'
       : 'text-faint'
 
 /** 确认卡片状态 → 配色 */
@@ -59,12 +59,6 @@ const cardCls = computed(() => {
   }[st] || 'border-line bg-surface'
 })
 
-const TOOL_LABEL = {
-  update_song_mv: '修改歌曲 MV',
-  set_ticket_status: '票档上下架',
-  delete_session: '删除场次',
-  delete_event: '删除演出',
-}
 </script>
 
 <template>
@@ -140,7 +134,7 @@ const TOOL_LABEL = {
     <div v-if="msg.pending" class="w-full max-w-xl">
       <div class="rounded-xl border p-3.5" :class="cardCls">
         <p class="text-sm font-semibold">
-          <template v-if="msg.pending.state === 'PENDING'">⚠️ 待确认：{{ TOOL_LABEL[msg.pending.toolName] || msg.pending.toolName }}</template>
+          <template v-if="msg.pending.state === 'PENDING'">⚠️ 待确认：{{ msg.pending.title || msg.pending.toolName }}</template>
           <template v-else-if="msg.pending.state === 'EXECUTED'">✅ 已执行</template>
           <template v-else-if="msg.pending.state === 'REJECTED'">🚫 已取消</template>
           <template v-else>❌ 执行失败</template>
