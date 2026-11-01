@@ -42,7 +42,10 @@ test.describe('加入歌单下拉', () => {
     await row.hover()
     await row.getByRole('button', { name: '加入歌单' }).click()
 
-    await page.getByRole('button', { name: '＋ 新建歌单' }).click()
+    // 下拉里的歌单会随每次 E2E 累积，新建入口可能滚出可视区 → 先滚动到可见再点
+    const newBtn = page.getByRole('button', { name: '＋ 新建歌单' })
+    await newBtn.scrollIntoViewIfNeeded()
+    await newBtn.click()
     const name = `E2E歌单${Date.now().toString(36).slice(-4)}`
     await page.getByPlaceholder('歌单名').fill(name)
     await page.getByRole('button', { name: '新建并加入' }).click()

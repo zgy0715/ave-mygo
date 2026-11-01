@@ -33,3 +33,7 @@ mysql-data/
 # 审计原始产物 / 会话临时目录
 .audit/
 .workbuddy/tmp/
+
+# 本地素材（OP 视频 / 原图 / 参考图，不入库，避免仓库膨胀）
+video/
+图片/

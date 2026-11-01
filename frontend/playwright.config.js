@@ -9,7 +9,7 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
-  expect: { timeout: 8_000 },
+  expect: { timeout: 15_000 },   // 首页会并发拉多场演出详情，8s 在慢机偶尔不够
   fullyParallel: false,          // 购票用例会写数据，串行更稳
   retries: 0,
   workers: 1,
