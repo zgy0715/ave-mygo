@@ -25,7 +25,7 @@ const info = MAP[props.status] || { text: props.status, cls: 'bg-gray-100 text-g
 </script>
 
 <template>
-  <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="info.cls">
+  <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="info.cls">
     {{ info.text }}
   </span>
 </template>
