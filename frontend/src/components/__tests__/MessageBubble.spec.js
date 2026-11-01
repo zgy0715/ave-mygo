@@ -102,4 +102,44 @@ describe('MessageBubble（v2）', () => {
     const long = mountBubble(mkMsg({ text: 'a'.repeat(600) }))
     expect(long.text()).toContain('展开全文')
   })
+
+  it('助手气泡不再依赖 .card：16px 圆角生效、无 hover 上浮', () => {
+    const w = mountBubble(mkMsg({ text: '你好' }))
+    const b = w.find('[data-bubble]')
+    expect(b.classes()).not.toContain('card')            // .card 的 6px / translateY(-4px) 不再介入
+    expect(b.classes()).toContain('rounded-2xl')
+    expect(b.classes()).toContain('rounded-bl-sm')
+    expect(b.classes()).toContain('bg-base')
+  })
+
+  it('hover 操作条不再被 hidden 吞掉（回归 group-hover/none 拼写错误）', () => {
+    const w = mountBubble(mkMsg({ text: '你好' }))
+    const bar = w.find('[data-msg-actions]')
+    expect(bar.classes()).not.toContain('hidden')
+    expect(bar.classes().join(' ')).toContain('group-hover/msg:opacity-100')
+    expect(w.html()).toContain('group/msg')
+    expect(w.html()).not.toContain('group-hover/none')
+  })
+
+  it('工具条目默认单行截断，点击展开完整摘要', async () => {
+    const w = mountBubble(mkMsg({ tools: [{ name: 'list_events', status: 'OK', summary: '共 6 场演出资料' }] }))
+    const line = w.findAll('p').find((p) => p.text().includes('🔧'))
+    const sum = line.find('[data-tool-summary]')
+    expect(sum.classes()).toContain('truncate')
+    expect(sum.classes()).not.toContain('break-all')
+
+    await line.trigger('click')
+    expect(sum.classes()).not.toContain('truncate')
+    expect(sum.classes()).toContain('break-words')
+    expect(line.text()).toContain('共 6 场演出资料')
+  })
+
+  it('meta 行合并名字与时间，气泡下方不再重复时间', () => {
+    const w = mountBubble(mkMsg({ text: '你好' }))
+    const meta = w.find('[data-msg-meta]')
+    expect(meta.text()).toContain('小灯')
+    expect(meta.text()).toMatch(/\d{2}:\d{2}/)
+    // 时间只出现一次（meta 内），不再在气泡外多一行
+    expect((w.text().match(/\d{2}:\d{2}/g) || []).length).toBe(1)
+  })
 })

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 /**
  * 单条消息气泡（docs/12 · 消息三类型：text / tool / confirm 全在这一条里渲染）
@@ -31,7 +31,21 @@ const time = computed(() => {
 
 /** 长回复折叠：超过 12 行（约 480 字符）默认收起 */
 const longText = computed(() => isAssistant.value && (props.msg.text || '').length > 480)
-const shownText = computed(() => (longText.value && !expanded.value ? (props.msg.text || '').slice(0, 480) + '…' : props.msg.text))
+const shownText = computed(() => {
+  const raw = props.msg.text || ''
+  if (!longText.value || expanded.value) return raw
+  // 截断处若刚好落在 ** 标记上，先清掉再补省略号，避免露出半个星号
+  return raw.slice(0, 480).replace(/\*{1,2}$/, '') + '…'
+})
+
+/** 工具条目展开状态：key 带 msg.id，长对话里不串台 */
+const openTools = reactive(new Set())
+const toolKey = (i) => `${props.msg.id}:${i}`
+const toolOpen = (i) => openTools.has(toolKey(i))
+function toggleTool(i) {
+  const k = toolKey(i)
+  openTools.has(k) ? openTools.delete(k) : openTools.add(k)
+}
 
 async function copyText() {
   try {
@@ -79,29 +93,47 @@ const cardCls = computed(() => {
 
   <!-- 用户 -->
   <div v-else-if="isUser" class="flex flex-col items-end gap-0.5">
-    <p class="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">{{ msg.text }}</p>
-    <span v-if="time" class="tabular px-1 text-[10px] text-faint">{{ time }}</span>
+    <p class="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-3.5 py-2.5 text-sm leading-relaxed text-white">{{ msg.text }}</p>
+    <span v-if="time" class="tabular pr-0.5 text-[10px] text-faint">{{ time }}</span>
   </div>
 
   <!-- 助手 -->
-  <div v-else class="group flex flex-col items-start gap-1">
-    <p v-if="msg.name" class="micro-accent !text-[9px] text-faint">{{ msg.name }}</p>
+  <div v-else class="group/msg flex w-full flex-col items-start gap-1">
+    <div v-if="msg.name" data-msg-meta class="flex items-baseline gap-1.5 pl-0.5">
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-primary/80">{{ msg.name }}</span>
+      <span v-if="time && !msg.streaming" class="tabular text-[10px] text-faint">{{ time }}</span>
+    </div>
 
     <!-- 工具条目 -->
-    <div v-if="msg.tools?.length" class="w-full space-y-0.5">
-      <p v-for="(tc, i) in msg.tools" :key="i" class="text-[11px]" :class="toolCls(tc.status)">
-        🔧 <span class="mono">{{ tc.name }}</span>
-        <span class="mx-1 opacity-50">·</span>{{ tc.status }}
-        <template v-if="tc.summary"> — <span class="break-all opacity-80">{{ tc.summary }}</span></template>
+    <div v-if="msg.tools?.length" class="flex w-full max-w-[85%] flex-col gap-0.5">
+      <p
+        v-for="(tc, i) in msg.tools"
+        :key="i"
+        class="flex cursor-pointer items-baseline gap-1 text-[11px] leading-5"
+        :class="toolCls(tc.status)"
+        :title="tc.summary || tc.name"
+        @click="toggleTool(i)"
+      >
+        <span class="shrink-0">🔧</span>
+        <span class="mono shrink-0">{{ tc.name }}</span>
+        <span class="shrink-0 opacity-50">·</span>
+        <span class="shrink-0">{{ tc.status }}</span>
+        <span
+          v-if="tc.summary"
+          data-tool-summary
+          class="ml-1 min-w-0 flex-1 opacity-80"
+          :class="toolOpen(i) ? 'whitespace-normal break-words' : 'truncate'"
+        >{{ tc.summary }}</span>
       </p>
     </div>
 
     <!-- 文本气泡：没吐出第一个字时不渲染（由三点 loading 代表），避免空框 + 三点双框 -->
     <div
       v-if="msg.text"
-      class="card relative max-w-full rounded-2xl rounded-bl-sm px-3.5 py-2"
+      data-bubble
+      class="relative max-w-[85%] rounded-2xl rounded-bl-sm border border-line bg-base px-3.5 py-2.5 text-sm leading-relaxed"
     >
-      <p class="whitespace-pre-wrap break-words text-sm leading-relaxed">
+      <p class="whitespace-pre-wrap break-words">
         {{ shownText }}<span
           v-if="msg.streaming"
           class="ml-0.5 inline-block w-[2px] animate-pulse bg-primary align-middle"
@@ -115,15 +147,18 @@ const cardCls = computed(() => {
       >展开全文</button>
 
       <!-- hover 操作条：复制 / 失败重试 -->
-      <div class="absolute -top-2 right-2 hidden items-center gap-1 group-hover/none:flex">
+      <div
+        data-msg-actions
+        class="pointer-events-none absolute -top-2.5 right-2 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-focus-within/msg:pointer-events-auto group-focus-within/msg:opacity-100 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 max-sm:!pointer-events-auto max-sm:!opacity-100"
+      >
         <button
-          class="cursor-pointer rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] text-faint opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-ink"
+          class="cursor-pointer rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] text-faint shadow-sm transition hover:text-ink"
           :title="copied ? '已复制' : '复制'"
           @click="copyText"
         >{{ copied ? '已复制 ✓' : '⧉' }}</button>
         <button
           v-if="msg.failed"
-          class="cursor-pointer rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] text-faint opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-red-500"
+          class="cursor-pointer rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] text-faint shadow-sm transition hover:text-red-500"
           title="重试"
           @click="emit('retry', msg.retryText)"
         >↺</button>
@@ -132,7 +167,7 @@ const cardCls = computed(() => {
 
     <!-- 确认卡片：绑自己的 pending（v-for 多卡不串台） -->
     <div v-if="msg.pending" class="w-full max-w-xl">
-      <div class="rounded-xl border p-3.5" :class="cardCls">
+      <div class="rounded-2xl border p-3" :class="cardCls">
         <p class="text-sm font-semibold">
           <template v-if="msg.pending.state === 'PENDING'">⚠️ 待确认：{{ msg.pending.title || msg.pending.toolName }}</template>
           <template v-else-if="msg.pending.state === 'EXECUTED'">✅ 已执行</template>
@@ -167,6 +202,5 @@ const cardCls = computed(() => {
       </div>
     </div>
 
-    <span v-if="time && !msg.streaming" class="tabular px-1 text-[10px] text-faint">{{ time }}</span>
   </div>
 </template>
