@@ -183,7 +183,7 @@ const gradientOf = (slug) =>
 
       <RouterLink v-if="featured" :to="`/events/${featured.id}`" class="group ml-auto text-right">
         <p class="mono text-sm font-medium text-primary tabular">{{ shortDate }} @{{ featured.venue }}</p>
-        <p class="mt-1 text-sm font-bold sm:text-base">{{ featured.title }}</p>
+        <p class="mt-1 text-sm font-bold sm:text-[16px]">{{ featured.title }}</p>
         <p class="micro mt-1.5 transition-colors duration-300 group-hover:!text-primary">
           TICKET ON SALE — 立即购票 ↗
         </p>

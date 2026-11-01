@@ -57,7 +57,7 @@ const externalLinks = [
       </nav>
 
       <!-- 版权 + 免责 -->
-      <p class="display mt-10 text-sm tracking-[0.18em] sm:text-base">
+      <p class="display mt-10 text-sm tracking-[0.18em] sm:text-[16px]">
         COPYRIGHT © {{ year }} BANG DREAM! / LIVE. ALL RIGHTS RESERVED.
       </p>
       <p class="micro mt-3 !text-white/60">

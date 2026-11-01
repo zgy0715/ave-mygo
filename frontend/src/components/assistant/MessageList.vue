@@ -81,7 +81,7 @@ defineExpose({ scrollBottom })
     >
       <!-- 空态 -->
       <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-        <p class="serif text-base text-dim">💡 试试：</p>
+        <p class="serif text-[15px] text-dim">💡 试试：</p>
         <button
           v-for="s in emptyHint"
           :key="s"

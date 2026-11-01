@@ -176,7 +176,7 @@ const fmtDateTime = (t) => (t ? t.slice(5, 16).replace('T', ' ') : '待定')
         <div class="flex items-center justify-between border-b border-line px-4 py-3">
           <div class="flex items-center gap-2">
             <button class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-dim transition hover:bg-base hover:text-ink" aria-label="上个月" @click="shiftMonth(-1)">‹</button>
-            <p class="serif min-w-32 text-center text-base font-semibold">{{ monthTitle }}</p>
+            <p class="serif min-w-32 text-center text-[15px] font-semibold">{{ monthTitle }}</p>
             <button class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-dim transition hover:bg-base hover:text-ink" aria-label="下个月" @click="shiftMonth(1)">›</button>
           </div>
           <button class="micro cursor-pointer rounded-full border border-line px-3 py-1 transition hover:text-primary" @click="backToThisMonth">回到本月</button>

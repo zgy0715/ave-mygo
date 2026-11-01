@@ -8,7 +8,7 @@
  * ======================================================= */
 @theme {
   /* 中性色 */
-  --color-base: #f7f7f8;        /* 页面底 */
+  --color-base: #f7f7f8;        /* 页面底（注意：定义后 text-base 会被解析成此颜色，字号请用 text-[15px] 等显式值） */
   --color-surface: #ffffff;     /* 卡片面 */
   --color-elevated: #eff0f3;    /* 悬停面 */
   --color-ink: #1a1a1f;         /* 主文字 */
