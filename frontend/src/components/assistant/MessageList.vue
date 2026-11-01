@@ -3,15 +3,14 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 
 /**
- * 消息列表：日期分隔（今天/昨天/日期）+ 智能自动滚动（距底 <80px 才跟）+ 回到底部浮标
- * docs/12 §消息列表
+ * 消息列表：日期胶囊 + 智能自动滚动（距底 <80px 才跟）+ 回到底部浮标
  */
 const props = defineProps({
   messages: { type: Array, required: true },
   loading: { type: Boolean, default: false },
   waitingFirst: { type: Boolean, default: false },
   confirming: { type: Boolean, default: false },
-  emptyHint: { type: Array, default: () => [] },   // 空态快捷提问
+  emptyHint: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['confirm', 'retry', 'send'])
 
@@ -58,7 +57,6 @@ function scrollBottom(behavior = 'smooth') {
   })
 }
 
-// 新消息 / 流式文本增长 → 贴底时才自动滚（不打断上翻历史）
 watch(
   () => props.messages.map((m) => `${m.id}:${(m.text || '').length}`).join('|'),
   () => { if (stickToBottom.value) scrollBottom() },
@@ -76,9 +74,13 @@ defineExpose({ scrollBottom })
 
 <template>
   <div class="relative min-h-0 flex-1 overflow-hidden">
-    <div ref="listEl" class="flex h-full flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-3 pt-3.5" aria-live="polite">
+    <div
+      ref="listEl"
+      class="flex h-full flex-col gap-3 overflow-y-auto overscroll-contain bg-base/50 px-5 pb-3 pt-3.5"
+      aria-live="polite"
+    >
       <!-- 空态 -->
-      <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center gap-2.5 text-center">
+      <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
         <p class="serif text-base text-dim">💡 试试：</p>
         <button
           v-for="s in emptyHint"
@@ -89,7 +91,9 @@ defineExpose({ scrollBottom })
       </div>
 
       <template v-for="row in rows" :key="row.id">
-        <p v-if="row.type === 'date'" class="self-center py-0.5 font-mono text-[10px] tracking-[0.14em] text-faint">{{ row.label }}</p>
+        <p v-if="row.type === 'date'" class="self-center">
+          <span class="rounded-full border border-line bg-surface px-3 py-0.5 font-mono text-[10px] tracking-[0.14em] text-faint shadow-sm">{{ row.label }}</span>
+        </p>
         <MessageBubble
           v-else
           :msg="row.msg"
@@ -99,8 +103,8 @@ defineExpose({ scrollBottom })
         />
       </template>
 
-      <!-- 三点 loading（等首字 / 运营执行中） -->
-      <div v-if="waitingFirst" class="flex w-[72px] items-center justify-center gap-1.5 self-start rounded-2xl rounded-bl-sm border border-line bg-base px-3 py-2.5">
+      <!-- 三点 loading -->
+      <div v-if="waitingFirst" class="flex w-[72px] items-center justify-center gap-1.5 self-start rounded-2xl rounded-bl-sm border border-line bg-white px-3 py-2.5 shadow-sm">
         <span class="assistant-dot" style="animation-delay: 0s" />
         <span class="assistant-dot" style="animation-delay: .15s" />
         <span class="assistant-dot" style="animation-delay: .3s" />
@@ -110,7 +114,7 @@ defineExpose({ scrollBottom })
     <!-- 回到底部浮标 -->
     <button
       v-if="!stickToBottom"
-      class="absolute bottom-4 right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-sm transition hover:text-ink"
+      class="absolute bottom-4 right-4 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-dim shadow-md transition hover:text-ink"
       aria-label="回到底部"
       @click="scrollBottom(); stickToBottom = true"
     >

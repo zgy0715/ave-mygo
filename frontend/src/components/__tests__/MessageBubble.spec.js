@@ -109,7 +109,7 @@ describe('MessageBubble（v2）', () => {
     expect(b.classes()).not.toContain('card')            // .card 的 6px / translateY(-4px) 不再介入
     expect(b.classes()).toContain('rounded-2xl')
     expect(b.classes()).toContain('rounded-bl-sm')
-    expect(b.classes()).toContain('bg-base')
+    expect(b.classes()).toContain('bg-white')
   })
 
   it('hover 操作条不再被 hidden 吞掉（回归 group-hover/none 拼写错误）', () => {
