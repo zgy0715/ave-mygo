@@ -71,10 +71,14 @@ D:/全栈/
 │   ├── src/{views,components,api,stores,router}/
 │   └── public/{img/covers,img/logo,img/bands,assets}/
 ├── db/seed/reference.sql         # 参考数据基线（幂等；新环境回放迁移后执行）
-├── docs/                         # 设计文档 01–18 + metrics + SQL 总览
+├── docs/                         # 现行设计 01–18 + metrics + SQL 总览
+│   └── archive/                  # 历史任务书 / 数据审计 / 开发纪实（不作为现行规范）
 ├── scripts/                      # build / start / check / backup-db / gen_seed
 └── AGENTS.md                     # 本文档
 ```
+
+> 文档约定：新增设计/方案写进 `docs/NN-xxx.md` 并与 README 索引同步；一次性任务书、过程记录、
+> 已完成的历史方案一律放 `docs/archive/`；个人记忆日记（`.workbuddy/`）不入库。
 
 ---
 
