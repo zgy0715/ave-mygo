@@ -50,18 +50,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** CORS 白名单：429 也要带跨域头，否则浏览器只会报"CORS 错误"，真因被掩盖 */
     private final List<String> allowedOrigins;
 
+    /**
+     * 可信反向代理地址：只有请求来自这些地址时，才采信 X-Forwarded-For。
+     * 否则任何人自带一个 XFF 头就能伪装成不同 IP，绕过限流（审阅项 XFF）。
+     */
+    private final List<String> trustedProxies;
+
     public RateLimitFilter(@Value("${app.rate-limit.enabled:true}") boolean enabled,
                            @Value("${app.rate-limit.auth:10}") int authLimit,
                            @Value("${app.rate-limit.order:20}") int orderLimit,
                            @Value("${app.rate-limit.assistant:20}") int assistantLimit,
                            @Value("${app.rate-limit.default-limit:120}") int defaultLimit,
-                           @Value("${app.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
+                           @Value("${app.cors.allowed-origins:http://localhost:5173}") String allowedOrigins,
+                           @Value("${app.rate-limit.trusted-proxies:127.0.0.1,0:0:0:0:0:0:0:1,::1}")
+                           String trustedProxies) {
         this.enabled = enabled;
         this.authLimit = authLimit;
         this.orderLimit = orderLimit;
         this.assistantLimit = assistantLimit;
         this.defaultLimit = defaultLimit;
         this.allowedOrigins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(x -> !x.isEmpty()).toList();
+        this.trustedProxies = java.util.Arrays.stream(trustedProxies.split(","))
                 .map(String::trim).filter(x -> !x.isEmpty()).toList();
     }
 
@@ -129,12 +139,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
         };
     }
 
-    /** 取真实客户端 IP：优先 X-Forwarded-For 首段（反向代理场景），否则 remoteAddr */
+    /**
+     * 取限流身份用的客户端 IP。
+     *
+     * 安全前提（审阅项）：**只有当请求来自可信代理时才采信 X-Forwarded-For**。
+     * 否则客户端自己带一个 XFF 头就能伪装成任意 IP，把限流绕成摆设。
+     * 配合部署要求：反向代理必须用 proxy_set_header X-Forwarded-For $remote_addr
+     * 「覆盖」而不是追加，这样首段才是真实来源。
+     */
     private String clientIp(HttpServletRequest request) {
+        String remote = request.getRemoteAddr();
+        if (!trustedProxies.contains(remote)) {
+            return remote;                     // 直连或不可信来源：只认 TCP 层地址
+        }
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             return forwarded.split(",")[0].trim();
         }
-        return request.getRemoteAddr();
+        return remote;
     }
 }

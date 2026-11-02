@@ -61,10 +61,11 @@ D:/全栈/
 │       │   ├── event/            # 演出/场次/票档/演出曲表（setlist）
 │       │   ├── order/            # 订单状态机、下单事务
 │       │   ├── admin/            # 管理端（歌曲 CRUD、Hero 视频上传）
-│       │   ├── assistant/        # AI 助手（意图识别、LLM 客户端、人格）
+│       │   ├── assistant/        # AI 助手（意图识别、LLM 客户端、人格、stream/ 流式对话）
 │       │   ├── common/           # ApiResponse / BizException / GlobalExceptionHandler
-│       │   └── config/           # SecurityConfig / SchedulingConfig
-│       └── resources/db/migration/   # V1–V37 Flyway 迁移
+│       │   ├── agent/            # Agent 能力层（工具注册表 / 循环 / 确认门控 / 审计 / 多轮）
+│       │   └── config/           # SecurityConfig / SchedulingConfig / RateLimitFilter
+│       └── resources/db/migration/   # V1–V55 Flyway 迁移
 ├── frontend/                     # Vue3 前端
 │   ├── src/{views,components,api,stores,router}/
 │   └── public/{img/covers,img/logo,img/bands,assets}/

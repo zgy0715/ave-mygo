@@ -1,7 +1,17 @@
-# SQL 迁移总览（V1 – V38）
+# SQL 迁移总览（V1 – V55）
 
-> 位置：`ave-mygo/src/main/resources/db/migration/`　共 **38 个文件**，Flyway 已应用 **V1–V37**（37 条历史，全部 success），V38 为纯 UPDATE，已在库执行、待下次启动补记录。
-> 生成时间：2026-10-20（依据文件实际内容 + Flyway 历史表核对）
+> 位置：`ave-mygo/src/main/resources/db/migration/`　共 **55 个文件**，Flyway 全量应用至 **V55**（全部 success）。
+> 生成时间：2026-11-02（依据文件实际内容 + Flyway 历史表核对）
+>
+> **V50–V55 为 2026-10-31 ~ 11-02 新增**（Agent 能力层与并发加固）：
+> | 版本 | 文件 | 内容 |
+> |---|---|---|
+> | V50 | agent_tool_calls | Agent 工具调用审计（token/状态机/参数与结果） |
+> | V51 | agent_messages | Agent 会话消息（多轮上下文，按 conversation_id） |
+> | V52 | more_official_lives | 4 场官方演出（横滨 / 台北 / Exitus 巡演 / BEAT AX，共 12 场次） |
+> | V53 | order_concurrency_hardening | `user_session_quota` 配额表 + 订单索引（限购与状态原子化） |
+> | V54 | agent_messages_user_isolation | 会话消息索引改为 (user_id, conversation_id, id) |
+> | V55 | user_token_version | 用户令牌版本（封禁/改权限即时失效） |
 
 ---
 
