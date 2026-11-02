@@ -13,6 +13,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -135,6 +136,19 @@ public class AgentService {
 
     // ---------------- 确认门控 ----------------
 
+    /**
+     * 确认门控（并发安全版，2026-11-02 加固）。
+     *
+     * 原实现是「读到 PENDING → 执行工具 → 写回 EXECUTED」，
+     * 两个确认请求同时进来会都通过检查、各执行一次写操作（例如删两次演出）。
+     *
+     * 现在先原子抢占 PENDING → EXECUTING：
+     *   · 抢占成功（影响行数=1）才允许执行工具
+     *   · 抢不到直接 40902，工具一次都不会跑
+     *   · 执行完用 EXECUTING → EXECUTED/FAILED 收尾，避免覆盖别人的终态
+     * 若进程在 EXECUTING 期间崩溃，该行会停在 EXECUTING（审计可见，需人工确认后处理）。
+     */
+    @Transactional   // 抢占/收尾都是 @Modifying 更新，必须运行在事务里
     public AgentConfirmResponse confirm(String token, boolean approve, Long userId) {
         AgentToolCall row = auditRepository.findByToken(token)
                 .orElseThrow(() -> new BizException(40004, "确认请求不存在"));
@@ -147,42 +161,45 @@ public class AgentService {
         }
         if (row.getCreatedAt() != null
                 && row.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(PENDING_TTL_MINUTES))) {
-            row.setStatus(AgentToolCall.EXPIRED);
-            auditRepository.save(row);
+            // 条件更新：只有仍是 PENDING 才标过期，避免把刚被执行完的记录改成 EXPIRED
+            auditRepository.markExpired(token);
             throw new BizException(40902, "确认已过期（超过 " + PENDING_TTL_MINUTES + " 分钟），请重新发起");
         }
 
         if (!approve) {
-            row.setStatus(AgentToolCall.REJECTED);
-            auditRepository.save(row);
+            if (auditRepository.markRejected(token) == 0) {
+                throw new BizException(40902, "该操作已处理或已失效，请重新发起指令");
+            }
             persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
                     "（工具执行结果）已取消，未修改任何数据");
             return new AgentConfirmResponse(AgentToolCall.REJECTED, "已取消，未修改任何数据");
         }
 
-        AgentTool tool = registry.get(row.getToolName());
+        // 关键一步：抢占。抢不到说明另一个请求已经在执行，什么都不做
+        if (auditRepository.claim(token) == 0) {
+            throw new BizException(40902, "该操作已处理或已失效，请重新发起指令");
+        }
+        // 抢占后重新读，拿到最新状态（claim 清空了持久化上下文）
+        AgentToolCall claimed = auditRepository.findByToken(token)
+                .orElseThrow(() -> new BizException(40004, "确认请求不存在"));
+
+        AgentTool tool = registry.get(claimed.getToolName());
         if (tool == null) {
-            row.setStatus(AgentToolCall.FAILED);
-            row.setResult("工具已不存在：" + row.getToolName());
-            auditRepository.save(row);
+            auditRepository.finish(token, AgentToolCall.FAILED, "工具已不存在：" + claimed.getToolName());
             return new AgentConfirmResponse(AgentToolCall.FAILED, "工具已不存在，未执行任何修改");
         }
 
         try {
-            String result = tool.handler().execute(parseArgs(row.getArgumentsJson()));
-            row.setStatus(AgentToolCall.EXECUTED);
-            row.setResult(truncate(result));
-            auditRepository.save(row);
+            String result = tool.handler().execute(parseArgs(claimed.getArgumentsJson()));
+            auditRepository.finish(token, AgentToolCall.EXECUTED, truncate(result));
             // 补记结果进会话：之后追问"刚才删掉了吗"能答上
-            persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
+            persist(claimed.getConversationId(), claimed.getUserId(), AgentMessage.ASSISTANT,
                     "（工具执行结果）" + result);
             return new AgentConfirmResponse(AgentToolCall.EXECUTED, result);
         } catch (Exception e) {
             String msg = "执行失败：" + rootMessage(e);
-            row.setStatus(AgentToolCall.FAILED);
-            row.setResult(truncate(msg));
-            auditRepository.save(row);
-            persist(row.getConversationId(), row.getUserId(), AgentMessage.ASSISTANT,
+            auditRepository.finish(token, AgentToolCall.FAILED, truncate(msg));
+            persist(claimed.getConversationId(), claimed.getUserId(), AgentMessage.ASSISTANT,
                     "（工具执行结果）" + msg);
             return new AgentConfirmResponse(AgentToolCall.FAILED, msg);
         }

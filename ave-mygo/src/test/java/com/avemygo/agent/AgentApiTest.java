@@ -40,6 +40,7 @@ class AgentApiTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private AgentToolRegistry registry;
     @Autowired private AgentToolCallRepository auditRepository;
+    @Autowired private AgentService agentService;
 
     @MockitoBean private AgentLlm agentLlm;
 
@@ -393,6 +394,62 @@ class AgentApiTest {
                 "SELECT content FROM agent_messages WHERE conversation_id = 'ctx-2' AND role = 'ASSISTANT' "
                         + "ORDER BY id DESC LIMIT 1", String.class);
         assertThat(lastAssistant).contains("工具执行结果").contains("已删除");
+    }
+
+    // ---------------- 确认门控并发（V53 加固） ----------------
+
+    @Test
+    @DisplayName("A14 同一 token 并发确认：只允许执行一次，其余请求 40902")
+    void a14_concurrentConfirmOnlyOnceExecutes() throws Exception {
+        long eventId = createEventWithSession();
+        long sessionId = jdbc.queryForObject(
+                "SELECT id FROM live_session WHERE event_id = ? LIMIT 1", Long.class, eventId);
+
+        Mockito.when(agentLlm.chat(ArgumentMatchers.any(), ArgumentMatchers.any()))
+                .thenReturn(new AgentLlm.Turn(null, List.of(
+                        new AgentLlm.ToolCall("c1", "delete_session",
+                                "{\"sessionId\":" + sessionId + "}"))));
+
+        MvcResult res = mvc.perform(post("/api/v1/admin/agent/chat")
+                        .header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"删掉这个场次\",\"conversationId\":\"ctx-race\"}"))
+                .andReturn();
+        String token = mapper.readTree(res.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .path("data").path("token").asText();
+        assertThat(token).isNotBlank();
+
+        int threads = 6;
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger executed = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger rejected = new java.util.concurrent.atomic.AtomicInteger();
+        List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            futures.add(pool.submit(() -> {
+                start.await();
+                try {
+                    var r = agentService.confirm(token, true, 1L);
+                    if (AgentToolCall.EXECUTED.equals(r.status())) executed.incrementAndGet();
+                } catch (Exception e) {
+                    rejected.incrementAndGet();
+                }
+                return null;
+            }));
+        }
+        start.countDown();
+        for (var f : futures) f.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        pool.shutdown();
+
+        assertThat(executed.get()).isEqualTo(1);          // 只执行一次
+        assertThat(rejected.get()).isEqualTo(threads - 1); // 其余全部被拦
+        String status = jdbc.queryForObject(
+                "SELECT status FROM agent_tool_calls WHERE token = ?", String.class, token);
+        assertThat(status).isEqualTo(AgentToolCall.EXECUTED);
+        Integer alive = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM live_session WHERE id = ? AND is_deleted = 0",
+                Integer.class, sessionId);
+        assertThat(alive).isZero();                        // 场次确实被删了（且没被"删两次"搞乱）
     }
 
     // ---------------- 帮助方法 ----------------

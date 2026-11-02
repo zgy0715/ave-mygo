@@ -26,6 +26,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class AgentToolCall {
 
     public static final String PENDING = "PENDING";
+    /** 抢占中的中间态：两个确认请求只允许一个进入执行（V53 并发加固） */
+    public static final String EXECUTING = "EXECUTING";
     public static final String EXECUTED = "EXECUTED";
     public static final String REJECTED = "REJECTED";
     public static final String FAILED = "FAILED";
