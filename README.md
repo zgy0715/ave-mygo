@@ -4,7 +4,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
 ![Spring Security](https://img.shields.io/badge/Spring%20Security-JWT%20%E8%87%AA%E6%A0%A1%E9%AA%8C-6DB33F)
 ![JPA](https://img.shields.io/badge/JPA-Hibernate%207-59666C?logo=hibernate&logoColor=white)
-![Flyway](https://img.shields.io/badge/Flyway-V1--V49-CC0205?logo=flyway&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-V1--V55-CC0205?logo=flyway&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -12,8 +12,8 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![ECharts](https://img.shields.io/badge/ECharts-%E7%9C%8B%E6%9D%BF-AA344D?logo=apacheecharts&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-qwen3:8b-000000?logo=ollama&logoColor=white)
-![JUnit](https://img.shields.io/badge/JUnit-5%20%C2%B7%20112%E7%94%A8%E4%BE%8B-25A162?logo=junit5&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-23%E7%94%A8%E4%BE%8B-6E9F18?logo=vitest&logoColor=white)
+![JUnit](https://img.shields.io/badge/JUnit-5%20%C2%B7%20149%E7%94%A8%E4%BE%8B-25A162?logo=junit5&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-82%E7%94%A8%E4%BE%8B-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-%E5%90%8C%E6%BA%90%E5%8F%8D%E4%BB%A3-009639?logo=nginx&logoColor=white)
 ![License](https://img.shields.io/badge/%E7%94%A8%E9%80%94-%E4%BB%85%E4%BE%9B%E5%AD%A6%E4%B9%A0%E5%8F%82%E8%80%83-blueviolet)
@@ -123,7 +123,7 @@
                                      │
                     ┌────────────────▼───────────────────┐
                     │  MySQL 8 (bandori_live)            │
-                    │  18 张表 · InnoDB · utf8mb4        │
+                    │  19 张表 · InnoDB · utf8mb4        │
                     │  外链：iTunes 预览 / B 站 iframe    │
                     └────────────────────────────────────┘
 ```
@@ -137,7 +137,7 @@
 ```bash
 # 1. 数据库：保证 MySQL 在跑即可，库和表由 Flyway 首次启动自动创建并灌入种子数据
 # 2. 后端配置（敏感信息不入库）
-cd ave-mygo
+cd backend
 cat > .env <<'EOF'
 DB_URL=jdbc:mysql://localhost:3306/bandori_live?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 DB_USERNAME=root
@@ -218,14 +218,16 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 ## 目录结构
 
 ```
-├── ave-mygo/              # Spring Boot 后端
+├── backend/              # Spring Boot 后端
 │   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（已冻结，新结构从 V56 起）
 ├── frontend/              # Vue 3 前端
 │   └── e2e/               # Playwright E2E
 ├── db/seed/reference.sql  # 参考数据幂等基线（乐队/曲目/专辑/演出/票档/歌单）
 ├── docs/                  # 现行设计文档 + 截图（docs/img/）
 │   └── archive/           # 历史任务书、审计报告、开发纪实
-├── scripts/               # 构建 / 启动 / 备份 / 基线检查
+├── scripts/               # 构建 / 启动 / 基线检查 / 备份（见 scripts/README.md）
+├── assets-src/            # 本地素材（OP 视频 / 原图，不入库）
+├── backup/                # 本地数据库与 .git 备份、一次性脚本（不入库）
 └── AGENTS.md              # 工程全景（约定 / 数据模型 / 接口 / 红线）
 ```
 

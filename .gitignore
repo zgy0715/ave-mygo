@@ -5,6 +5,7 @@ __pycache__/
 
 # 构建产物
 dist/
+dist-verify/
 build/
 target/
 .vite/
@@ -26,18 +27,18 @@ Thumbs.db
 *.log
 logs/
 
-# 数据库本地数据
+# 数据库本地数据 / 本地备份
 *.sql.bak
 mysql-data/
-db/backup/
+backup/
+backups/
 
 # 审计原始产物 / 会话临时目录
 .audit/
 .workbuddy/tmp/
 
 # 本地素材（OP 视频 / 原图 / 参考图，不入库，避免仓库膨胀）
-video/
-图片/
+assets-src/
 
 # Hero 轮播视频（单文件 26–30MB，不入库；克隆后经管理端上传或手动放入）
 frontend/public/assets/*.mp4

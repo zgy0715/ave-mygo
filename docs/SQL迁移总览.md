@@ -3,11 +3,11 @@
 > ⚠️ **冻结声明（2026-11-02）**
 >
 > 1. **V1–V55 只读**：不得修改内容、改名或删除。这些迁移已在数据库中执行，Flyway 按 checksum 校验，改动即导致后端启动失败（`Validate failed: checksum mismatch`）。
-> 2. **表结构变更只能新增 V56 及以后**，文件放 `ave-mygo/src/main/resources/db/migration/`。
+> 2. **表结构变更只能新增 V56 及以后**，文件放 `backend/src/main/resources/db/migration/`。
 > 3. **数据补录 / 种子不再进 Flyway**，放 `db/seed/*.sql`（幂等，手动执行）。
 > 4. 本文件第四节"数据水位"（56 首 / 10 专辑 / max=37）已过期，**唯一准确口径以 [metrics.md](metrics.md) 为准**。
 
-> 位置：`ave-mygo/src/main/resources/db/migration/`　共 **55 个文件**，Flyway 全量应用至 **V55**（全部 success）。
+> 位置：`backend/src/main/resources/db/migration/`　共 **55 个文件**，Flyway 全量应用至 **V55**（全部 success）。
 > 生成时间：2026-11-02（依据文件实际内容 + Flyway 历史表核对）
 >
 > **V50–V55 为 2026-10-31 ~ 11-02 新增**（Agent 能力层与并发加固）：
@@ -123,7 +123,7 @@
 mysql -u root -p**** bandori_live -e "SELECT version, script, success FROM flyway_schema_history ORDER BY installed_rank;"
 
 # 迁移文件最大版本
-ls ave-mygo/src/main/resources/db/migration | sort -V | tail -1
+ls backend/src/main/resources/db/migration | sort -V | tail -1
 
 # 回滚（谨慎）：Flyway 社区版无 undo，按需反向写新迁移
 ```

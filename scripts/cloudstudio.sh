@@ -7,7 +7,7 @@
 # 流程：拉代码 -> MySQL -> 后端构建+重启 -> 前端构建 -> nginx -> 验证
 # ============================================================
 ROOT=/workspace
-BACKEND=$ROOT/ave-mygo
+BACKEND=$ROOT/backend
 FRONTEND=$ROOT/frontend
 
 echo "==> [1/7] 拉取最新代码"
