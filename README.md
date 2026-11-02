@@ -93,7 +93,7 @@
 |---|---|---|
 | 后端 | **Spring Boot 4.1（Java 17）** | Spring MVC + Spring Security（JWT 自校验）+ Spring Data JPA（Hibernate 7.4） |
 | 数据库 | **MySQL 8.0** | 全表 InnoDB + utf8mb4_0900_ai_ci；表结构只信 Flyway（49 个迁移），JPA 仅 `ddl-auto: validate` |
-| 迁移 | **Flyway** | V1–V49；结构迁移 + 数据迁移（含全部曲库/专辑/成员种子数据），新环境一键自举 |
+| 迁移 | **Flyway** | V1–V55；结构迁移 + 数据迁移（含全部曲库/专辑/成员种子数据），新环境一键自举 |
 | 前端 | **Vue 3 + Vite 8 + Pinia + Vue Router + Tailwind CSS 4** | 按路由代码分割，ECharts 异步加载 |
 | 实时 | **SSE**（`SseEmitter` + 线程池） | AI 助手流式输出；开售提醒后台扫描 |
 | AI | **Ollama**（qwen3:8b，OpenAI 兼容端点） | 本地推理，不可用时规则引擎兜底，格式一致 |
@@ -116,14 +116,14 @@
                     │  ├─ Security：JWT 过滤器 + RBAC     │
                     │  ├─ 限流：IP 固定窗口（按组配额）    │
                     │  ├─ Controller → Service → Repo    │
-                    │  ├─ Flyway：V1–V49 迁移            │
+                    │  ├─ Flyway：V1–V55 迁移            │
                     │  ├─ 定时任务：场次状态机/提醒/超时   │
                     │  └─ SSE：AI 助手流式                │
                     └────────────────┬───────────────────┘
                                      │
                     ┌────────────────▼───────────────────┐
                     │  MySQL 8 (bandori_live)            │
-                    │  16 张表 · InnoDB · utf8mb4        │
+                    │  18 张表 · InnoDB · utf8mb4        │
                     │  外链：iTunes 预览 / B 站 iframe    │
                     └────────────────────────────────────┘
 ```
@@ -163,8 +163,8 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 | 层 | 命令 | 规模 |
 |---|---|---|
-| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | **112 用例**，含并发购票压测、SSE 流式、限流、权限负例 |
-| 前端单测 | `npm run test`（Vitest + jsdom） | 23 用例（请求封装 / 播放器 / 表单校验） |
+| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | **149 用例**，含并发购票/支付取消/确认抢占、SSE 流式、限流、权限负例、令牌吊销 |
+| 前端单测 | `npm run test`（Vitest + jsdom） | **82 用例**（请求封装 / 播放器 / 表单校验 / 小灯事件流 / 首页区块） |
 | E2E 旅程 | `npm run test:e2e`（Playwright + Edge） | 游客浏览 / 歌单 / 购票 / **管理端删除全链路** |
 
 E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
@@ -187,6 +187,22 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 # nginx：托 dist + /api 反代 8080（配置见 docs/08-上线检查清单.md）
 ```
 
+**AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
+
+| 变量 | 说明 | 示例 |
+|---|---|---|
+| `LLM_BASE_URL` | OpenAI 兼容的 chat completions 地址 | 本地 `http://localhost:11434/v1/chat/completions`；云端如 `https://api.deepseek.com/v1/chat/completions` |
+| `LLM_MODEL` | 模型名（云端必须显式配置） | `qwen3:8b` / `deepseek-chat` |
+| `LLM_API_KEY` | 云 API Key（本地 Ollama 留空） | `sk-...` |
+
+> ⚠️ 云端部署的两处已知限制：① 代码目前**不发 Authorization 头**，接云 API 前需要补
+> （见「遗留事项」）；② 流式 `tool_calls` 解析按 Ollama 的「整块到达」实现，
+> 标准 OpenAI 的增量分片需要改成按 index 累加。这两条是接云端 LLM 的前置改动。
+
+**限流相关**：`RATE_LIMIT_AUTH` / `RATE_LIMIT_ORDER` / `RATE_LIMIT_ASSISTANT` /
+`RATE_LIMIT_DEFAULT`（默认 10/20/20/120 每分钟）、`RATE_LIMIT_TRUSTED_PROXIES`
+（只有这些代理地址发来的 `X-Forwarded-For` 才被采信）。
+
 上线自检清单：`/ready` 探针、生产 CORS 域名、限流阈值、数据库备份脚本（`scripts/backup-db.bat`）、日志级别。
 
 ---
@@ -195,7 +211,7 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 
 ```
 ├── ave-mygo/              # Spring Boot 后端
-│   └── src/main/resources/db/migration/   # V1–V49 Flyway 迁移（含数据）
+│   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（含数据）
 ├── frontend/              # Vue 3 前端
 │   └── e2e/               # Playwright E2E
 ├── docs/                  # 设计文档 + 审计报告 + 截图（docs/img/）
@@ -208,12 +224,12 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 | 文档 | 内容 |
 |---|---|
 | [docs/04-需求说明.md](docs/04-需求说明.md) | 产品需求与页面结构 |
-| [docs/05-数据库设计.md](docs/05-数据库设计.md) | 16 张表建模 |
+| [docs/05-数据库设计.md](docs/05-数据库设计.md) | 数据库建模（含 V50–V55 新增 3 张表） |
 | [docs/06-接口设计.md](docs/06-接口设计.md) | REST 契约 |
 | [docs/08-上线检查清单.md](docs/08-上线检查清单.md) | 生产部署自检 |
 | [docs/08-测试与验收.md](docs/08-测试与验收.md) | 测试策略 |
 | [docs/09-数据审计报告.md](docs/09-数据审计报告.md) | 全量数据审计与修正记录 |
-| [docs/SQL迁移总览.md](docs/SQL迁移总览.md) | V1–V52 迁移明细 |
+| [docs/SQL迁移总览.md](docs/SQL迁移总览.md) | V1–V55 迁移明细 |
 | [docs/10-Agent运营层设计.md](docs/10-Agent运营层设计.md) | Agent 能力设计（工具/循环/门控/审计/多轮/预热） |
 | [docs/13-小灯v2方案.md](docs/13-小灯v2方案.md) | 小灯 v2：删模式开关 + 对话质量重做 |
 | [docs/14-演出数据补充清单.md](docs/14-演出数据补充清单.md) | 官方演出数据核验清单（含来源） |
@@ -285,6 +301,40 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 - **Anon 语气偏吵**：「超——」偶尔仍出现两次，可再收紧频率约束；
 - **事实类预取只覆盖成员/担当/CV**，曲目发行日期、票价等仍靠模型主动调工具；
 - **v1 接口保留未删**（`/assistant/chat`、`/admin/agent/**`），作为回退路径，后续可统一收口。
+
+---
+
+## 代码审阅修复（2026-11-02）
+
+> 第三方静态审阅（GPT）对 `feat/agent-ops` 提出 4 项优先问题 + 若干后续优化。
+> 我逐条对着代码核实，**4 项全部属实**，其中 2 项比审阅描述的更严重。以下是修复与取舍记录。
+
+### 已修（4 项 + 2 处加固）
+
+| # | 问题 | 实际严重度 | 修法 | 验证 |
+|---|---|---|---|---|
+| 1 | 购票限购「先查后写」、订单状态流转非原子 | **高**（可重复回滚库存 → 真超卖） | V53 新增 `user_session_quota`，限购改为条件 UPDATE 一次完成「检查+占用」；pay/cancel/expire/refund 全部改条件 UPDATE（`WHERE status='PENDING_PAYMENT'`），按影响行数定胜负 | T07 支付与取消并发、T08 并发限购、T09 超时与支付并发 |
+| 2 | Agent 确认门控「检查→执行→改状态」非原子 | **高**（同一 token 可执行两次写操作） | 新增中间态 `EXECUTING`，先原子抢占 PENDING→EXECUTING，抢不到直接 40902；执行完 EXECUTING→终态 | A14 六线程并发确认，恰好一次成功 |
+| 3 | 助手历史只按 `conversationId` 查，不校验用户 | 中（ID 是随机 UUID，难猜） | 查询改为 `user_id + conversation_id`；游客不读也不落库（无稳定身份就无法隔离）；V54 调整索引 | A15 跨用户隔离、V12 游客不落库 |
+| 4 | 封禁后旧 JWT 仍可用（默认 24h） | 中 | V55 `user.token_version`；登录签发带版本，过滤器比对「状态 + 版本」，封禁时版本 +1 | J01 封禁即失效、J02 版本提升即失效 |
+| 5 | 限流盲信 `X-Forwarded-For` | 中（可伪造 IP 绕过限流） | 只有来自可信代理（默认 127.0.0.1/::1）才采信 XFF，否则用 TCP 层地址；可配 `RATE_LIMIT_TRUSTED_PROXIES` | ApiSecurityTest |
+| 6 | 429 响应缺 CORS 头（排查时被伪装成跨域错误） | 中（掩盖真因） | 429 按白名单回写 ACAO + `Retry-After`；限流额度改为可配置 | R01 回归测试 |
+
+### 有意没做（附理由，不是遗漏）
+
+| 审阅建议 | 为什么暂缓 |
+|---|---|
+| 订单列表改分页、按演出聚合已购数 | 需要前端同步改「我的订单」与演出详情页的限购提示，属独立迭代；当前数据量（百余单）无性能问题 |
+| 拆分 `AgentToolRegistry`（15 个工具挤在一个文件）、`AssistantStreamService` | 纯结构重构、无行为收益；这两个文件是当前最热的改动点，重构期间容易与功能改动互相干扰。已记录为后续专项 |
+| 为订单/场次/票档加数据库外键 | 存量数据里可能存在历史孤儿行（早期手工 SQL 与 E2E 产物），需先做一次数据体检；另收藏表是多态关联，本来就不能直接加外键 |
+| OpenAPI 契约作为前后端唯一依据 | 方向认同，但需先把 4 份文档的口径统一（本轮已统一迁移版本号），再引入生成流程 |
+
+### 已知取舍（写清楚，不留暗坑）
+
+1. **老令牌灰度放行**：升级前签发、不带 `ver` 声明的令牌不做状态校验，最长 24 小时后自然过期；升级后新签发的令牌全部受控。
+2. **抢占后崩溃**：进程若在 `EXECUTING` 期间挂掉，该条审计会停在 `EXECUTING`，需要人工确认；后续可加超时回收任务。
+3. **每请求一次用户查询**：令牌版本校验需要读用户表（未加缓存）。当前单机 2C4G 足够，多实例部署前应加短 TTL 缓存。
+4. **E2E 数据累积**：歌单用例每跑一次建一个歌单且不自清理，跑多了会让下拉变长导致断言失败——已加滚动到可见，但根治需要用例结束时删除自己创建的数据（留给前端会话）。
 
 ---
 
