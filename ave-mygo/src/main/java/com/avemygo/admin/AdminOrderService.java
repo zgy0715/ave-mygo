@@ -10,6 +10,7 @@ import com.avemygo.event.TicketType;
 import com.avemygo.event.TicketTypeRepository;
 import com.avemygo.order.TicketOrder;
 import com.avemygo.order.TicketOrderRepository;
+import com.avemygo.order.UserSessionQuotaRepository;
 import com.avemygo.user.User;
 import com.avemygo.user.UserRepository;
 import java.time.LocalDateTime;
@@ -43,6 +44,7 @@ public class AdminOrderService {
     private final LiveSessionRepository sessionRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final UserSessionQuotaRepository quotaRepository;
 
     @Transactional(readOnly = true)
     public Page<AdminOrderView> search(String status, Long eventId, String keyword,
@@ -85,15 +87,24 @@ public class AdminOrderService {
         if (!"PAID".equals(order.getStatus())) {
             throw new BizException(40902, "订单当前状态不可退款（仅已支付可退）");
         }
-        order.setStatus("REFUNDED");
-        order.setRefundedAt(LocalDateTime.now());
-        order.setRefundReason(reason == null ? null : reason.trim());
-        orderRepository.save(order);
-
-        int rows = ticketTypeRepository.decreaseSold(order.getTicketTypeId(), order.getQuantity());
+        // 条件 UPDATE：两个管理员同时点退款，只有一个能拿到行；抢不到的直接判失败
+        String trimmedReason = reason == null ? null : reason.trim();
+        int rows = orderRepository.markRefunded(orderNo, LocalDateTime.now(), trimmedReason);
         if (rows == 0) {
+            throw new BizException(40902, "订单当前状态不可退款（可能已被退款）");
+        }
+        // 状态转换成功之后才回滚库存与配额——顺序反了会导致重复退款把库存刷成负数
+        int stockRows = ticketTypeRepository.decreaseSold(order.getTicketTypeId(), order.getQuantity());
+        if (stockRows == 0) {
             log.error("退款回滚库存异常：sold_count < quantity, orderNo={}", orderNo);
         }
+        int quotaRows = quotaRepository.release(order.getUserId(), order.getSessionId(),
+                order.getQuantity());
+        if (quotaRows == 0) {
+            log.warn("退款释放配额未命中（可能已释放）orderNo={}", orderNo);
+        }
+        order = orderRepository.findByOrderNo(orderNo).orElseThrow(
+                () -> new BizException(40401, "订单不存在"));
         log.info("管理端退款 orderNo={} qty={} amount={} reason={}",
                 orderNo, order.getQuantity(), order.getTotalAmount(), order.getRefundReason());
         return new AdminOrderView(order.getOrderNo(), order.getUserId(),

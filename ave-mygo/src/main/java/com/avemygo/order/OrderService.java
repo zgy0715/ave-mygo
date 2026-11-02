@@ -27,6 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
  * ② 同一事务：扣减与建单同生共死
  * ③ order_no 唯一索引兜底
  * 校验顺序：场次状态 → 票档归属与启用 → 限购 → 扣减 → 建单。
+ *
+ * 2026-11-02 并发加固（V53）：
+ * ④ 限购改为「原子配额」：user_session_quota 条件 UPDATE 一次完成"检查+占用"，
+ *    不再 SELECT SUM 后判断（并发下会突破 max_per_user）
+ * ⑤ 状态流转改为条件 UPDATE（WHERE status='PENDING_PAYMENT'），按影响行数定胜负，
+ *    避免支付与取消并发互相覆盖、库存被回滚两次（真超卖）
  */
 @Slf4j
 @Service
@@ -39,6 +45,7 @@ public class OrderService {
     private final TicketTypeRepository ticketTypeRepository;
     private final TicketOrderRepository orderRepository;
     private final EventRepository eventRepository;
+    private final UserSessionQuotaRepository quotaRepository;
 
     @Transactional
     public OrderCreated create(Long userId, CreateOrderRequest req) {
@@ -68,10 +75,11 @@ public class OrderService {
             throw new BizException(40902, "该票档已停售");
         }
 
-        // 3. 限购：本笔数量 + 该用户该场次活跃订单合计 不得超过 max_per_user
-        int alreadyBought = orderRepository.sumActiveQuantity(userId, session.getId());
-        if (alreadyBought + qty > ticketType.getMaxPerUser()) {   // Byte 参与算术自动提升为 int
-            throw new BizException(40903, "超出限购数量：该场次最多购买 " + ticketType.getMaxPerUser() + " 张");
+        // 3. 限购：原子占用配额（检查与占用在同一条 UPDATE 里完成，并发安全）
+        int maxPerUser = ticketType.getMaxPerUser();
+        quotaRepository.ensureRow(userId, session.getId());
+        if (quotaRepository.reserve(userId, session.getId(), qty, maxPerUser) == 0) {
+            throw new BizException(40903, "超出限购数量：该场次最多购买 " + maxPerUser + " 张");
         }
 
         // 4. 原子扣库存：影响行数 0 = 余票不足（并发安全的唯一真相来源）
@@ -128,27 +136,41 @@ public class OrderService {
         if (!"PENDING_PAYMENT".equals(order.getStatus())) {
             throw new BizException(40902, "订单当前状态不可支付");
         }
-        if (LocalDateTime.now().isAfter(order.getPayDeadline())) {
-            throw new BizException(40902, "订单已超时，请重新下单");   // 任务延迟时的兜底校验
+        // 条件 UPDATE：状态与截止时间都写进 WHERE，谁先拿到行谁生效
+        LocalDateTime now = LocalDateTime.now();
+        int rows = orderRepository.markPaid(orderNo, userId, now);
+        if (rows == 0) {
+            // 抢失败：可能是并发支付（幂等返回）、并发取消或刚好超时
+            TicketOrder latest = findOwned(orderNo, userId);
+            if ("PAID".equals(latest.getStatus())) return toView(latest);
+            if (!"PENDING_PAYMENT".equals(latest.getStatus())) {
+                throw new BizException(40902, "订单当前状态不可支付");
+            }
+            throw new BizException(40902, "订单已超时，请重新下单");
         }
-        order.setStatus("PAID");
-        order.setPaidAt(LocalDateTime.now());
-        log.info("支付成功 orderNo={} userId={} amount={}", order.getOrderNo(), userId, order.getTotalAmount());
-        return toView(order);
+        TicketOrder paid = findOwned(orderNo, userId);
+        log.info("支付成功 orderNo={} userId={} amount={}", paid.getOrderNo(), userId, paid.getTotalAmount());
+        return toView(paid);
     }
 
-    /** 用户取消：PENDING → CANCELLED + 回滚库存（同事务） */
+    /** 用户取消：PENDING → CANCELLED + 回滚库存 + 释放配额（同事务） */
     @Transactional
     public OrderView cancel(String orderNo, Long userId) {
         TicketOrder order = findOwned(orderNo, userId);
         if (!"PENDING_PAYMENT".equals(order.getStatus())) {
             throw new BizException(40902, "订单当前状态不可取消");
         }
-        order.setStatus("CANCELLED");
-        order.setCancelledAt(LocalDateTime.now());
-        rollbackStock(order);
-        log.info("用户取消订单 orderNo={} userId={} qty={}", order.getOrderNo(), userId, order.getQuantity());
-        return toView(order);
+        int rows = orderRepository.markCancelled(orderNo, userId, LocalDateTime.now());
+        if (rows == 0) {
+            // 并发下可能已被支付/超时任务处理，只有抢到状态转换的请求才能回滚库存
+            throw new BizException(40902, "订单当前状态不可取消");
+        }
+        TicketOrder cancelled = findOwned(orderNo, userId);
+        rollbackStock(cancelled);
+        releaseQuota(cancelled);
+        log.info("用户取消订单 orderNo={} userId={} qty={}",
+                cancelled.getOrderNo(), userId, cancelled.getQuantity());
+        return toView(cancelled);
     }
 
     /** 我的订单列表 */
@@ -165,13 +187,25 @@ public class OrderService {
     @Scheduled(fixedDelay = 60_000)
     @Transactional
     public void expirePendingOrders() {
+        LocalDateTime now = LocalDateTime.now();
+        // 限量 200 条：避免一次捞全表 + 长事务（剩余的下个周期继续处理）
         List<TicketOrder> expired = orderRepository
-                .findByStatusAndPayDeadlineBefore("PENDING_PAYMENT", LocalDateTime.now());
+                .findTop200ByStatusAndPayDeadlineBeforeOrderByIdAsc("PENDING_PAYMENT", now);
         for (TicketOrder order : expired) {
-            order.setStatus("EXPIRED");
-            order.setCancelledAt(LocalDateTime.now());
+            // 只有仍在待支付且确实过期的才能被本任务改；已被支付/取消的跳过
+            if (orderRepository.markExpired(order.getId(), now) == 0) continue;
             rollbackStock(order);
+            releaseQuota(order);
             log.warn("订单超时取消: orderNo={}, qty={}", order.getOrderNo(), order.getQuantity());
+        }
+    }
+
+    /** 释放限购配额：取消/超时/退款时调用，否则名额会被永久占住 */
+    private void releaseQuota(TicketOrder order) {
+        int rows = quotaRepository.release(order.getUserId(), order.getSessionId(),
+                order.getQuantity());
+        if (rows == 0) {
+            log.warn("配额释放未命中（可能已释放）orderNo={}", order.getOrderNo());
         }
     }
 

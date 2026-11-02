@@ -96,6 +96,7 @@ class OrderConcurrencyTest {
 
     private void cleanup() {
         // 逆依赖顺序清库（测试专用表，jdbc 直删避免软删除过滤）
+        jdbc.update("DELETE FROM user_session_quota");
         jdbc.update("DELETE FROM ticket_order");
         jdbc.update("DELETE FROM ticket_type");
         jdbc.update("DELETE FROM live_session");
@@ -257,5 +258,130 @@ class OrderConcurrencyTest {
         assertThat(first.status()).isEqualTo("PAID");
         assertThat(second.status()).isEqualTo("PAID");
         assertThat(soldCount()).isEqualTo(1);
+    }
+
+    // ==================== V53 并发加固（2026-11-02） ====================
+
+    @Test
+    @DisplayName("T07 支付与取消并发：状态唯一，库存最多回滚一次（不会变成负数）")
+    void t07_payAndCancelRace() throws Exception {
+        fixture(50, 4);
+        String orderNo = buy(9101L, 2).orderNo();
+        assertThat(soldCount()).isEqualTo(2);
+
+        int threads = 12;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<String>> results = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            final boolean isPay = (i % 2 == 0);
+            results.add(pool.submit((Callable<String>) () -> {
+                start.await();
+                try {
+                    if (isPay) {
+                        orderService.pay(orderNo, 9101L);
+                        return "PAID";
+                    }
+                    orderService.cancel(orderNo, 9101L);
+                    return "CANCELLED";
+                } catch (BizException e) {
+                    return "FAIL:" + e.getCode();
+                }
+            }));
+        }
+        start.countDown();
+        for (Future<String> f : results) f.get(20, TimeUnit.SECONDS);
+        pool.shutdown();
+
+        String finalStatus = jdbc.queryForObject(
+                "SELECT status FROM ticket_order WHERE order_no = ?", String.class, orderNo);
+        int sold = soldCount();
+        Integer quota = jdbc.queryForObject(
+                "SELECT qty FROM user_session_quota WHERE user_id = 9101 AND session_id = ?",
+                Integer.class, sessionId);
+
+        // 状态只能二选一，且库存/配额必须与该状态一致（不能出现"CANCELLED 但库存没回滚"或"回滚两次"）
+        assertThat(finalStatus).isIn("PAID", "CANCELLED");
+        if ("PAID".equals(finalStatus)) {
+            assertThat(sold).isEqualTo(2);
+            assertThat(quota).isEqualTo(2);
+        } else {
+            assertThat(sold).isZero();
+            assertThat(quota).isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("T08 同一用户并发下单：不突破 max_per_user（限额 2，8 线程各买 1）")
+    void t08_concurrentLimitPerUser() throws Exception {
+        fixture(50, 2);
+
+        int threads = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger success = new AtomicInteger();
+        List<Future<?>> futures = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            futures.add(pool.submit(() -> {
+                start.await();
+                try {
+                    buy(9202L, 1);
+                    success.incrementAndGet();
+                } catch (BizException | DataAccessException ignored) {
+                    // 超限购 / 唯一键冲突都算正常失败
+                }
+                return null;
+            }));
+        }
+        start.countDown();
+        for (Future<?> f : futures) f.get(20, TimeUnit.SECONDS);
+        pool.shutdown();
+
+        Integer quota = jdbc.queryForObject(
+                "SELECT qty FROM user_session_quota WHERE user_id = 9202 AND session_id = ?",
+                Integer.class, sessionId);
+        Integer orders = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM ticket_order WHERE user_id = 9202", Integer.class);
+
+        assertThat(success.get()).isLessThanOrEqualTo(2);      // 核心断言：绝不超限购
+        assertThat(soldCount()).isEqualTo(success.get());      // 库存只按成功单扣
+        assertThat(quota).isEqualTo(success.get());            // 配额与成功单一致
+        assertThat(orders).isEqualTo(success.get());
+    }
+
+    @Test
+    @DisplayName("T09 超时任务与支付并发：已过期订单不能被支付，库存必须清零")
+    void t09_expireVersusPay() throws Exception {
+        fixture(50, 4);
+        String orderNo = buy(9303L, 2).orderNo();
+        // 人为把支付截止时间调到过去
+        jdbc.update("UPDATE ticket_order SET pay_deadline = ? WHERE order_no = ?",
+                LocalDateTime.now().minusMinutes(5), orderNo);
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        Future<?> expireTask = pool.submit(() -> {
+            start.await();
+            orderService.expirePendingOrders();
+            return null;
+        });
+        Future<?> payTask = pool.submit(() -> {
+            start.await();
+            try {
+                orderService.pay(orderNo, 9303L);
+            } catch (BizException ignored) {
+                // 已过期就不能支付，抛异常是正确行为
+            }
+            return null;
+        });
+        start.countDown();
+        expireTask.get(20, TimeUnit.SECONDS);
+        payTask.get(20, TimeUnit.SECONDS);
+        pool.shutdown();
+
+        String status = jdbc.queryForObject(
+                "SELECT status FROM ticket_order WHERE order_no = ?", String.class, orderNo);
+        assertThat(status).isEqualTo("EXPIRED");     // 过期单只能被超时任务收走
+        assertThat(soldCount()).isZero();            // 库存已回滚且只回滚一次
     }
 }
