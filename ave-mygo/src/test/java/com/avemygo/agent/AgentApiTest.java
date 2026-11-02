@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.avemygo.auth.JwtService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -450,6 +451,37 @@ class AgentApiTest {
                 "SELECT COUNT(*) FROM live_session WHERE id = ? AND is_deleted = 0",
                 Integer.class, sessionId);
         assertThat(alive).isZero();                        // 场次确实被删了（且没被"删两次"搞乱）
+    }
+
+    @Test
+    @DisplayName("A15 历史按用户隔离：同一 conversationId 下，他人历史不会被读入")
+    void a15_historyIsolatedByUser() throws Exception {
+        Mockito.when(agentLlm.chat(ArgumentMatchers.any(), ArgumentMatchers.any()))
+                .thenReturn(new AgentLlm.Turn("好的，记下了。", List.of()));
+
+        // 用户 1 在 shared-conv 里说一句
+        mvc.perform(post("/api/v1/admin/agent/chat")
+                        .header("Authorization", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"我是用户一的私密内容\",\"conversationId\":\"shared-conv\"}"))
+                .andExpect(jsonPath("$.code").value(0));
+
+        // 用户 2 用同一个 conversationId 发问
+        String otherToken = "Bearer " + jwtService.generate(2L, "ADMIN");
+        List<List<Map<String, Object>>> calls = new ArrayList<>();
+        Mockito.when(agentLlm.chat(ArgumentMatchers.argThat(msgs -> {
+            calls.add((List<Map<String, Object>>) msgs);
+            return true;
+        }), ArgumentMatchers.any())).thenReturn(new AgentLlm.Turn("你好。", List.of()));
+
+        mvc.perform(post("/api/v1/admin/agent/chat")
+                        .header("Authorization", otherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"我刚才说了什么\",\"conversationId\":\"shared-conv\"}"))
+                .andExpect(jsonPath("$.code").value(0));
+
+        String allMessages = calls.get(calls.size() - 1).toString();
+        assertThat(allMessages).doesNotContain("用户一的私密内容");   // 核心断言：不串话
     }
 
     // ---------------- 帮助方法 ----------------

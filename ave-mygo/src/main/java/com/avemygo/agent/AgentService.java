@@ -67,7 +67,7 @@ public class AgentService {
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
         // 多轮上下文：把本会话最近几条人机对话放进 messages，让"刚才那场""为什么没删掉"有据可依
-        appendHistory(conv, messages);
+        appendHistory(conv, userId, messages);
         messages.add(Map.of("role", "user", "content", message));
         persist(conv, userId, AgentMessage.USER, message);
 
@@ -283,10 +283,12 @@ public class AgentService {
     }
 
     /** 多轮上下文：把本会话最近 N 条人机对话追加进消息列表（时间正序） */
-    private void appendHistory(String conv, List<Map<String, Object>> messages) {
+    private void appendHistory(String conv, Long userId, List<Map<String, Object>> messages) {
+        if (userId == null) return;   // 游客没有稳定身份，不读历史
         try {
-            List<AgentMessage> recent = messageRepository.findByConversationIdOrderByIdDesc(
-                    conv, org.springframework.data.domain.PageRequest.of(0, HISTORY_LIMIT));
+            List<AgentMessage> recent =
+                    messageRepository.findByUserIdAndConversationIdOrderByIdDesc(
+                            userId, conv, org.springframework.data.domain.PageRequest.of(0, HISTORY_LIMIT));
             List<AgentMessage> chronological = new ArrayList<>(recent);
             java.util.Collections.reverse(chronological);
             for (AgentMessage m : chronological) {

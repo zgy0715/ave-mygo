@@ -238,6 +238,29 @@ class AssistantStreamServiceTest {
     }
 
     @Test
+    @DisplayName("V12 游客不落库、也不读历史（没有身份就无法隔离）")
+    void v12_guestNoHistory() throws Exception {
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenReturn(new StreamLlm.Turn("好。", List.of()));
+
+        service.chat("有什么演出", "guest-conv", null, null, false, sink());
+
+        Integer rows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM agent_messages WHERE conversation_id = 'guest-conv'",
+                Integer.class);
+        assertThat(rows).isZero();
+
+        // 第二次同样的 conversationId 也不应该带出历史（否则不同游客会串话）
+        List<List<Map<String, Object>>> calls = new ArrayList<>();
+        when(streamLlm.stream(anyList(), anyList(), any())).thenAnswer(inv -> {
+            calls.add((List<Map<String, Object>>) inv.getArgument(0));
+            return new StreamLlm.Turn("嗯。", List.of());
+        });
+        service.chat("再说一次", "guest-conv", null, null, false, sink());
+        assertThat(calls.get(0)).hasSize(2);   // 只有 system + 本次 user
+    }
+
+    @Test
     @DisplayName("V10 人设：persona 不同则 system 提示词不同（修复 ANON 说客服话）")
     void v10_personaInjected() throws Exception {
         when(streamLlm.stream(anyList(), anyList(), any()))
@@ -277,7 +300,7 @@ class AssistantStreamServiceTest {
             return new StreamLlm.Turn("1. **id=19** 《MyGO!!!!! 9th》\n## 列表\n用 `search_songs` 查", List.of());
         });
 
-        service.chat("列一下", null, null, null, false, sink());
+        service.chat("列一下", "md-conv", null, 1L, false, sink());   // 登录用户才会落库
 
         String text = textOfDeltas();
         assertThat(text).doesNotContain("*").doesNotContain("`").doesNotContain("##");

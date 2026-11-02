@@ -120,7 +120,7 @@ public class AssistantStreamService {
         }
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
-        appendHistory(conv, messages);
+        appendHistory(conv, userId, messages);
         messages.add(Map.of("role", "user", "content", message));
         persist(conv, userId, AgentMessage.USER, message);
 
@@ -282,10 +282,12 @@ public class AssistantStreamService {
         }
     }
 
-    private void appendHistory(String conv, List<Map<String, Object>> messages) {
+    private void appendHistory(String conv, Long userId, List<Map<String, Object>> messages) {
+        // 游客没有稳定身份，不读历史（否则不同游客只要 conversationId 相同就会串话）
+        if (userId == null) return;
         try {
-            List<AgentMessage> recent = messageRepository.findByConversationIdOrderByIdDesc(
-                    conv, PageRequest.of(0, HISTORY_LIMIT));
+            List<AgentMessage> recent = messageRepository.findByUserIdAndConversationIdOrderByIdDesc(
+                    userId, conv, PageRequest.of(0, HISTORY_LIMIT));
             List<AgentMessage> chronological = new ArrayList<>(recent);
             java.util.Collections.reverse(chronological);
             for (AgentMessage m : chronological) {
@@ -387,6 +389,7 @@ public class AssistantStreamService {
 
     private void persist(String conv, Long userId, String role, String content) {
         if (content == null || content.isBlank()) return;
+        if (userId == null) return;   // 游客不落库：没有身份就无法隔离，宁可不存
         try {
             AgentMessage m = new AgentMessage();
             m.setConversationId(conv);
