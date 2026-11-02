@@ -1,7 +1,7 @@
-# AGENT.md —— BanG Dream! Live 项目全景（合并自 docs/01-09）
+# AGENTS.md —— BanG Dream! Live 项目全景
 
 > 一份文档读完整个项目：技术栈、约定、数据模型、接口、红线、测试、协作规则。
-> 生成于 2026-10-19，内容来自 docs/01~09 合并精简 + **代码与数据库实际状态核对**（已过时的计划项已剔除）。
+> 生成于 2026-10-19，2026-11-02 校对（V55 / 19 张业务表 / 61 接口 / 149 + 82 + 21 用例）；**数字唯一口径见 `docs/metrics.md`**。
 
 ---
 
@@ -10,7 +10,7 @@
 **BanG Dream! Live** —— MyGO!!!!! × Ave Mujica 粉丝站：音乐库（官方外链试听 + MV 内嵌）、演出票务（模拟支付、防超卖、15 分钟超时取消）、内容管理（管理端）、AI 助手（本地 Ollama 四人格）。
 
 - 定位：个人粉丝站 + 简历项目（企业级工程规范）
-- 状态（2026-10-19）：**M1–M4.10 全部完成**，`main` 已合并（102 提交）；剩余 M5 质量加固、M6 部署交付
+- 状态（2026-11-02）：M1–M5 完成，Agent 能力层已上线；下一步按 `docs/17-后续演进计划.md`（数据可信知识库）与 `docs/18-工程深度与体量方案.md`（工程深度）推进
 
 ---
 
@@ -24,7 +24,7 @@
 | 认证 | Spring Security + JJWT 0.12.6（JWT 内嵌 role） | `USER` / `ADMIN` |
 | 前端 | Vue 3 + Vite + Pinia + Vue Router + **Tailwind CSS** | JS（非 TS） |
 | AI | **Ollama + qwen3:8b**（OpenAI 兼容端点） | 自动探测模型；不可用时规则引擎兜底 |
-| 构建 | mvnw（后端）/ npm（前端） | Node 22.22.2 |
+| 构建 | mvnw（后端）/ npm（前端） | Node v24.15.0 / npm 11.12.1 |
 
 > 注意：Spring Boot 4 使用 **Jackson 3（`tools.jackson.*`）**，不是 `com.fasterxml.*`。
 
@@ -69,9 +69,10 @@ D:/全栈/
 ├── frontend/                     # Vue3 前端
 │   ├── src/{views,components,api,stores,router}/
 │   └── public/{img/covers,img/logo,img/bands,assets}/
-├── docs/                         # 历史设计文档（已合并至此，保留备查）
-├── AGENT.md                      # 本文档
-└── 项目未完成.md                  # 剩余计划
+├── db/seed/reference.sql         # 参考数据基线（幂等；新环境回放迁移后执行）
+├── docs/                         # 设计文档 01–18 + metrics + SQL 总览
+├── scripts/                      # build / start / check / backup-db / gen_seed
+└── AGENTS.md                     # 本文档
 ```
 
 ---
@@ -93,6 +94,7 @@ D:/全栈/
 ### 数据库
 - 表三要素：`id` 自增主键、`created_at`、`updated_at`；业务表`is_deleted` 软删除
 - 一切结构变更走 Flyway（**禁止手工改表后不补历史**；手动执行过的迁移必须改幂等写法）
+- **V1–V55 已冻结（只读）**：不得改内容/改名/删除——Flyway 按 checksum 校验，改动后后端启动即失败。新结构只能新增 **V56 及以后**；数据补录与种子写 `db/seed/*.sql`（幂等、手动执行），不再进 Flyway
 - 关键约束：`ticket_type` 有 `chk_stock CHECK (sold_count <= total_stock)`（防超卖最后防线）
 
 ### 敏感信息
@@ -100,7 +102,7 @@ D:/全栈/
 
 ---
 
-## 6. 数据模型（15 张表，实际）
+## 6. 数据模型（19 张业务表，实际）
 
 ```
 user              （id, username, password_hash, nickname, role, status, avatar_url, ...）
@@ -113,7 +115,8 @@ live_session      （event_id, name, start_time, end_time, sale_start_time,
 ticket_type       （session_id, name, price, total_stock, sold_count, max_per_user, status）
 ticket_order      （order_no, user_id, session_id, ticket_type_id, quantity, amount,
                      status: PENDING/PAID/CANCELLED/REFUNDED, pay_deadline）
-favorite / playlist / playlist_item / setlist_item / comment / conversation_history
+favorite / playlist / playlist_item / setlist_item / comment / conversation_history / event_reminder
+agent_tool_calls / agent_messages / user_session_quota   （Agent 审计 / 多轮消息 / 场次限购配额）
 ```
 
 **订单状态机**：`PENDING --支付--> PAID --退款--> REFUNDED`；`PENDING --手动取消/超时15min--> CANCELLED`（回滚库存）
@@ -133,14 +136,16 @@ favorite / playlist / playlist_item / setlist_item / comment / conversation_hist
 | 订单 | 4 | `POST /orders`、`GET /orders/my`、`PATCH /orders/{orderNo}/cancel`、`POST /orders/{orderNo}/pay` |
 | 收藏 | 2 | `GET /favorites`、`POST/DELETE /favorites` |
 | 健康 | 1 | `GET /health` |
-| 助手 | 1 | `POST /assistant/chat`（`{message, sessionId, persona}` → `{reply, intent, persona, personaName}`） |
-| 管理端 | 5 | `/admin/songs` CRUD、`POST /admin/hero-videos`（multipart，slot=mygo\|mujica，≤100MB，原子替换） |
+| 助手 | 2 | `POST /assistant/chat`（v1 兼容）、`POST /assistant/chat/v2`（SSE：status/delta/tool/confirm/done/error） |
+| 管理端 | 6 | `/admin/songs` CRUD、`POST /admin/hero-videos`（multipart，slot=mygo\|mujica，≤100MB，原子替换）、`POST /admin/agent/confirm`（写工具二次确认） |
+
+> 全量端点共 **61 个**（`@*Mapping` 计数，口径见 `docs/metrics.md`）；上表只列主链路，comment / reminder / search / agent 运营台等未逐条展开。
 
 **安全**：公开接口 = auth/songs/bands/albums/events/health/assistant；`/admin/**` 强制 `ROLE_ADMIN`；其余需登录。
 
 ---
 
-## 8. 前端（12 个页面，实际）
+## 8. 前端（14 个页面，实际）
 
 | 路由 | 页面 | 说明 |
 |---|---|---|
@@ -167,14 +172,16 @@ favorite / playlist / playlist_item / setlist_item / comment / conversation_hist
 
 ---
 
-## 10. 测试计划（M5 主体，docs/08 精简）
+## 10. 测试计划（M5 主体，docs/08b 精简）
 
 | 层 | 工具 | 目标 |
 |---|---|---|
 | 单元 | JUnit5 + Mockito | 订单状态机 5 条流转、限购计算、价格快照 |
 | 接口 | MockMvc | 每接口 ≥1 正例 + 主要错误码 + 权限（401/403） |
-| 集成 | SpringBootTest + **Testcontainers（真 MySQL）** | 并发下单、库存扣减、超时任务 |
+| 集成 | SpringBootTest + 本机 MySQL `bandori_live_test`（Flyway clean 后重建） | 并发下单、库存扣减、超时任务 |
 | E2E | Playwright（可选） | 游客/购票/管理三条旅程 |
+
+> 基线（2026-11-02 实测）：后端 **149** 例 / 前端 Vitest **82** 例 / E2E **21** 例；一键跑 `scripts\check.bat`。
 
 **P0 用例（验收线）**
 - T01 正常下单：余票 50 买 2 → 200、`sold_count=2`、订单 PENDING、金额=单价×2
@@ -205,3 +212,6 @@ favorite / playlist / playlist_item / setlist_item / comment / conversation_hist
 5. **前端改动验证**：`npm run build` 会清 `dist/` 可能触发沙盒拦截；轻量验证用 `curl localhost:5173/src/<文件>` 看编译 200，运行时报错需用户刷新页面看 Console（曾因少 `computed` 导入导致整站白屏）
 6. **双会话分工**：后端/数据/资产由本会话负责，UI/交互由前端会话负责；跨会话任务写成「可直接粘贴的提示词」
 7. **回答风格**：直接给结论与下一步，不要长篇铺垫；事实类先查证再答
+8. **冻结迁移**：V1–V55 只读；新迁移从 V56 起只写 DDL；数据改动走 `db/seed/`（`scripts/gen_seed.py` 可重新导出参考数据）
+9. **基线检查**：改完代码跑 `scripts\check.bat`（后端 149 + 前端 82）；E2E 用 `scripts\check.bat e2e`
+10. **中文路径坑**：仓库路径含中文（`D:\全栈`），`mvnw.cmd` 在非交互 cmd 下会报 "Cannot start maven from wrapper"；脚本里直接调用 `%USERPROFILE%\.m2\wrapper\dists\apache-maven-*\apache-maven-*\bin\mvn.cmd`

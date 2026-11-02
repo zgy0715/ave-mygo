@@ -157,6 +157,9 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 管理员账号：将 `user` 表目标用户 `role` 改为 `ADMIN`（参考迁移 `V22__admin_user.sql`）。
 
+> 参考数据（乐队/曲目/专辑/演出/票档/歌单）由迁移自带；如需把数据恢复到当前基线，直接执行
+> `db/seed/reference.sql`（幂等，可重复跑）：`mysql -u root -p bandori_live < db/seed/reference.sql`。
+
 ---
 
 ## 测试
@@ -168,6 +171,8 @@ npm run dev                     # http://localhost:5173（代理已配）
 | E2E 旅程 | `npm run test:e2e`（Playwright + Edge） | 游客浏览 / 歌单 / 购票 / **管理端删除全链路** |
 
 E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
+
+一键跑后端 + 前端基线：`scripts\check.bat`（E2E 加参数：`scripts\check.bat e2e`）。
 
 ---
 
@@ -184,7 +189,7 @@ nohup env DB_URL=... DB_USERNAME=... DB_PASSWORD=... JWT_SECRET=... \
 # 前端（关键：同源路径，覆盖 .env.production 的 localhost）
 cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm run build
 
-# nginx：托 dist + /api 反代 8080（配置见 docs/08-上线检查清单.md）
+# nginx：托 dist + /api 反代 8080（配置见 docs/08a-上线检查清单.md）
 ```
 
 **AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
@@ -211,12 +216,13 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 
 ```
 ├── ave-mygo/              # Spring Boot 后端
-│   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（含数据）
+│   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（已冻结，新结构从 V56 起）
 ├── frontend/              # Vue 3 前端
 │   └── e2e/               # Playwright E2E
+├── db/seed/reference.sql  # 参考数据幂等基线（乐队/曲目/专辑/演出/票档/歌单）
 ├── docs/                  # 设计文档 + 审计报告 + 截图（docs/img/）
-├── scripts/               # 构建 / 启动 / 备份脚本
-└── AGENT.md               # 工程全景（约定 / 数据模型 / 接口 / 红线）
+├── scripts/               # 构建 / 启动 / 备份 / 基线检查
+└── AGENTS.md              # 工程全景（约定 / 数据模型 / 接口 / 红线）
 ```
 
 ## 文档索引
@@ -226,9 +232,10 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 | [docs/04-需求说明.md](docs/04-需求说明.md) | 产品需求与页面结构 |
 | [docs/05-数据库设计.md](docs/05-数据库设计.md) | 数据库建模（含 V50–V55 新增 3 张表） |
 | [docs/06-接口设计.md](docs/06-接口设计.md) | REST 契约 |
-| [docs/08-上线检查清单.md](docs/08-上线检查清单.md) | 生产部署自检 |
-| [docs/08-测试与验收.md](docs/08-测试与验收.md) | 测试策略 |
-| [docs/09-数据审计报告.md](docs/09-数据审计报告.md) | 全量数据审计与修正记录 |
+| [docs/08a-上线检查清单.md](docs/08a-上线检查清单.md) | 生产部署自检 |
+| [docs/08b-测试与验收.md](docs/08b-测试与验收.md) | 测试策略 |
+| [docs/09a-数据审计报告.md](docs/09a-数据审计报告.md) | 全量数据审计与修正记录 |
+| [docs/09b-环境与依赖清单.md](docs/09b-环境与依赖清单.md) | 本机/部署环境与依赖版本 |
 | [docs/SQL迁移总览.md](docs/SQL迁移总览.md) | V1–V55 迁移明细 |
 | [docs/10-Agent运营层设计.md](docs/10-Agent运营层设计.md) | Agent 能力设计（工具/循环/门控/审计/多轮/预热） |
 | [docs/13-小灯v2方案.md](docs/13-小灯v2方案.md) | 小灯 v2：删模式开关 + 对话质量重做 |
@@ -431,7 +438,7 @@ IP 固定窗口限流（按接口组配额）、`/ready` 就绪探针、CORS 白
 
 ## 数据可信度声明
 
-- 曲库事实（成员 / 担当 / 乐队名 / 曲目 / 专辑归属）已对照 **BanG Dream! 官方 discography（bang-dream.com）与 Bandori Wiki** 逐条核验，修正记录见 `docs/09-数据审计报告.md` 与迁移 V45–V48
+- 曲库事实（成员 / 担当 / 乐队名 / 曲目 / 专辑归属）已对照 **BanG Dream! 官方 discography（bang-dream.com）与 Bandori Wiki** 逐条核验，修正记录见 `docs/09a-数据审计报告.md` 与迁移 V45–V48
 - MV 均经 Bilibili `view` 接口逐条验证（可播放、标题匹配、UP 主为官方账号 MyGO_AveMujica / THE FIRST TAKE）
 - 官方无预览 / 无 MV 的曲目（4 + 7 首）**如实标注为空**，不爬取、不伪造
 
