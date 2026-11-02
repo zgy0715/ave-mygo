@@ -8,8 +8,9 @@ setlocal
 cd /d "%~dp0.."
 
 echo [1/2] 构建后端...
+call "%~dp0env.bat"
 pushd backend
-call mvnw.cmd -q clean package -DskipTests
+call "%MVN%" -q clean package -DskipTests
 if errorlevel 1 ( echo 后端构建失败 & popd & exit /b 1 )
 popd
 

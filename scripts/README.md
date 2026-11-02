@@ -5,7 +5,9 @@
 
 | 脚本 | 用途 | 用法 |
 |---|---|---|
-| `start.bat` | 一键启动：后端（`backend/target/*.jar`，没有 jar 就回退 `mvnw spring-boot:run`）+ 前端 Vite | `scripts\start.bat`；`scripts\start.bat preview` 用构建产物预览（4173） |
+| `start.bat` | 一键启动：后端（`backend/target/*.jar`，没有 jar 就 `mvn spring-boot:run`）+ 前端 Vite | `scripts\start.bat`；`scripts\start.bat preview` 用构建产物预览（4173） |
+| `_backend.bat` | 后端启动的实际执行体（由 `start.bat` 开新窗口调用） | 一般不用手动跑 |
+| `env.bat` | 公共环境探测：自动定位 JDK 17（`JAVA_HOME`）与 `mvn.cmd`，被 `start`/`build` 调用；**故意只用 ASCII**（中文写在 .bat 里会受 OEM 代码页影响） | `call scripts\env.bat` |
 | `build.bat` | 构建后端 jar + 前端 `dist/` | `scripts\build.bat` |
 | `check.bat` / `check.ps1` | 基线检查：后端 149 例 + 前端 Vitest 82 例；`e2e` 模式跑 Playwright 21 例（需 8080/5173 已启动） | `scripts\check.bat`、`scripts\check.bat e2e` |
 | `backup-db.bat` | `mysqldump` 备份 `bandori_live` 到 `backups\`，保留 7 天（凭据读环境变量 `DB_USERNAME`/`DB_PASSWORD`） | `scripts\backup-db.bat` |
