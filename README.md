@@ -159,6 +159,9 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 > 参考数据（乐队/曲目/专辑/演出/票档/歌单）由迁移自带；如需把数据恢复到当前基线，直接执行
 > `db/seed/reference.sql`（幂等，可重复跑）：`mysql -u root -p bandori_live < db/seed/reference.sql`。
+>
+> 首页 Hero 视频（`frontend/public/assets/band-*.mp4`，各 26–30MB）**不入库**：克隆后首页自动降级为渐变背景，
+> 需要视频的话用管理端「Hero 视频上传」或手动放到 `frontend/public/assets/` 下即可。
 
 ---
 

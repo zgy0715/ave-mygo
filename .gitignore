@@ -38,3 +38,6 @@ db/backup/
 # 本地素材（OP 视频 / 原图 / 参考图，不入库，避免仓库膨胀）
 video/
 图片/
+
+# Hero 轮播视频（单文件 26–30MB，不入库；克隆后经管理端上传或手动放入）
+frontend/public/assets/*.mp4

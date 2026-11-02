@@ -46,6 +46,7 @@ npm run dev
 - 数据库连接：`application.yaml` 用 `${DB_URL}/${DB_USERNAME}/${DB_PASSWORD:}`，实际值在 `.env`（gitignore）
 - 管理员账号：`tomori_fan`（`user_id=1`，V22 提权 ADMIN）
 - 配置项：`llm.base-url / llm.model / llm.api-key`（可切云端）、`hero.assets-dir`（Hero 视频目录）
+- Hero 视频（`frontend/public/assets/band-*.mp4`，各 26–30MB）**不入库**（`.gitignore` 已排除，历史也已清理）；缺失时首页自动降级为渐变背景
 
 ---
 
