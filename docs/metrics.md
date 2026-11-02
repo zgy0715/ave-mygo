@@ -24,7 +24,7 @@
 |---|---|---|
 | 后端集成测试 | **149 用例 / 31 个测试类** | `./mvnw test` |
 | 前端单测 | **82 用例 / 10 个文件** | `npm run test` |
-| E2E | **21 用例 / 8 个 spec** | `npx playwright test --list` |
+| E2E | **20 用例 / 8 个 spec** | `npx playwright test --list` |
 
 > E2E 前置：后端 8080 + 前端 5173 都要在跑，否则会大面积 `ERR_CONNECTION_REFUSED`（不是代码问题）。
 > 全量跑前建议清一次测试残留：`DELETE FROM playlist WHERE name LIKE 'E2E歌单%';`
