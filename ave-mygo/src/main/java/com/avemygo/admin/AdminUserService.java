@@ -68,6 +68,10 @@ public class AdminUserService {
             throw new BizException(40001, "不能封禁管理员账号");
         }
         target.setStatus(status);
+        if (status == 0) {
+            // 封禁：版本 +1，让对方已签发的令牌立刻失效（V55）
+            target.setTokenVersion((target.getTokenVersion() == null ? 0 : target.getTokenVersion()) + 1);
+        }
         User saved = userRepository.save(target);
         log.info("管理端修改用户状态 adminId={} userId={} status={}", adminId, targetId, status);
         return new UserView(saved.getId(), saved.getUsername(), saved.getNickname(),

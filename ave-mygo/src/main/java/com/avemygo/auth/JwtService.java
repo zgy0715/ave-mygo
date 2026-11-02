@@ -29,12 +29,32 @@ public class JwtService {
         this.expirationHours = expirationHours;
     }
 
-    /** 登录成功后调用：签发 token（载荷 = 用户id + 角色 + 过期时间） */
+    /**
+     * 不带令牌版本的签发（测试与兼容用）。生产登录一律走三参版本，
+     * 这样封禁/降权才能对已签发的令牌立即生效。
+     */
     public String generate(Long userId, String role) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("role", role)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(expirationHours, ChronoUnit.HOURS)))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * 登录成功后调用：签发 token（载荷 = 用户id + 角色 + 令牌版本 + 过期时间）。
+     * 令牌版本与数据库中的 user.token_version 不一致时，过滤器会判定为失效——
+     * 这样封禁/降权能立刻生效，不必维护黑名单。
+     */
+    public String generate(Long userId, String role, int tokenVersion) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(userId))       // sub = 谁的通行证
                 .claim("role", role)                   // 自定义载荷：权限角色
+                .claim("ver", tokenVersion)             // 令牌版本
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expirationHours, ChronoUnit.HOURS)))
                 .signWith(key)                         // 用密钥签名，防伪造

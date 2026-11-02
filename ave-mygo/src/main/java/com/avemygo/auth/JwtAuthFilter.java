@@ -1,6 +1,8 @@
 package com.avemygo.auth;
 
 import com.avemygo.common.ApiResponse;
+import com.avemygo.user.User;
+import com.avemygo.user.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -28,6 +30,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -44,6 +47,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             Claims claims = jwtService.parse(header.substring(7));
             Long userId = Long.valueOf(claims.getSubject());
             String role = claims.get("role", String.class);
+            // 账户状态与令牌版本校验（V55）：封禁/改权限后旧令牌立刻失效，
+            // 不再出现"封了人还能用 24 小时"的窗口。
+            //
+            // 只校验带 ver 声明的令牌：升级前签发的老令牌（无 ver）允许自然过期，
+            // 这是灰度过渡——上线后新签发的令牌都带版本，24 小时内老令牌自然消失。
+            Integer tokenVersion = claims.get("ver", Integer.class);
+            if (tokenVersion != null) {
+                User user = userRepository.findById(userId).orElse(null);
+                if (user == null || user.getStatus() == null || user.getStatus() == 0) {
+                    reject(response, "账号已被停用，请联系管理员");
+                    return;
+                }
+                int dbVersion = user.getTokenVersion() == null ? 0 : user.getTokenVersion();
+                if (tokenVersion != dbVersion) {
+                    reject(response, "登录状态已失效，请重新登录");
+                    return;
+                }
+            }
 
             // 盖章：Spring Security 只认 Authentication 对象；权限名约定前缀 ROLE_
             var auth = new UsernamePasswordAuthenticationToken(
@@ -58,5 +79,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     "{\"code\":40101,\"message\":\"未登录或登录已过期\",\"data\":null}"
                             .getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    /** 统一的 401 拒绝（不区分"token 无效"与"账号停用"的具体原因给前端时也够用） */
+    private void reject(HttpServletResponse response, String message) throws java.io.IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getOutputStream().write(
+                ("{\"code\":40101,\"message\":\"" + message + "\",\"data\":null}")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

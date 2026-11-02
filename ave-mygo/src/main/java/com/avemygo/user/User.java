@@ -49,6 +49,10 @@ public class User {
     @Column(nullable = false)
     private Byte status = (byte) 1;
 
+    /** 令牌版本：封禁/权限变更时 +1，签发时的值不一致即视为旧令牌（V55） */
+    @Column(name = "token_version", nullable = false)
+    private Integer tokenVersion = 0;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 

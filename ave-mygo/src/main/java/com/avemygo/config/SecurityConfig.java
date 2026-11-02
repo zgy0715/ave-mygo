@@ -56,7 +56,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService,
+                                           com.avemygo.user.UserRepository userRepository) throws Exception {
         http
                 .cors(Customizer.withDefaults())                        // 启用上面的 CORS 配置
                 .csrf(AbstractHttpConfigurer::disable)                 // 前后端分离 + token，无 CSRF 风险
@@ -82,7 +83,7 @@ public class SecurityConfig {
                             "{\"code\":40101,\"message\":\"未登录或登录已过期\",\"data\":null}"
                                     .getBytes());
                 }))
-                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService, userRepository), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

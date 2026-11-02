@@ -58,7 +58,8 @@ public class AuthService {
             throw new BizException(40301, "账号已被封禁");
         }
 
-        String token = jwtService.generate(user.getId(), user.getRole());
+        String token = jwtService.generate(user.getId(), user.getRole(),
+                user.getTokenVersion() == null ? 0 : user.getTokenVersion());
         return new LoginResponse(token, 24 * 3600,
                 new LoginResponse.UserBrief(user.getId(), user.getUsername(),
                         user.getNickname(), user.getRole()));
