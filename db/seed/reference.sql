@@ -1,0 +1,191 @@
+-- 参考数据基线（自动生成，勿手改）：scripts/gen_seed.py
+-- 生成时间：2026-11-02 20:14:36
+-- 用途：新环境 Flyway 回放 V1..V55 后执行本文件，数据收敛到与开发库一致的基线。
+-- 幂等：全部为 INSERT ... ON DUPLICATE KEY UPDATE，可重复执行。
+-- 已排除：软删除行、[TEST] 事件、E2E 场次（及其票档/歌单）。
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- band: 3 行
+INSERT INTO `band` (`id`, `name`, `slug`, `description`, `logo_url`, `created_at`, `updated_at`) VALUES
+(1, 'MyGO!!!!!', 'mygo', '失落与寻找的乐队。成员：高松灯、千早爱音、要乐奈、长崎素世、椎名立希。', '/img/band-mygo.jpg', '2026-10-16 19:35:12', '2026-10-21 20:59:36'),
+(2, 'Ave Mujica', 'ave-mujica', '面具下的完美人偶剧团。成员：三角初华、若叶睦、八幡海铃、祐天寺若麦、丰川祥子。', '/img/band-mujica.png', '2026-10-16 19:35:12', '2026-10-18 17:04:17'),
+(3, 'sumimi', 'sumimi', '三角初華 × 純田まな 的双人偶像组合。镜头前的闪闪发光，是两个人一起挣来的。', '/img/band-sumimi.jpg', '2026-10-18 20:57:20', '2026-10-18 21:45:21')
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `slug` = VALUES(`slug`), `description` = VALUES(`description`), `logo_url` = VALUES(`logo_url`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`);
+
+-- member: 12 行
+INSERT INTO `member` (`id`, `band_id`, `name_ja`, `name_romaji`, `cv`, `position`, `avatar_url`, `intro`, `sort`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(1, 1, '高松 燈', 'Takamatsu Tomori', '羊宮妃那', 'Vo.', '/img/member-mygo-1.png', '不太爱说话的主唱。拥有独自的感性，歌词里写满了她说不出口的心情。', 1, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(2, 1, '千早 愛音', 'Chihaya Anon', '立石凛', 'Gt.', '/img/member-mygo-2.png', '喜欢引人注目的女孩。跟谁都能打成一片，是乐队的气氛担当。', 2, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(3, 1, '要 樂奈', 'Kaname Raana', '青木陽菜', 'Gt.', '/img/member-mygo-3.png', '天才吉他少女。猫一般的超级自由人，兴致来了才会出现。', 3, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(4, 1, '長崎 そよ', 'Nagasaki Soyo', '小日向美香', 'Ba.', '/img/member-mygo-4.png', '有表面也有里子。即便如此，还是温柔的女孩子。', 4, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(5, 1, '椎名 立希', 'Shiina Taki', '林鼓子', 'Dr.', '/img/member-mygo-5.png', '总之很会照顾人。经常被自由人折腾。', 5, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(6, 2, '三角 初華', 'Misumi Uika', '佐々木李子', 'Gt. & Vo.', '/img/member-mujica-1.png', 'Ave Mujica 的主唱 Doloris。舞台上完美无瑕，舞台下心事重重。', 1, '2026-10-17 20:22:04', '2026-10-21 20:59:36', 0),
+(7, 2, '若葉 睦', 'Wakaba Mutsumi', '渡瀬結月', 'Gt.', '/img/member-mujica-2.png', '人偶 Mortis。感情稀薄，吉他却是世界级的水准。', 2, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(8, 2, '八幡 海鈴', 'Yahata Umiri', '岡田夢以', 'Ba.', '/img/member-mujica-3.png', '贝斯手 Timoris。商业头脑一流的"海贼"系女子。', 3, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(9, 2, '祐天寺 にゃむ', 'Yutenji Nyamu', '米澤茜', 'Dr.', '/img/member-mujica-4.png', '演员 Amoris。流量至上主义者，把乐队当成爆红的机会。', 4, '2026-10-17 20:22:04', '2026-10-21 20:59:36', 0),
+(10, 2, '豊川 祥子', 'Togawa Sakiko', '高尾奏音', 'Key.', '/img/member-mujica-5.png', '乐队创始者 Oblivionis。曾是 CRYCHIC 的键盘手，背负着过去。', 5, '2026-10-17 20:22:04', '2026-10-18 17:04:17', 0),
+(11, 3, '三角 初華', 'Misumi Uika', '佐々木李子', 'Vo./Gt.', '/img/member-sumimi-1.png', 'sumimi 的主唱兼吉他手。同时也是 Ave Mujica 的 Doloris。', 1, '2026-10-18 20:57:20', '2026-10-18 21:36:02', 0),
+(12, 3, '純田 まな', 'Sumita Mana', '反田叶月', 'Vo.', '/img/member-sumimi-2.png', 'sumimi 的主唱。元气满满的偶像担当，永远站在镜头最前面。', 2, '2026-10-18 20:57:20', '2026-10-18 21:36:02', 0)
+ON DUPLICATE KEY UPDATE `band_id` = VALUES(`band_id`), `name_ja` = VALUES(`name_ja`), `name_romaji` = VALUES(`name_romaji`), `cv` = VALUES(`cv`), `position` = VALUES(`position`), `avatar_url` = VALUES(`avatar_url`), `intro` = VALUES(`intro`), `sort` = VALUES(`sort`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`), `is_deleted` = VALUES(`is_deleted`);
+
+-- album: 16 行
+INSERT INTO `album` (`id`, `band_id`, `name`, `type`, `cover_url`, `release_date`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(1, 1, '迷星叫', 'SINGLE', '/img/covers/song-1.jpg', '2022-11-09', '2026-10-17 16:30:30', '2026-10-19 12:02:55', 0),
+(2, 1, '音一会', 'SINGLE', '/img/covers/song-2.jpg', '2023-04-12', '2026-10-17 16:30:30', '2026-10-22 13:55:59', 0),
+(3, 1, '壱雫空', 'SINGLE', '/img/covers/song-3.jpg', '2023-08-09', '2026-10-17 16:30:30', '2026-10-22 13:55:59', 0),
+(4, 2, '黒のバースデイ', 'SINGLE', '/img/covers/song-7.jpg', '2023-04-11', '2026-10-17 16:30:30', '2026-10-22 13:55:59', 0),
+(7, 1, '迷跡波', 'ALBUM', '/img/covers/song-17.jpg', '2023-11-01', '2026-10-18 18:24:25', '2026-10-22 13:55:59', 0),
+(8, 1, '跡暖空', 'ALBUM', '/img/covers/song-26.jpg', '2024-12-18', '2026-10-18 18:24:25', '2026-10-22 13:55:59', 0),
+(12, 3, 'Here, the world!', 'SINGLE', '/img/covers/sumimi-here-the-world.jpg', '2025-05-28', '2026-10-19 12:24:47', '2026-10-19 12:24:47', 0),
+(13, 2, 'Alea jacta est', 'EP', '/img/covers/album-13.jpg', '2023-09-13', '2026-10-19 12:38:47', '2026-10-19 12:50:32', 0),
+(14, 2, '素晴らしき世界 でも どこにもない場所', 'SINGLE', '/img/covers/song-9.jpg', '2023-12-30', '2026-10-19 12:38:47', '2026-10-19 12:38:47', 0),
+(15, 2, 'Completeness', 'ALBUM', '/img/covers/song-57.jpg', '2025-04-23', '2026-10-19 16:52:36', '2026-10-19 16:52:36', 0),
+(16, 1, '致並跡', 'ALBUM', NULL, '2026-07-15', '2026-10-22 13:55:59', '2026-10-22 13:55:59', 0),
+(17, 1, 'バンドリ!カバーコレクション Extra Volume', 'ALBUM', NULL, '2024-07-10', '2026-10-22 13:55:59', '2026-10-22 13:55:59', 0),
+(18, 2, 'ELEMENTS', 'EP', NULL, '2024-10-02', '2026-10-22 13:55:59', '2026-10-22 13:55:59', 0),
+(19, 2, 'DIVINE', 'SINGLE', NULL, '2025-08-04', '2026-10-22 13:55:59', '2026-10-22 13:55:59', 0),
+(20, 2, '碧い瞳の中に', 'SINGLE', NULL, '2025-09-04', '2026-10-22 13:55:59', '2026-10-22 13:55:59', 0),
+(21, 2, '‘S/’ The Way / Sophie', 'SINGLE', NULL, '2025-12-10', '2026-10-22 13:58:27', '2026-10-22 13:58:27', 0)
+ON DUPLICATE KEY UPDATE `band_id` = VALUES(`band_id`), `name` = VALUES(`name`), `type` = VALUES(`type`), `cover_url` = VALUES(`cover_url`), `release_date` = VALUES(`release_date`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`), `is_deleted` = VALUES(`is_deleted`);
+
+-- song: 55 行
+INSERT INTO `song` (`id`, `title`, `band_id`, `album_id`, `track_no`, `release_date`, `duration`, `cover_url`, `audio_url`, `stream_url`, `mv_url`, `mv_platform`, `tags`, `status`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(1, '迷星叫', 1, 1, 1, '2022-11-09', 246, '/img/covers/song-1.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/3e/ac/cf/3eaccf4d-91cc-a4f8-23d1-823553788f92/mzaf_14282508663799295633.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2097485069', 'https://player.bilibili.com/player.html?bvid=BV1Ue4y117Xz&autoplay=0', 'BILIBILI', '燃,主题曲', 1, '2026-10-17 16:30:30', '2026-10-19 16:14:44', 0),
+(2, '音一会', 1, 2, 1, '2023-01-11', 232, '/img/covers/song-2.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/72/18/e3/7218e370-5938-4d58-1b52-1829347ec389/mzaf_8545842104847365832.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2097485075', 'https://player.bilibili.com/player.html?bvid=BV1Zs4y1m7HP&autoplay=0', 'BILIBILI', '治愈', 1, '2026-10-17 16:30:30', '2026-10-19 16:14:44', 0),
+(3, '壱雫空', 1, 3, 1, '2023-04-12', 255, '/img/covers/song-3.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/73/46/97/734697b6-03d0-9771-1897-3e6fef08e38e/mzaf_15959749137406295167.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2060086839', 'https://player.bilibili.com/player.html?bvid=BV1Lh411c7Ys&autoplay=0', 'BILIBILI', '燃', 1, '2026-10-17 16:30:30', '2026-10-21 13:56:55', 0),
+(4, '潜在表明', 1, 2, 2, '2023-04-12', 218, '/img/covers/song-4.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/11/f4/0c/11f40c7c-32a8-51d8-9aaa-8e33dbdf433a/mzaf_7882356024645150806.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2097485074', 'https://player.bilibili.com/player.html?bvid=BV1xP4y1i7G8&autoplay=0', 'BILIBILI', '暗,燃', 1, '2026-10-17 16:30:30', '2026-10-21 13:56:55', 0),
+(5, '影色舞', 1, 2, 3, '2024-01-11', 224, '/img/covers/song-5.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f9/42/bc/f942bce1-fb33-6354-69f5-067d06d753b3/mzaf_1965524780295079676.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2097485072', 'https://player.bilibili.com/player.html?bvid=BV1gP411u7kS&autoplay=0', 'BILIBILI', '暗', 1, '2026-10-17 16:30:30', '2026-10-21 13:56:55', 0),
+(6, '栞', 1, 3, 2, '2023-05-24', 262, '/img/covers/song-6.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/fd/64/d4/fd64d483-a7fb-5f4b-6084-9deece6c6619/mzaf_1791518156138424805.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2060083093', 'https://player.bilibili.com/player.html?bvid=BV1na4y1c7bR&autoplay=0', 'BILIBILI', '治愈,催泪', 1, '2026-10-17 16:30:30', '2026-10-22 13:20:48', 0),
+(7, '黒のバースデイ', 2, 4, 1, '2023-02-15', 240, '/img/covers/song-7.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f9/c6/6b/f9c66bbd-152e-5746-0275-41af2240e33d/mzaf_15116290605173598509.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2118740086', 'https://player.bilibili.com/player.html?bvid=BV1ChKHzAEQF&autoplay=0', 'BILIBILI', '暗,燃', 1, '2026-10-17 16:30:30', '2026-10-19 16:45:02', 0),
+(8, 'Ave Mujica', 2, 13, 1, '2023-09-13', 231, '/img/covers/song-8.png', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/44/7e/96/447e967e-f869-c095-12d9-5c045586141b/mzaf_6662109111460915602.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2085117641', 'https://player.bilibili.com/player.html?bvid=BV1XcjSzXEdY&autoplay=0', 'BILIBILI', '暗', 1, '2026-10-17 16:30:30', '2026-10-19 16:46:28', 0),
+(9, '素晴らしき世界', 2, 14, 2, '2023-12-30', 248, '/img/covers/song-9.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/53/91/1e/53911eec-12e6-d79f-8498-bb964e4bd3dc/mzaf_8433476808854128044.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2114641236', 'https://player.bilibili.com/player.html?bvid=BV1Xg4y1k7GH&autoplay=0', 'BILIBILI', '治愈', 1, '2026-10-17 16:30:30', '2026-10-22 13:20:48', 0),
+(11, '碧天伴走', 1, 7, 1, '2023-05-24', 240, '/img/covers/song-11.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f8/2e/e9/f82ee968-34ec-ed14-d18f-090b36e461b9/mzaf_5297713312385259829.plus.aac.p.m4a', 'https://music.163.com/#/song?id=2074119582', 'https://player.bilibili.com/player.html?bvid=BV1ACJHzAExV&autoplay=0', 'BILIBILI', '燃', 1, '2026-10-18 18:24:25', '2026-10-21 13:56:55', 0),
+(13, '無路矢', 1, 7, 6, '2023-08-09', 251, '/img/covers/song-13.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f6/19/4d/f6194d3c-9dca-e315-63de-0a0550544a88/mzaf_7613310834311336670.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1ns4GebEfx&autoplay=0', 'BILIBILI', '暗,燃', 1, '2026-10-18 18:24:25', '2026-10-21 13:56:55', 0),
+(14, '詩超絆', 1, 7, 4, '2023-12-13', 288, '/img/covers/song-14.png', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ac/25/41/ac25415e-7689-1e33-bec2-8f9656094198/mzaf_11192983204653992812.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1kj411i7ZY&autoplay=0', 'BILIBILI', '催泪,名场面', 1, '2026-10-18 18:24:25', '2026-10-21 13:56:55', 0),
+(15, '春日影', 1, 7, 3, '2023-07-27', 254, '/img/covers/song-15.png', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/fa/8b/10/fa8b102d-187d-6750-145e-c02106eb5091/mzaf_17798707345381201290.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1JHLUz4EUy&autoplay=0', 'BILIBILI', 'CRYCHIC,名场面', 1, '2026-10-18 18:24:25', '2026-10-21 13:56:55', 0),
+(16, '顔', 2, 15, 6, '2025-01-15', 230, '/img/covers/song-16.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/57/dc/4a/57dc4a80-3026-7005-ef09-e54ee82226d4/mzaf_1619065298388649267.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1EjqzBvEms&autoplay=0', 'BILIBILI', '暗,燃', 1, '2026-10-18 18:24:25', '2026-10-20 20:54:15', 0),
+(18, '迷路日々', 1, 7, 5, NULL, 215, '/img/covers/song-18.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/2f/27/2a/2f272acc-a5c7-1b74-8c88-9c0fa58d2f44/mzaf_14273750615248355215.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV11m4y1T7mS&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-21 13:56:55', 0),
+(19, '処救生', 1, 8, NULL, NULL, 217, '/img/covers/song-19.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/06/a2/00/06a200c1-36dd-7de6-4a2e-4e459470c2f6/mzaf_8088737320516618078.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1Qz4y1F7B4&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(20, '輪符雨', 1, 8, NULL, NULL, 207, '/img/covers/song-20.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/20/21/7c/20217c12-7dbb-9e92-40b5-6a78f55d1d1f/mzaf_4451871267718590501.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1EF4m1j7QF&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(21, '砂寸奏／回層浮', 1, 8, NULL, NULL, 234, '/img/covers/song-21.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c4/10/30c41048-467b-1ea0-0ea6-8e8a185404d6/mzaf_833708600030408075.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1VH4y1E7XE&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(22, '端程山', 1, 8, NULL, NULL, 260, '/img/covers/song-22.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/bb/78/30bb78b6-0fba-7a0f-2405-6a50834f722d/mzaf_12159357708717122000.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1Lf421B7w8&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(23, '過惰幻', 1, 8, 5, NULL, 237, '/img/covers/song-23.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ef/98/ca/ef98ca36-3614-401e-8bef-11cfa10c6c29/mzaf_3456823077421865333.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1FwSdY9ESF&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-21 13:56:55', 0),
+(24, '霧周途', 1, 8, 3, NULL, 222, '/img/covers/song-24.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/5f/96/da/5f96da21-56f4-1928-506e-7c669756e9d2/mzaf_10340548192454023451.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1gES9YNEFP&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-21 13:56:55', 0),
+(25, '歩拾道', 1, 8, 1, NULL, 260, '/img/covers/song-25.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/68/e8/f6/68e8f6f1-9da9-e2f3-7bcf-b46b0a3e6ec4/mzaf_11583159646388123694.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1RpmBYtEy1&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-21 13:56:55', 0),
+(27, '聿日箋秋', 1, 16, NULL, NULL, 236, '/img/covers/song-27.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/a7/9e/c2/a79ec2c9-4aaa-74b2-0e4f-9e9745832471/mzaf_9235557380841557469.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1raZZYJE1D&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(28, '残痕字 (TV Size)', 1, 16, NULL, NULL, 90, '/img/covers/song-28.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/be/ce/19/bece19bf-eea7-2b2c-4588-da767cbe1ddd/mzaf_16313094603405687187.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1AN8WzAEj8&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(29, '往欄印', 1, 16, NULL, NULL, 298, '/img/covers/song-29.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/87/2f/cb/872fcbe5-fe17-2b21-5b86-c02c93c1f850/mzaf_14025831591996984362.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1SkmEBpEwc&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(30, 'エガクミライ', 1, 16, NULL, NULL, 239, '/img/covers/song-30.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f5/06/c5/f506c558-7304-35c2-3155-215fd527a147/mzaf_14776694955921585162.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1yRWVzxE5Q&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(31, '静降想', 1, 16, NULL, NULL, 278, '/img/covers/song-31.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/dd/25/6e/dd256ef5-0cb1-eca3-4b8c-672eef0acdf9/mzaf_9843034283886829493.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1wcmgBJEbM&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(32, '証命讃歌', 1, 16, NULL, NULL, 192, '/img/covers/song-32.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c9/34/37/c9343705-1091-645f-9c1b-29b90d12d779/mzaf_9107407538077555757.plus.aac.p.m4a', NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(33, '過去を喰らう (Cover)', 1, 17, NULL, NULL, 240, '/img/covers/song-33.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c7/a2/ee/c7a2ee90-5534-19ae-afb3-6c9845457283/mzaf_14006231765498384100.plus.aac.p.m4a', NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(34, 'だれかの心臓になれたなら (Cover)', 1, 17, NULL, NULL, 234, '/img/covers/song-34.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/69/9b/d4/699bd4ad-7436-04b4-ca43-a8134374c910/mzaf_11028125219263282046.plus.aac.p.m4a', NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(35, 'ノンブレス·オブリージュ (Cover)', 1, 17, NULL, NULL, 207, '/img/covers/song-35.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/29/92/e3/2992e311-2e90-35c1-ed6c-4ca5c1a50b28/mzaf_5349188953943560956.plus.aac.p.m4a', NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(36, 'バンドリ!カバーコレクション', 1, 17, NULL, NULL, NULL, '/img/covers/song-36.jpg', NULL, NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(37, '潜在表明 - From THE FIRST TAKE', 1, NULL, NULL, NULL, 266, '/img/covers/song-37.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/16/d4/84/16d48403-7d8e-b3da-1c7f-a23923b3dd1c/mzaf_12227495902279560496.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1hFQWYQE15&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:20:48', 0),
+(38, 'ふたつの月 ~Deep Into The Forest~', 2, 13, NULL, NULL, 296, '/img/covers/song-38.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e7/34/59/e73459a1-9e2c-8e4f-4bc4-d81cf3aa220a/mzaf_2347562309670672075.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV18e411Y7Vz&autoplay=0', NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(39, 'Choir ''S'' Choir', 2, 13, NULL, NULL, 280, '/img/covers/song-39.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/65/cb/ca/65cbca57-11dd-955f-88bf-43ed7cdf37b4/mzaf_10390276721221456627.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1kUPXeREJ9&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(40, '神さま、バカ', 2, 13, NULL, NULL, 213, '/img/covers/song-40.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/39/75/f5/3975f518-44cc-9aed-f7f5-539102a1998c/mzaf_14210414546871650420.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1VPBFYREU2&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(41, 'Masquerade Rhapsody Request', 2, 13, NULL, NULL, 242, '/img/covers/song-41.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/01/40/a9/0140a90c-8f6e-4395-a8e8-9ec05259c964/mzaf_11473953764860556383.plus.aac.p.m4a', NULL, NULL, NULL, NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(42, 'Angles', 2, 14, NULL, NULL, 275, '/img/covers/song-42.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/4e/59/a2/4e59a25b-d70c-1fde-0488-7f1637f8568b/mzaf_6729334152746250061.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1EoE9zUEbN&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(43, 'Symbol I', 2, 18, NULL, NULL, 312, '/img/covers/song-43.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/50/d2/8b/50d28bfd-ebf5-a070-eeb9-2808cd665f85/mzaf_18252749252497323929.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1C9Nzz7Ein&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(44, 'Symbol II Air', 2, 18, NULL, NULL, 214, '/img/covers/song-44.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/e2/af/16/e2af16e9-5d18-83f5-3f7f-6e8eebb51a7e/mzaf_17475819849432678220.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV19D421M73g&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(45, 'Symbol III', 2, 18, NULL, NULL, 256, '/img/covers/song-45.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/85/ef/d8/85efd8de-d7b5-59e0-0715-a88464fa57be/mzaf_4422540043052579407.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1W9Nzz7EJZ&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(46, 'Symbol IV Earth', 2, 18, NULL, NULL, 239, '/img/covers/song-46.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/6a/bf/0b/6abf0b2f-6ded-40e8-0372-fcab5a02c23c/mzaf_14707004215968167601.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1W9Nzz7EEt&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(49, 'KiLLKiSS', 2, 15, 1, NULL, 208, '/img/covers/song-49.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/8c/fb/70/8cfb706e-01a9-5eb6-b154-c25c34b657db/mzaf_8473314610296989148.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1wnrDYoEGY&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-20 20:54:15', 0),
+(50, 'Georgette Me, Georgette You', 2, 15, 2, NULL, 234, '/img/covers/song-50.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/9d/98/3e/9d983ed6-e520-367e-7d6b-be9a23647855/mzaf_3920530166910904567.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1L9cteeERx&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-20 20:54:15', 0),
+(51, 'Imprisoned XII', 2, 15, 3, NULL, 187, '/img/covers/song-51.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ae/6f/5c/ae6f5c13-e562-1a25-44ec-c00d68cb9c2f/mzaf_1739410317949973019.plus.aac.p.m4a', NULL, 'https://www.bilibili.com/bangumi/play/ep1521592', 'BILIBILI_PAGE', NULL, 1, '2026-10-18 20:57:20', '2026-10-20 20:54:15', 0),
+(52, 'Crucifix X', 2, 15, 4, NULL, 299, '/img/covers/song-52.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/2d/05/f3/2d05f3d0-93ab-8e1e-5ab2-b82ba8a51c56/mzaf_8075094713031547629.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1SYQ6YPEmZ&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-20 20:54:15', 0),
+(53, '天球(そら)のMúsica', 2, 15, 7, NULL, 279, '/img/covers/song-53.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/fd/d6/a7/fdd6a798-016b-d8d2-2b18-30ad6ffb827b/mzaf_4082869420215908424.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1RtZmYGE3a&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-20 20:54:15', 0),
+(54, 'DIVINE', 2, 19, NULL, NULL, 257, '/img/covers/song-54.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f9/dc/fa/f9dcfa2d-448b-8937-3f43-17b840d9c8c1/mzaf_8973735517476138021.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1RodKYWEgr&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(55, 'in your blue eyes', 2, 20, NULL, NULL, 223, '/img/covers/song-55.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/b1/e4/b1/b1e4b131-b565-8220-f083-a1c94f85778d/mzaf_15566032399383303711.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV13Ma2zjEMA&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:55:59', 0),
+(56, 'S The Way', 2, 21, NULL, NULL, 227, '/img/covers/song-56.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/6a/8c/ff/6a8cffe4-9768-1068-8721-df66a26764ca/mzaf_6041876199284644908.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1LmmLBpEAs&autoplay=0', 'BILIBILI', NULL, 1, '2026-10-18 20:57:20', '2026-10-22 13:58:27', 0),
+(58, 'Here, the world!', 3, 12, 1, '2023-06-30', 263, '/img/covers/sumimi-here-the-world.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/7e/a0/ed/7ea0ed60-9884-bc4f-939c-0e7e3839207e/mzaf_11111132645316514114.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV181421k7F6&autoplay=0', 'BILIBILI', '偶像,闪闪', 1, '2026-10-19 11:17:42', '2026-10-21 13:57:05', 0),
+(59, 'Sweet Escape', 3, 12, NULL, '2025-05-28', 224, '/img/covers/sumimi-here-the-world.jpg', NULL, NULL, 'https://player.bilibili.com/player.html?bvid=BV1Q7jdzKEKb&autoplay=0', 'BILIBILI', '偶像,闪闪', 1, '2026-10-19 11:17:42', '2026-10-21 14:40:36', 0),
+(60, '焚音打', 1, 3, 3, '2023-04-12', 332, '/img/covers/song-3.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/23/0d/02/230d025a-72aa-7038-da2e-c54a87c6f088/mzaf_949642698194693992.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV16dV3zDEZX&autoplay=0', 'BILIBILI', '暗,动画插曲', 1, '2026-10-19 16:22:06', '2026-10-22 13:31:23', 0),
+(61, '八芒星ダンス', 2, 15, 5, NULL, 230, '/img/covers/song-57.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/58/9f/ae/589fae70-983b-84f3-0efc-37f3ce9129d1/mzaf_16019185153775512435.plus.aac.p.m4a', NULL, 'https://player.bilibili.com/player.html?bvid=BV1n4MjzEEwx&autoplay=0', 'BILIBILI', '暗,动画插曲', 1, '2026-10-19 16:28:44', '2026-10-22 13:31:23', 0),
+(62, '人間になりたいうたII', 1, NULL, NULL, NULL, NULL, '/img/covers/song-15.png', NULL, NULL, 'https://www.bilibili.com/bangumi/play/ep1456209', 'BILIBILI_PAGE', 'CRYCHIC,动画插曲', 1, '2026-10-19 16:28:44', '2026-10-21 13:56:55', 0)
+ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `band_id` = VALUES(`band_id`), `album_id` = VALUES(`album_id`), `track_no` = VALUES(`track_no`), `release_date` = VALUES(`release_date`), `duration` = VALUES(`duration`), `cover_url` = VALUES(`cover_url`), `audio_url` = VALUES(`audio_url`), `stream_url` = VALUES(`stream_url`), `mv_url` = VALUES(`mv_url`), `mv_platform` = VALUES(`mv_platform`), `tags` = VALUES(`tags`), `status` = VALUES(`status`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`), `is_deleted` = VALUES(`is_deleted`);
+
+-- live_event: 6 行
+INSERT INTO `live_event` (`id`, `title`, `band_id`, `description`, `poster_url`, `venue`, `status`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(1, 'MyGO!!!!! 9th LIVE「つなぎ目の向こうに」- 神戸再景編 -', 1, 'MyGO!!!!! 第 9 场专场，神户世界纪念大厅两日公演（2026.11.14-15）。官方票价参考：一般指定席 8,800 円 / 一般指定席（特製グッズ付）13,200 円 / A席（特製グッズ付）17,600 円 / S席（特製グッズ付）25,300 円。本站票档金额为演示数据。', '/img/band-mygo.jpg', 'ワールド記念ホール（神戸ポートアイランドホール）', 'PUBLISHED', '2026-10-17 16:46:44', '2026-10-21 15:49:38', 0),
+(2, 'Ave Mujica 7th LIVE「Virtus」', 2, 'Ave Mujica 第 7 场专场，京王 Arena TOKYO 两日公演（2026.10.24-25）。官方票价参考：一般指定席 9,900 円 / A席（特製グッズ付）16,500 円 / S席（特製グッズ付）24,200 円。本站票档金额为演示数据。', '/img/band-mujica.png', '京王アリーナ TOKYO', 'ENDED', '2026-10-18 18:24:25', '2026-10-31 17:50:09', 0),
+(19, 'MyGO!!!!! 9th LIVE「つなぎ目の向こうに」〈横浜公演〉', 1, '2026年7月18日・19日 ぴあアリーナMM。单独公演两日，票面含特典档位（S/A/一般指定）。官方票价：S席 24,200 / A席 16,500 / 一般指定席（附特典）13,200 / 一般指定席 8,800（含税）。开场嘉宾 DAY1 millsage、DAY2 一家Dumb Rock!。本站已有的是神户追加公演，此为横滨主办公演。', '/img/band-mygo.jpg', 'ぴあアリーナMM', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(20, 'BanG Dream! Special LIVE in TAIPEI DAY1「moment / memory」', 2, '2026年4月11日 台北・大佳河濱公園。MyGO!!!!! × Ave Mujica 双乐队拼盘公演（DAY1）。票价档位未从官方页取到，站内以 8,800 参考价占位，实际以官方公告为准；本站按 Ave Mujica 归档。', '/img/band-mujica.png', '台北・大佳河濱公園', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(21, 'Ave Mujica LIVE TOUR 2026「Exitus」', 2, '2026年4月17日～8月9日 全国巡演共 8 场：Zepp Fukuoka（4.17）、Zepp Namba（4.26）、Zepp Nagoya（5.1）、Zepp Haneda TOKYO（5.4）、SGC HALL ARIAKE（6.19/6.20）、台北・國立體育大學綜合體育館 林口體育館（8.8/8.9）。各场票价不同，站内统一以 8,800 参考价占位，实际以官方为准。', '/img/band-mujica.png', '全国ツアー（8 公演）', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(22, 'BEAT AX -SUMMER EDITION 2026-', 2, '2026年7月12日 Kアリーナ横浜。RAISE A SUILEN × Ave Mujica 拼盘公演（RAISE A SUILEN 未收录于本站乐队库）。票价未取到官方档位，站内以 8,800 参考价占位。', '/img/band-mujica.png', 'Kアリーナ横浜', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0)
+ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `band_id` = VALUES(`band_id`), `description` = VALUES(`description`), `poster_url` = VALUES(`poster_url`), `venue` = VALUES(`venue`), `status` = VALUES(`status`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`), `is_deleted` = VALUES(`is_deleted`);
+
+-- live_session: 16 行
+INSERT INTO `live_session` (`id`, `event_id`, `name`, `start_time`, `end_time`, `sale_start_time`, `status`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(1, 1, 'DAY1（11.14 神戸）', '2026-11-14 18:00:00', '2026-11-14 20:30:00', '2026-10-01 12:00:00', 'ONSALE', '2026-10-17 16:46:44', '2026-10-21 15:49:38', 0),
+(2, 1, 'DAY2（11.15 神戸）', '2026-11-15 17:00:00', '2026-11-15 19:30:00', '2026-10-01 12:00:00', 'ONSALE', '2026-10-17 16:46:44', '2026-10-21 15:49:38', 0),
+(3, 2, 'DAY1（10.24 TOKYO）', '2026-10-24 18:30:00', '2026-10-24 21:00:00', '2026-10-01 12:00:00', 'ENDED', '2026-10-18 18:24:25', '2026-10-31 17:50:09', 0),
+(4, 2, 'DAY2（10.25 TOKYO）', '2026-10-25 17:30:00', '2026-10-25 20:00:00', '2026-10-01 12:00:00', 'ENDED', '2026-10-21 15:49:38', '2026-10-31 17:50:09', 0),
+(33, 19, 'DAY1（7.18 横浜）', '2026-07-18 18:00:00', '2026-07-18 20:30:00', '2026-05-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(34, 19, 'DAY2（7.19 横浜）', '2026-07-19 18:00:00', '2026-07-19 20:30:00', '2026-05-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(35, 20, 'DAY1（4.11 台北）', '2026-04-11 18:00:00', '2026-04-11 21:00:00', '2026-02-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(36, 21, '福岡（4.17 Zepp Fukuoka）', '2026-04-17 18:30:00', '2026-04-17 21:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(37, 21, '大阪（4.26 Zepp Namba）', '2026-04-26 18:30:00', '2026-04-26 21:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(38, 21, '名古屋（5.1 Zepp Nagoya）', '2026-05-01 18:30:00', '2026-05-01 21:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(39, 21, '東京（5.4 Zepp Haneda）', '2026-05-04 18:30:00', '2026-05-04 21:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(40, 21, '有明（6.19 SGC HALL ARIAKE）', '2026-06-19 18:30:00', '2026-06-19 21:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(41, 21, '有明（6.20 SGC HALL ARIAKE）', '2026-06-20 17:30:00', '2026-06-20 20:00:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(42, 21, '台北（8.8 林口體育館）', '2026-08-08 19:00:00', '2026-08-08 21:30:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(43, 21, '台北（8.9 林口體育館）', '2026-08-09 17:00:00', '2026-08-09 19:30:00', '2026-03-01 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0),
+(51, 22, '本公演（7.12 横浜）', '2026-07-12 17:00:00', '2026-07-12 20:00:00', '2026-05-15 12:00:00', 'ENDED', '2026-11-01 13:39:16', '2026-11-01 13:39:16', 0)
+ON DUPLICATE KEY UPDATE `event_id` = VALUES(`event_id`), `name` = VALUES(`name`), `start_time` = VALUES(`start_time`), `end_time` = VALUES(`end_time`), `sale_start_time` = VALUES(`sale_start_time`), `status` = VALUES(`status`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`), `is_deleted` = VALUES(`is_deleted`);
+
+-- ticket_type: 26 行
+INSERT INTO `ticket_type` (`id`, `session_id`, `name`, `price`, `total_stock`, `sold_count`, `max_per_user`, `status`, `is_deleted`, `created_at`, `updated_at`) VALUES
+(1, 1, 'S席（特製グッズ付）', 980.00, 50, 10, 4, 1, 0, '2026-10-17 16:46:44', '2026-11-02 18:48:01'),
+(2, 1, '一般指定席', 480.00, 100, 0, 4, 1, 0, '2026-10-17 16:46:44', '2026-10-21 15:49:38'),
+(3, 2, 'S席（特製グッズ付）', 980.00, 50, 1, 4, 1, 0, '2026-10-17 16:46:44', '2026-10-21 15:49:38'),
+(4, 2, '一般指定席', 480.00, 100, 0, 4, 1, 0, '2026-10-17 16:46:44', '2026-10-21 15:49:38'),
+(5, 3, 'S席（特製グッズ付）', 880.00, 40, 13, 2, 1, 0, '2026-10-18 18:24:25', '2026-10-22 17:10:09'),
+(6, 3, '一般指定席', 380.00, 120, 1, 4, 1, 0, '2026-10-18 18:24:25', '2026-10-21 15:49:56'),
+(7, 4, 'S席（特製グッズ付）', 880.00, 40, 0, 2, 1, 0, '2026-10-21 15:49:38', '2026-10-21 15:50:05'),
+(8, 4, '一般指定席', 380.00, 120, 0, 4, 1, 0, '2026-10-21 15:49:38', '2026-10-21 15:50:02'),
+(10, 34, 'S席（附特典）', 24200.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(11, 33, 'S席（附特典）', 24200.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(12, 34, 'A席（附特典）', 16500.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(13, 33, 'A席（附特典）', 16500.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(14, 34, '一般指定席（附特典）', 13200.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(15, 33, '一般指定席（附特典）', 13200.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(16, 34, '一般指定席', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(17, 33, '一般指定席', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(25, 35, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(26, 36, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(27, 37, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(28, 38, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(29, 39, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(30, 40, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(31, 41, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(32, 42, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(33, 43, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16'),
+(41, 51, '一般指定席（参考价）', 8800.00, 100, 0, 2, 1, 0, '2026-11-01 13:39:16', '2026-11-01 13:39:16')
+ON DUPLICATE KEY UPDATE `session_id` = VALUES(`session_id`), `name` = VALUES(`name`), `price` = VALUES(`price`), `total_stock` = VALUES(`total_stock`), `sold_count` = VALUES(`sold_count`), `max_per_user` = VALUES(`max_per_user`), `status` = VALUES(`status`), `is_deleted` = VALUES(`is_deleted`), `created_at` = VALUES(`created_at`), `updated_at` = VALUES(`updated_at`);
+
+-- setlist_item: 14 行
+INSERT INTO `setlist_item` (`id`, `session_id`, `song_id`, `order_no`, `is_encore`, `is_deleted`, `created_at`) VALUES
+(1, 1, 3, 1, 0, 0, '2026-10-18 18:24:25'),
+(2, 1, 4, 2, 0, 0, '2026-10-18 18:24:25'),
+(4, 1, 13, 3, 0, 0, '2026-10-18 18:24:25'),
+(5, 1, 6, 4, 0, 0, '2026-10-18 18:24:25'),
+(6, 1, 11, 5, 0, 0, '2026-10-18 18:24:25'),
+(7, 1, 14, 6, 0, 0, '2026-10-18 18:24:25'),
+(8, 1, 1, 7, 1, 0, '2026-10-18 18:24:25'),
+(9, 1, 15, 8, 1, 0, '2026-10-18 18:24:25'),
+(10, 2, 1, 1, 0, 0, '2026-10-18 18:24:25'),
+(11, 2, 2, 2, 0, 0, '2026-10-18 18:24:25'),
+(12, 2, 5, 3, 0, 0, '2026-10-18 18:24:25'),
+(13, 2, 4, 4, 0, 0, '2026-10-18 18:24:25'),
+(14, 2, 14, 5, 0, 0, '2026-10-18 18:24:25'),
+(15, 2, 15, 6, 1, 0, '2026-10-18 18:24:25')
+ON DUPLICATE KEY UPDATE `session_id` = VALUES(`session_id`), `song_id` = VALUES(`song_id`), `order_no` = VALUES(`order_no`), `is_encore` = VALUES(`is_encore`), `is_deleted` = VALUES(`is_deleted`), `created_at` = VALUES(`created_at`);
+
+SET FOREIGN_KEY_CHECKS = 1;
+-- 合计 148 行
