@@ -11,21 +11,36 @@ BACKEND=$ROOT/backend
 FRONTEND=$ROOT/frontend
 
 echo "==> [1/7] 拉取最新代码"
-cd "$ROOT" && git pull --ff-only || echo "  (git pull 失败，使用现有代码继续)"
+cd "$ROOT"
+# 部署机不需要保留本地改动：直接对齐到 origin/main。
+# 用 reset 而非 pull：历史被重建（force push）后 pull --ff-only 必然失败，
+# 旧脚本会"失败但继续"，导致以为更新了、实际跑的是旧代码。
+if git fetch --depth=1 origin main; then
+  git reset --hard FETCH_HEAD
+  echo "  已对齐 origin/main: $(git log --oneline -1)"
+else
+  echo "  [警告] 拉取失败，将使用现有代码继续（可能是旧版本，请检查网络）"
+fi
 
 echo "==> [2/7] MySQL 启动 + 数据库账号同步"
 sudo service mysql start >/dev/null 2>&1 || sudo service mysql restart >/dev/null 2>&1
 # .env 不存在则生成默认配置（JWT_SECRET 随机）
 if [ ! -f "$BACKEND/.env" ]; then
   SECRET=$(openssl rand -base64 48 | tr -d '\n')
+  # 数据库密码随机生成，不把固定口令写进仓库（旧版本此处写死过固定值）
+  DB_NEW_PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 20)
   cat > "$BACKEND/.env" <<EOF
 DB_URL=jdbc:mysql://localhost:3306/bandori_live?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 DB_USERNAME=bandori
-DB_PASSWORD=Bandori_2026
+DB_PASSWORD=$DB_NEW_PASS
 JWT_SECRET=$SECRET
 JWT_EXPIRATION_HOURS=72
+# AI 助手（可选）：不填则助手返回 50301，站点其他功能不受影响
+# LLM_BASE_URL=http://localhost:11434/v1/chat/completions
+# LLM_MODEL=qwen3:8b
+# LLM_API_KEY=
 EOF
-  echo "  已生成默认 $BACKEND/.env"
+  echo "  已生成默认 $BACKEND/.env（数据库密码随机）"
 fi
 # 密码以 .env 为唯一事实源，数据库账号自动同步
 DB_PASSWORD=$(grep '^DB_PASSWORD=' "$BACKEND/.env" | head -1 | cut -d= -f2-)
@@ -43,14 +58,27 @@ fi
 echo "  使用 $JAR"
 
 echo "==> [4/7] 重启后端（启动即执行 Flyway 迁移）"
+# .env 可以手写，缺键就给默认值：空字符串会让 Spring 绑定 long 失败
+[ -n "$(grep '^JWT_EXPIRATION_HOURS=' .env | head -1 | cut -d= -f2-)" ] || echo "JWT_EXPIRATION_HOURS=72" >> .env
 pkill -f 'java -jar' 2>/dev/null || true
 sleep 2
+# LLM_* 从 .env 透传（可选）：线上没有 Ollama 时必须配云端 API，否则小灯 50301。
+# 用数组而不是 ${VAR:+...} 拼接，避免值里带空格/特殊字符时被拆成多个参数。
+ENV_LLM_BASE_URL="$(grep '^LLM_BASE_URL=' .env | head -1 | cut -d= -f2-)"
+ENV_LLM_MODEL="$(grep '^LLM_MODEL=' .env | head -1 | cut -d= -f2-)"
+ENV_LLM_API_KEY="$(grep '^LLM_API_KEY=' .env | head -1 | cut -d= -f2-)"
+EXTRA_ENV=()
+[ -n "$ENV_LLM_BASE_URL" ] && EXTRA_ENV+=("LLM_BASE_URL=$ENV_LLM_BASE_URL")
+[ -n "$ENV_LLM_MODEL" ] && EXTRA_ENV+=("LLM_MODEL=$ENV_LLM_MODEL")
+[ -n "$ENV_LLM_API_KEY" ] && EXTRA_ENV+=("LLM_API_KEY=$ENV_LLM_API_KEY")
+
 nohup env \
   DB_URL="$(grep '^DB_URL=' .env | head -1 | cut -d= -f2-)" \
   DB_USERNAME="$(grep '^DB_USERNAME=' .env | head -1 | cut -d= -f2-)" \
   DB_PASSWORD="$DB_PASSWORD" \
   JWT_SECRET="$(grep '^JWT_SECRET=' .env | head -1 | cut -d= -f2-)" \
-  JWT_EXPIRATION_HOURS="$(grep '^JWT_EXPIRATION_HOURS=' .env | head -1 | cut -d= -f2-)" \
+  JWT_EXPIRATION_HOURS="$(grep '^JWT_EXPIRATION_HOURS=' .env | head -1 | cut -d= -f2- || true)" \
+  "${EXTRA_ENV[@]}" \
   java -jar "$JAR" > backend.log 2>&1 &
 
 echo "==> [5/7] 前端构建（同源 API 路径）"
@@ -82,6 +110,8 @@ sudo nginx -t && sudo service nginx reload
 
 echo "==> [7/7] 验证（等后端 20 秒）"
 sleep 20
+echo "--- 后端健康 ---"
+curl -s "http://127.0.0.1:8080/api/v1/health" | head -c 120; echo
 echo "--- 后端直连 ---"
 curl -s "http://127.0.0.1:8080/api/v1/songs?page=0&size=1" | head -c 100; echo
 echo "--- nginx 全链路 ---"
