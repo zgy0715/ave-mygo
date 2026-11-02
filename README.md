@@ -235,6 +235,9 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 | [docs/14-演出数据补充清单.md](docs/14-演出数据补充清单.md) | 官方演出数据核验清单（含来源） |
 | [docs/15-前端提示词-小灯v2接入.md](docs/15-前端提示词-小灯v2接入.md) | v2 事件流接入说明 |
 | [docs/16-前端提示词-首页往期回顾.md](docs/16-前端提示词-首页往期回顾.md) | 首页「往期回顾」模块 |
+| [docs/17-后续演进计划.md](docs/17-后续演进计划.md) | 产品演进：来源基座 / 演出档案闭环 / 个人空间 / AI 引用 |
+| [docs/18-工程深度与体量方案.md](docs/18-工程深度与体量方案.md) | 七个 L3 模块、可量化证明与落地可行性 |
+| [docs/metrics.md](docs/metrics.md) | 项目度量快照（规模/测试/数据的**唯一数字口径**） |
 
 ---
 
