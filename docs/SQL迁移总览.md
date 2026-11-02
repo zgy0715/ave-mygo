@@ -1,5 +1,12 @@
 # SQL 迁移总览（V1 – V55）
 
+> ⚠️ **冻结声明（2026-11-02）**
+>
+> 1. **V1–V55 只读**：不得修改内容、改名或删除。这些迁移已在数据库中执行，Flyway 按 checksum 校验，改动即导致后端启动失败（`Validate failed: checksum mismatch`）。
+> 2. **表结构变更只能新增 V56 及以后**，文件放 `ave-mygo/src/main/resources/db/migration/`。
+> 3. **数据补录 / 种子不再进 Flyway**，放 `db/seed/*.sql`（幂等，手动执行）。
+> 4. 本文件第四节"数据水位"（56 首 / 10 专辑 / max=37）已过期，**唯一准确口径以 [metrics.md](metrics.md) 为准**。
+
 > 位置：`ave-mygo/src/main/resources/db/migration/`　共 **55 个文件**，Flyway 全量应用至 **V55**（全部 success）。
 > 生成时间：2026-11-02（依据文件实际内容 + Flyway 历史表核对）
 >
