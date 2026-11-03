@@ -19,12 +19,18 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Ollama 流式实现（OpenAI 兼容 /v1/chat/completions + stream=true）。
+ * 流式 LLM 实现（OpenAI 兼容 /v1/chat/completions + stream=true）。
+ *
+ * 同一份代码兼容两类后端（2026-11-03，docs/19 P0-2）：
+ *  - 本地 Ollama：不配 LLM_API_KEY → 不发 Authorization，模型可自动探测；
+ *  - 云端（DeepSeek / 百炼 / SiliconFlow）：配 LLM_API_KEY → 发 Bearer 头，
+ *    且必须显式配置 LLM_MODEL（云端无法探测），tool_calls 按 index 增量拼接。
  *
  * 实测结论（2026-11-01，qwen3:8b）：
  *  - 首个 chunk 是 delta.reasoning（思考过程，约 0.5s 到达），正文 content 为空 → 用它触发「思考中」
  *  - reasoning 片段不展示给用户（8B 的思考是碎片化的，展示反而显得混乱），直接丢弃
- *  - tool_calls 是**整块**到达（不是增量拼接），随后一个 chunk 带 finish_reason=tool_calls
+ *  - Ollama 的 tool_calls 是整块到达；云端标准协议是按 index 增量分片——统一交给
+ *    {@link OpenAiStreamAccumulator} 按 index 累加，两种格式都能拼出完整参数
  *  - 结束时发送 data: [DONE]
  */
 @Slf4j
@@ -42,6 +48,10 @@ public class OllamaStreamLlm implements StreamLlm {
     @Value("${llm.model:}")
     private String model;
 
+    /** 云 API Key（DeepSeek / 百炼 / SiliconFlow 等）；本地 Ollama 留空则不发鉴权头 */
+    @Value("${llm.api-key:}")
+    private String apiKey;
+
     private volatile String detectedModel;
 
     @Override
@@ -56,12 +66,16 @@ public class OllamaStreamLlm implements StreamLlm {
         body.put("stream", true);
         body.put("temperature", 0.3);
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl))
                 .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream")
                 .timeout(Duration.ofSeconds(120))
-                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.header("Authorization", "Bearer " + apiKey);   // 云 API 必需；Ollama 不需要
+        }
+        HttpRequest request = builder.build();
 
         HttpResponse<java.io.InputStream> resp = http.send(request,
                 HttpResponse.BodyHandlers.ofInputStream());
@@ -69,8 +83,7 @@ public class OllamaStreamLlm implements StreamLlm {
             throw new IllegalStateException("LLM HTTP " + resp.statusCode());
         }
 
-        StringBuilder content = new StringBuilder();
-        List<ToolCall> toolCalls = new ArrayList<>();
+        OpenAiStreamAccumulator acc = new OpenAiStreamAccumulator();
         boolean thinkingReported = false;
 
         try (BufferedReader reader = new BufferedReader(
@@ -89,38 +102,36 @@ public class OllamaStreamLlm implements StreamLlm {
                     continue;   // 非法 chunk 跳过，不中断整轮
                 }
 
-                // 思考阶段：只上报一次「思考中」，内容丢弃
-                if (!delta.path("reasoning").isMissingNode() && !thinkingReported) {
+                OpenAiStreamAccumulator.Delta d = acc.accept(delta);
+                if (d.thinkingStarted() && !thinkingReported) {
                     thinkingReported = true;
-                    listener.onThinking();
+                    listener.onThinking();      // 只上报一次，内容不展示
                 }
-
-                JsonNode c = delta.path("content");
-                if (c.isTextual() && !c.asText().isEmpty()) {
-                    content.append(c.asText());
-                    listener.onContent(c.asText());
-                }
-
-                for (JsonNode tc : delta.path("tool_calls")) {
-                    String name = tc.path("function").path("name").asText();
-                    if (name.isBlank()) continue;
-                    String args = tc.path("function").path("arguments").isString()
-                            ? tc.path("function").path("arguments").asText()
-                            : tc.path("function").path("arguments").toString();
-                    String id = tc.path("id").asText("call_" + toolCalls.size());
-                    toolCalls.add(new ToolCall(id, name, args));
-                    listener.onToolCall(id, name, args);
+                if (d.contentPiece() != null) {
+                    listener.onContent(d.contentPiece());
                 }
             }
         }
 
-        return new Turn(content.toString(), toolCalls);
+        // tool_calls 在流结束后统一给出完整参数（增量分片已按 index 拼好）
+        List<ToolCall> toolCalls = acc.toolCalls();
+        for (ToolCall call : toolCalls) {
+            listener.onToolCall(call.id(), call.name(), call.argumentsJson());
+        }
+        return new Turn(acc.content(), toolCalls);
     }
 
-    /** 模型名：显式配置优先，否则探测 Ollama 已装模型并缓存 */
+    /**
+     * 模型名：显式配置优先；未配置时只对本地 Ollama 做探测（云端必须显式给模型名，
+     * 因为云服务没有 /api/tags 这类探测端点，盲目探测只会浪费时间并报出误导性错误）。
+     */
     private String resolveModel() {
         if (model != null && !model.isBlank()) return model;
         if (detectedModel != null) return detectedModel;
+        if (!isLocalOllama()) {
+            throw new IllegalStateException(
+                    "云端 LLM 必须显式配置 LLM_MODEL（如 deepseek-chat / qwen-plus / Qwen/Qwen2.5-7B-Instruct）");
+        }
         try {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:11434/api/tags"))
@@ -136,5 +147,10 @@ public class OllamaStreamLlm implements StreamLlm {
             log.debug("流式 LLM 模型探测失败: {}", e.getMessage());
         }
         throw new IllegalStateException("未配置 llm.model 且无法从 Ollama 探测模型");
+    }
+
+    /** 是否指向本机 Ollama（探测模型只对这个成立） */
+    private boolean isLocalOllama() {
+        return baseUrl.contains("11434") || baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1");
     }
 }

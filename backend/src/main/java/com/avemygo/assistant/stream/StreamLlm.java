@@ -19,7 +19,7 @@ public interface StreamLlm {
         /** 正文增量（真正的打字机来源） */
         void onContent(String delta);
 
-        /** 模型要求调用工具（qwen3 会整块给出，一次回调即完整参数） */
+        /** 模型要求调用工具（流结束后每条回调一次，参数已按 index 拼成完整 JSON） */
         void onToolCall(String id, String name, String argumentsJson);
     }
 
