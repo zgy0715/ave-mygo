@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { apiUp, loginAs } from './helpers'
+import { API, apiUp, loginAs } from './helpers'
 
 /**
  * 回归：列表行的「加入歌单」下拉不能被列表容器裁切
@@ -35,7 +35,7 @@ test.describe('加入歌单下拉', () => {
 
   test('可就地新建歌单并加入当前歌曲', async ({ page, request }) => {
     test.skip(!(await apiUp(request)), '后端未启动')
-    await loginAs(page, request)
+    const { token } = await loginAs(page, request)
     await page.goto('/songs')
 
     const row = page.locator('main .group').first()
@@ -56,5 +56,23 @@ test.describe('加入歌单下拉', () => {
     await page.goto('/playlists')
     const card = page.getByText(name).first()
     await expect(card).toBeVisible({ timeout: 8000 })
+
+    // 自清理（docs/19 P1-6）：断言过后删掉自己建的歌单，防止数据逐次累积
+    // 放 try/finally：上面断言失败也不能留下脏数据
+    try {
+      const list = await request.get(`${API}/playlists`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const items = (await list.json()).data ?? []
+      const mine = items.find((p) => p.name === name)
+      if (mine) {
+        const del = await request.delete(`${API}/playlists/${mine.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        expect(del.ok()).toBeTruthy()
+      }
+    } finally {
+      // 即使清理请求本身出错，也不掩盖主断言结果
+    }
   })
 })

@@ -4,6 +4,15 @@ REM Uses java -jar when the jar exists, otherwise mvn spring-boot:run.
 REM ASCII-only on purpose (see env.bat header).
 setlocal
 call "%~dp0env.bat"
+
+REM Local dev / E2E: relax per-IP rate limits so the Playwright suite
+REM (which registers+logs in ~40 times) does not hit 429 mid-run.
+REM Production limits stay strict -- cloudstudio.sh does not set these.
+set "RATE_LIMIT_AUTH=3000"
+set "RATE_LIMIT_ORDER=3000"
+set "RATE_LIMIT_ASSISTANT=3000"
+set "RATE_LIMIT_DEFAULT=5000"
+
 cd /d "%~dp0..\backend"
 
 echo [backend] dir     = %CD%
