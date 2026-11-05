@@ -22,3 +22,6 @@ logging:
 app:
   rate-limit:
     enabled: false
+  # 测试关定时任务：会话状态翻转任务会与用例抢同表行锁，全量跑稳定复现死锁
+  scheduling:
+    enabled: false
