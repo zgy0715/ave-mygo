@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.avemygo.common.LlmSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -72,9 +73,8 @@ public class OllamaStreamLlm implements StreamLlm {
                 .header("Accept", "text/event-stream")
                 .timeout(Duration.ofSeconds(120))
                 .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
-        if (apiKey != null && !apiKey.isBlank()) {
-            builder.header("Authorization", "Bearer " + apiKey);   // 云 API 必需；Ollama 不需要
-        }
+        String auth = LlmSupport.bearer(apiKey);
+        if (auth != null) builder.header("Authorization", auth);   // 云 API 必需；Ollama 不需要
         HttpRequest request = builder.build();
 
         HttpResponse<java.io.InputStream> resp = http.send(request,
@@ -122,35 +122,15 @@ public class OllamaStreamLlm implements StreamLlm {
     }
 
     /**
-     * 模型名：显式配置优先；未配置时只对本地 Ollama 做探测（云端必须显式给模型名，
-     * 因为云服务没有 /api/tags 这类探测端点，盲目探测只会浪费时间并报出误导性错误）。
+     * 模型名：显式配置优先；本机 Ollama 未配置时自动探测并缓存。
+     * 解析规则与 Agent 端共用 {@link com.avemygo.common.LlmSupport}，避免两边再次分叉。
      */
     private String resolveModel() {
-        if (model != null && !model.isBlank()) return model;
-        if (detectedModel != null) return detectedModel;
-        if (!isLocalOllama()) {
-            throw new IllegalStateException(
-                    "云端 LLM 必须显式配置 LLM_MODEL（如 deepseek-chat / qwen-plus / Qwen/Qwen2.5-7B-Instruct）");
+        String resolved = LlmSupport.resolveModel(baseUrl, model, detectedModel, http, mapper);
+        if (resolved != null && !resolved.equals(model) && !resolved.equals(detectedModel)) {
+            detectedModel = resolved;
+            log.debug("流式 LLM 自动探测模型: {}", resolved);
         }
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:11434/api/tags"))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET().build();
-            HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
-            JsonNode first = mapper.readTree(resp.body()).path("models").path(0).path("name");
-            if (!first.isMissingNode() && !first.asText().isBlank()) {
-                detectedModel = first.asText();
-                return detectedModel;
-            }
-        } catch (Exception e) {
-            log.debug("流式 LLM 模型探测失败: {}", e.getMessage());
-        }
-        throw new IllegalStateException("未配置 llm.model 且无法从 Ollama 探测模型");
-    }
-
-    /** 是否指向本机 Ollama（探测模型只对这个成立） */
-    private boolean isLocalOllama() {
-        return baseUrl.contains("11434") || baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1");
+        return resolved;
     }
 }

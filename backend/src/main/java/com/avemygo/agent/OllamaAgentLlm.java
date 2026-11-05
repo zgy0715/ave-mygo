@@ -1,5 +1,6 @@
 package com.avemygo.agent;
 
+import com.avemygo.common.LlmSupport;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -35,6 +36,10 @@ public class OllamaAgentLlm implements AgentLlm {
     @Value("${llm.model:}")
     private String model;
 
+    /** 云 API Key；本地 Ollama 留空则不发鉴权头（与流式端共用 LlmSupport 规则） */
+    @Value("${llm.api-key:}")
+    private String apiKey;
+
     /** 启动后异步预热（加载模型到内存），避免第一条运营指令等 60s；可用 agent.warmup=false 关闭 */
     @Value("${agent.warmup:true}")
     private boolean warmupEnabled;
@@ -56,13 +61,14 @@ public class OllamaAgentLlm implements AgentLlm {
                 body.put("messages", List.of(Map.of("role", "user", "content", "hi")));
                 body.put("stream", false);
                 body.put("max_tokens", 1);
-                HttpRequest req = HttpRequest.newBuilder()
+                HttpRequest.Builder warmupReq = HttpRequest.newBuilder()
                         .uri(URI.create(baseUrl))
                         .header("Content-Type", "application/json")
                         .timeout(Duration.ofSeconds(120))
-                        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
-                        .build();
-                http.send(req, HttpResponse.BodyHandlers.ofString());
+                        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
+                String auth = LlmSupport.bearer(apiKey);
+                if (auth != null) warmupReq.header("Authorization", auth);
+                http.send(warmupReq.build(), HttpResponse.BodyHandlers.ofString());
                 log.info("Agent 模型预热完成，用时 {} ms", System.currentTimeMillis() - start);
             } catch (Exception e) {
                 log.info("Agent 模型预热跳过（Ollama 未就绪？）：{}", e.getMessage());
@@ -79,14 +85,16 @@ public class OllamaAgentLlm implements AgentLlm {
         body.put("stream", false);
         body.put("temperature", 0.2);   // Agent 要稳定，不要发挥
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl))
                 .header("Content-Type", "application/json")
                 .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
+        // 云 API 必需；本机 Ollama 不配 key 就不发（与流式端同一套规则）
+        String auth = LlmSupport.bearer(apiKey);
+        if (auth != null) builder.header("Authorization", auth);
 
-        HttpResponse<String> resp = http.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> resp = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200) {
             throw new IllegalStateException("LLM HTTP " + resp.statusCode());
         }
@@ -106,25 +114,13 @@ public class OllamaAgentLlm implements AgentLlm {
         return new Turn(content, calls);
     }
 
-    /** 模型名：显式配置优先；否则向 Ollama 探测第一个已装模型并缓存 */
+    /** 模型名：显式配置优先；本机 Ollama 未配置时自动探测第一个已装模型并缓存（逻辑见 LlmSupport） */
     private String resolveModel() {
-        if (model != null && !model.isBlank()) return model;
-        if (detectedModel != null) return detectedModel;
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:11434/api/tags"))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET().build();
-            HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
-            JsonNode first = mapper.readTree(resp.body()).path("models").path(0).path("name");
-            if (!first.isMissingNode() && !first.asText().isBlank()) {
-                detectedModel = first.asText();
-                log.info("Agent 自动探测 Ollama 模型: {}", detectedModel);
-                return detectedModel;
-            }
-        } catch (Exception e) {
-            log.debug("Agent 模型探测失败: {}", e.getMessage());
+        String resolved = LlmSupport.resolveModel(baseUrl, model, detectedModel, http, mapper);
+        if (resolved != null && !resolved.equals(model) && !resolved.equals(detectedModel)) {
+            detectedModel = resolved;             // 探测结果缓存，避免每次请求都探测
+            log.info("Agent 自动探测 Ollama 模型: {}", resolved);
         }
-        throw new IllegalStateException("未配置 llm.model 且无法从 Ollama 探测模型");
+        return resolved;
     }
 }
