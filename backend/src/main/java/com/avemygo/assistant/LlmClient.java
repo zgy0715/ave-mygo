@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import com.avemygo.common.LlmSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -56,13 +57,15 @@ public class LlmClient {
                     "messages", messages,
                     "stream", false,
                     "temperature", 0.7);
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + (apiKey == null ? "" : apiKey))
                     .timeout(Duration.ofSeconds(60))
-                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
+            // 空 key 就不发鉴权头（原来会发 "Bearer "，本机 Ollama 虽不介意但语义错误）
+            String auth = LlmSupport.bearer(apiKey);
+            if (auth != null) builder.header("Authorization", auth);
+            HttpRequest request = builder.build();
             HttpResponse<String> resp = http.send(request, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() != 200) {
                 throw new IllegalStateException("LLM HTTP " + resp.statusCode() + ": " + resp.body());
@@ -76,28 +79,13 @@ public class LlmClient {
     }
 
     /** 模型名解析：显式配置优先；Ollama 场景自动探测第一个已装模型并缓存 */
+    /** 模型名：显式配置优先；本机 Ollama 未配置时探测并缓存（规则见 LlmSupport） */
     private String resolveModel() {
-        if (model != null && !model.isBlank()) {
-            return model;
+        String resolved = LlmSupport.resolveModel(baseUrl, model, detectedModel, http, mapper);
+        if (resolved != null && !resolved.equals(model) && !resolved.equals(detectedModel)) {
+            detectedModel = resolved;
+            log.info("自动探测 Ollama 模型: {}", resolved);
         }
-        if (detectedModel != null) {
-            return detectedModel;
-        }
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:11434/api/tags"))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET().build();
-            HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
-            JsonNode first = mapper.readTree(resp.body()).path("models").path(0).path("name");
-            if (!first.isMissingNode() && !first.asText().isBlank()) {
-                detectedModel = first.asText();
-                log.info("Ollama 自动探测模型: {}", detectedModel);
-                return detectedModel;
-            }
-        } catch (Exception e) {
-            log.debug("Ollama 模型探测失败: {}", e.getMessage());
-        }
-        throw new IllegalStateException("未配置 LLM_MODEL 且无法从 Ollama 探测模型");
+        return resolved;
     }
 }
