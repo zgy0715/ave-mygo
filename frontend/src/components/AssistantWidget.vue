@@ -29,8 +29,22 @@ const input = ref('')
 const maximized = ref(false)
 const confirming = ref(false)
 
-/** 多轮上下文标识：整页一个（后端按它聚合会话） */
-const conversationId = crypto.randomUUID?.() || `c-${Date.now()}`
+/**
+ * 多轮上下文标识：**按人格各自一个**（2026-11-05 修）。
+ * 原来整页共用一个 UUID，切人格后历史里混着上一个角色的回复，
+ * 8B 模型会把别人的语气当成自己的上文——表现为答非所问、逐字复读。
+ * 存在 sessionStorage，刷新页面仍延续同一会话。
+ */
+function convIdFor(pid) {
+  const key = `assistant_conv:${pid}`
+  let id = sessionStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID?.() || `c-${pid}-${Date.now()}`
+    sessionStorage.setItem(key, id)
+  }
+  return id
+}
+const conversationId = computed(() => convIdFor(persona.value))
 
 /* ---- 线程：按人格分，各自独立 ---- */
 let msgSeq = 0
@@ -155,7 +169,7 @@ async function send(text, opts = {}) {
     // 这里只需把 id 传过去，不要再往 message 里塞口吻提示（会污染用户消息、污染上下文）
     await chatV2({
       message: content,
-      conversationId,
+      conversationId: conversationId.value,
       persona: persona.value,
       signal: controller.signal,
       onEvent: (evt) => {

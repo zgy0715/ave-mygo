@@ -37,6 +37,27 @@ public class AssistantStreamService {
     private static final int MAX_ROUNDS = 4;
     /** 带入上下文的历史条数 */
     private static final int HISTORY_LIMIT = 10;
+
+    /**
+     * 复读闸门：先攒够这么多字符再推给前端。
+     * 若这段开头与上一条助手回复逐字相同，判定为"照抄上文"→ 整轮重试。
+     * 40 字大约 0.1~0.3 秒的缓冲，换来「用户永远看不到复读」。
+     */
+    private static final int GUARD_PREFIX_CHARS = 40;
+
+    /**
+     * 判定"照抄"的最短连续相同片段（字符数）。
+     * 为什么要它：实测模型会换个开头（"诶嘿嘿！"）然后整段照抄旧回答——
+     * 只比开头 40 字会漏掉，必须看"有没有一段长片段与上一条回复相同"。
+     */
+    private static final int COPY_BLOCK_CHARS = 24;
+
+    /** 闸门命中：模型开头照抄了上一条回复（内部信号，不对外暴露） */
+    private static final class RepeatedAnswerException extends RuntimeException {
+        RepeatedAnswerException() {
+            super("assistant repeated previous answer");
+        }
+    }
     /** 同一工具连续失败多少次就停下来问用户 */
     private static final int MAX_SAME_TOOL_FAILS = 2;
 
@@ -82,7 +103,10 @@ public class AssistantStreamService {
                  同一条回复里同一个强调词不要出现两次以上（例如连续三个「超——」）
                · 禁止在句尾硬塞与内容无关的口癖词（例如列完名单后补一句「吉他」）
                · 信息类回答先保证准确完整（名字、CV、日期该给就给），再谈语气
-               · 换个话题时用不同的说法，不要复用上一轮句式。/no_think
+               · 换个话题时用不同的说法，不要复用上一轮句式。
+            9. 绝不复述：不许把上一轮说过的话整段再说一遍（即使听者只是换了个说法追问）。
+               每一轮都必须针对用户最新一句话重新作答——同一话题换角度、换措辞，
+               禁止逐字重复上文；如果你发现自己正要重复，就换成新的切入点。/no_think
             """;
 
     private final StreamLlm streamLlm;
@@ -120,7 +144,7 @@ public class AssistantStreamService {
         }
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
-        appendHistory(conv, userId, messages);
+        String priorAssistant = appendHistory(conv, userId, messages);
         messages.add(Map.of("role", "user", "content", message));
         persist(conv, userId, AgentMessage.USER, message);
 
@@ -131,29 +155,29 @@ public class AssistantStreamService {
 
         int usedTools = 0;
         Map<String, Integer> toolFails = new HashMap<>();
-        // 流式出口的 markdown 清洗器：模型不听话时由代码兜底（前端纯文本渲染，星号会裸露）
-        MarkdownStripper stripper = new MarkdownStripper();
+        boolean repeatRetried = false;
+        boolean guardDisabled = false;
 
         for (int round = 1; round <= MAX_ROUNDS; round++) {
             StreamLlm.Turn turn;
             try {
-                turn = streamLlm.stream(messages, tools, new StreamLlm.Listener() {
-                    @Override
-                    public void onThinking() {
-                        sink.emit("status", Map.of("phase", "thinking"));
-                    }
-
-                    @Override
-                    public void onContent(String delta) {
-                        String clean = stripper.push(delta);
-                        if (!clean.isEmpty()) sink.emit("delta", Map.of("text", clean));
-                    }
-
-                    @Override
-                    public void onToolCall(String id, String name, String args) {
-                        // 工具调用在正文之后才处理，这里不推事件（避免"正在调用"闪一下）
-                    }
-                });
+                turn = streamAttempt(messages, tools, sink, priorAssistant, guardDisabled);
+            } catch (RepeatedAnswerException repeat) {
+                if (repeatRetried) {
+                    // 重试一次仍照抄：宁可诚实报错，也不把复读推给用户
+                    log.warn("复读闸门二次命中 conv={}", conv);
+                    sink.emit("error", Map.of("code", 50301,
+                            "message", "小灯走神了，请换个说法再问一次"));
+                    return;
+                }
+                repeatRetried = true;
+                // 去掉那条被照抄的历史回复，并明确要求换开头，整轮重来（不占轮次）
+                dropLastAssistant(messages);
+                messages.add(Map.of("role", "system", "content",
+                        "你刚才的开头逐字重复了上一轮的回答。请完全换一个开头，针对用户最新一句重新作答。"));
+                log.info("复读闸门命中，已重试一次 conv={}", conv);
+                round--;
+                continue;
             } catch (Exception e) {
                 log.warn("v2 流式 LLM 调用失败: {}", e.getMessage());
                 sink.emit("error", Map.of("code", 50301,
@@ -282,22 +306,140 @@ public class AssistantStreamService {
         }
     }
 
-    private void appendHistory(String conv, Long userId, List<Map<String, Object>> messages) {
+    private String appendHistory(String conv, Long userId, List<Map<String, Object>> messages) {
         // 游客没有稳定身份，不读历史（否则不同游客只要 conversationId 相同就会串话）
-        if (userId == null) return;
+        if (userId == null) return null;
+        String lastAssistant = null;
         try {
             List<AgentMessage> recent = messageRepository.findByUserIdAndConversationIdOrderByIdDesc(
                     userId, conv, PageRequest.of(0, HISTORY_LIMIT));
             List<AgentMessage> chronological = new ArrayList<>(recent);
             java.util.Collections.reverse(chronological);
+            // 历史去重（2026-11-05）：窗口内重复出现的同一段助手回复只保留第一条。
+            // 注意不能只比较"相邻"——真实数据里两条重复回复之间夹着用户消息。
+            // 不去重时小模型会看到"自己说过这句"，随后逐字照抄（实测连续三轮完全一致）。
+            java.util.Set<String> seenAssistant = new java.util.HashSet<>();
             for (AgentMessage m : chronological) {
-                messages.add(Map.of(
-                        "role", AgentMessage.USER.equals(m.getRole()) ? "user" : "assistant",
-                        "content", MarkdownStripper.strip(m.getContent())));
+                boolean isUser = AgentMessage.USER.equals(m.getRole());
+                String text = MarkdownStripper.strip(m.getContent());
+                if (!isUser) {
+                    String key = normalizeForCompare(text);
+                    if (!key.isEmpty() && !seenAssistant.add(key)) {
+                        continue;              // 同一段回答已出现过，丢弃后续副本
+                    }
+                }
+                messages.add(Map.of("role", isUser ? "user" : "assistant", "content", text));
+                if (!isUser) lastAssistant = text;   // 供复读闸门比对
             }
         } catch (Exception e) {
             log.warn("v2 历史载入失败: {}", e.getMessage());
         }
+        return lastAssistant;
+    }
+
+    /**
+     * 单轮流式调用，带「复读闸门」。
+     *
+     * 闸门逻辑：正文先攒够 {@link #GUARD_PREFIX_CHARS} 个字符再推给前端；
+     * 攒够后与上一条助手回复的开头比对，若逐字相同 → 抛 {@link RepeatedAnswerException}
+     * 让上层整轮重试。用户因此永远不会看到"把上一轮的话再贴一遍"。
+     *
+     * @param guardDisabled 已重试过则关闭闸门，避免无限循环
+     */
+    private StreamLlm.Turn streamAttempt(List<Map<String, Object>> messages,
+                                         List<Map<String, Object>> tools,
+                                         Sink sink,
+                                         String priorAssistant,
+                                         boolean guardDisabled) throws Exception {
+        MarkdownStripper stripper = new MarkdownStripper();   // 流式出口的 markdown 清洗器
+        boolean guarded = guardDisabled || priorAssistant == null || priorAssistant.isBlank();
+        String priorKey = guarded ? null : normalizeForCompare(priorAssistant);
+        StringBuilder buffer = new StringBuilder();
+        boolean[] passed = {guarded};
+
+        StreamLlm.Turn turn = streamLlm.stream(messages, tools, new StreamLlm.Listener() {
+            @Override
+            public void onThinking() {
+                sink.emit("status", Map.of("phase", "thinking"));
+            }
+
+            @Override
+            public void onContent(String delta) {
+                String clean = stripper.push(delta);
+                if (clean.isEmpty()) return;
+                if (passed[0]) {
+                    sink.emit("delta", Map.of("text", clean));
+                    return;
+                }
+                buffer.append(clean);
+                // 注意：必须按"归一化后的有效字数"判断，不能按原始长度——
+                // 标点/空白占了 40 个原始字符时，有效字数只有 30 出头，比对会永远不成立。
+                String headKey = normalizeForCompare(buffer.toString());
+                int need = Math.min(GUARD_PREFIX_CHARS, priorKey.length());
+                if (headKey.length() < need) {
+                    return;   // 还没攒够有效字符，先扣着不推
+                }
+                boolean sameHead = headKey.regionMatches(0, priorKey, 0, need);
+                boolean copiedBlock = longestCommonSubstring(headKey, priorKey) >= COPY_BLOCK_CHARS;
+                if (sameHead || copiedBlock) {
+                    throw new RepeatedAnswerException();
+                }
+                passed[0] = true;
+                sink.emit("delta", Map.of("text", buffer.toString()));
+                buffer.setLength(0);
+            }
+
+            @Override
+            public void onToolCall(String id, String name, String args) {
+                // 工具调用在正文之后才处理，这里不推事件（避免"正在调用"闪一下）
+            }
+        });
+
+        // 回答短于闸门长度时缓冲还没推出去：这里补一次判断 + 冲刷，避免前端白屏
+        if (!passed[0]) {
+            String rest = buffer.toString();
+            String restKey = normalizeForCompare(rest);
+            if (!restKey.isEmpty()
+                    && (restKey.regionMatches(0, priorKey, 0, Math.min(restKey.length(), priorKey.length()))
+                        || longestCommonSubstring(restKey, priorKey) >= COPY_BLOCK_CHARS)) {
+                throw new RepeatedAnswerException();
+            }
+            if (!rest.isEmpty()) sink.emit("delta", Map.of("text", rest));
+        }
+        return turn;
+    }
+
+    /** 最长公共子串长度（动态规划，文本量很小，O(n*m) 足够） */
+    private static int longestCommonSubstring(String a, String b) {
+        if (a == null || b == null || a.isEmpty() || b.isEmpty()) return 0;
+        int[] prev = new int[b.length() + 1];
+        int best = 0;
+        for (int i = 1; i <= a.length(); i++) {
+            int[] cur = new int[b.length() + 1];
+            for (int j = 1; j <= b.length(); j++) {
+                if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    cur[j] = prev[j - 1] + 1;
+                    if (cur[j] > best) best = cur[j];
+                }
+            }
+            prev = cur;
+        }
+        return best;
+    }
+
+    /** 移除历史里最后一条助手消息（复读重试时用，避免再次诱导照抄） */
+    private static void dropLastAssistant(List<Map<String, Object>> messages) {
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            if ("assistant".equals(messages.get(i).get("role"))) {
+                messages.remove(i);
+                return;
+            }
+        }
+    }
+
+    /** 去掉空白与常见标点后比较，避免"看起来一样"的回复逃过去重 */
+    private static String normalizeForCompare(String text) {
+        return text == null ? "" : text.replaceAll("[\\s，。！？、…~～—\\(\\)（）]", "");
     }
 
     private Map<String, Object> assistantMessage(StreamLlm.Turn turn) {
@@ -391,6 +533,22 @@ public class AssistantStreamService {
         if (content == null || content.isBlank()) return;
         if (userId == null) return;   // 游客不落库：没有身份就无法隔离，宁可不存
         try {
+            // 幂等：3 秒内同会话、同角色、同内容只写一条。
+            // 场景（2026-11-05 实测）：v2 流式失败 → 前端降级 v1 兜底，
+            // 两条链路各写一次用户消息，历史里出现两条相同的「我喜欢你」，污染上下文。
+            java.time.LocalDateTime since = java.time.LocalDateTime.now().minusSeconds(3);
+            // 取最近 4 条：最后一条往往是助手回复，只看 1 条会漏掉紧邻其前的同一条用户消息
+            boolean duplicated = messageRepository
+                    .findByUserIdAndConversationIdOrderByIdDesc(userId, conv, PageRequest.of(0, 4))
+                    .stream()
+                    .anyMatch(m -> role.equals(m.getRole())
+                            && content.equals(m.getContent())
+                            && m.getCreatedAt() != null
+                            && m.getCreatedAt().isAfter(since));
+            if (duplicated) {
+                log.debug("跳过重复会话消息 conv={} role={}", conv, role);
+                return;
+            }
             AgentMessage m = new AgentMessage();
             m.setConversationId(conv);
             m.setUserId(userId == null ? 0L : userId);

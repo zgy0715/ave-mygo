@@ -326,4 +326,117 @@ class AssistantStreamServiceTest {
         org.mockito.Mockito.verify(streamLlm, org.mockito.Mockito.times(2))
                 .stream(anyList(), anyList(), any());
     }
+
+    // ==================== 复读治理（2026-11-05） ====================
+
+    @Test
+    @DisplayName("V13 历史去重：相邻重复的助手回复只喂给模型一条")
+    void v13_dedupeRepeatedAssistantHistory() throws Exception {
+        String conv = "dup-conv";
+        String repeated = "那个那个！超——喜欢的话要一直支持我们 MyGO!!!!! 哦！";
+        // 复刻线上那条被污染的会话：u1 / A / u2 / A / u3
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "USER", "我好喜欢anon");
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "ASSISTANT", repeated);
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "USER", "我好喜欢爱音");
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "ASSISTANT", repeated);
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "USER", "我喜欢你");
+
+        List<List<Map<String, Object>>> calls = new ArrayList<>();
+        when(streamLlm.stream(org.mockito.ArgumentMatchers.argThat(msgs -> {
+            calls.add((List<Map<String, Object>>) msgs);
+            return true;
+        }), anyList(), any())).thenReturn(new StreamLlm.Turn("嗯，知道了。", List.of()));
+
+        service.chat("我也是", conv, "anon", 1L, false, sink());
+
+        List<Map<String, Object>> sent = calls.get(0);
+        long repeatedCount = sent.stream()
+                .filter(m -> "assistant".equals(m.get("role"))
+                        && String.valueOf(m.get("content")).contains("超——喜欢的话要一直支持我们"))
+                .count();
+        assertThat(repeatedCount).isEqualTo(1);          // 只保留一条，不再自我强化
+        assertThat(sent).hasSize(6);                     // system + u1 + A + u2 + u3 + 本轮 user
+    }
+
+    @Test
+    @DisplayName("V14 幂等：3 秒内重复提交同一条消息，只落库一次（v2 失败 → v1 兜底双写）")
+    void v14_persistSameMessageOnceWithinWindow() throws Exception {
+        String conv = "idem-conv";
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenReturn(new StreamLlm.Turn("嗯。", List.of()));
+
+        service.chat("我喜欢你", conv, "anon", 1L, false, sink());
+        service.chat("我喜欢你", conv, "anon", 1L, false, sink());   // 模拟降级链路的第二次提交
+
+        Integer userRows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM agent_messages WHERE conversation_id = ? AND role = 'USER'",
+                Integer.class, conv);
+        assertThat(userRows).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V15 复读闸门：模型照抄上一条回复开头 → 自动重试并采用新答案")
+    void v15_repeatGuardRetries() throws Exception {
+        String conv = "guard-conv";
+        String old = "那个那个！超——喜欢的话要一直支持我们 MyGO!!!!! 哦！anon 是在说我们乐队吗？";
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "USER", "我好喜欢anon");
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "ASSISTANT", old);
+
+        // 第一次调用照抄旧回答；第二次（重试）给新回答。必须主动触发 listener 才是真流式
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenAnswer(inv -> {
+                    StreamLlm.Listener l = inv.getArgument(2);
+                    l.onContent(old);                       // 逐字照抄历史
+                    l.onContent("（旧）");
+                    return new StreamLlm.Turn(old + "（旧）", List.of());
+                })
+                .thenAnswer(inv -> {
+                    StreamLlm.Listener l = inv.getArgument(2);
+                    l.onContent("换个说法：今天想聊哪首歌？");
+                    return new StreamLlm.Turn("换个说法：今天想聊哪首歌？", List.of());
+                });
+
+        service.chat("我也是", conv, "anon", 1L, false, sink());
+
+        assertThat(textOfDeltas()).contains("换个说法");
+        assertThat(textOfDeltas()).doesNotContain("超——喜欢的话要一直支持我们");
+        org.mockito.Mockito.verify(streamLlm, org.mockito.Mockito.times(2))
+                .stream(anyList(), anyList(), any());
+    }
+
+    @Test
+    @DisplayName("V16 换开头照抄：开头不同但正文大段相同 → 仍判为复读并重试")
+    void v16_repeatWithDifferentOpener() throws Exception {
+        String conv = "guard-conv2";
+        String old = "那个那个！超——喜欢的话要一直支持我们 MyGO!!!!! 哦！anon 是在说我们乐队吗？还是说……（突然意识到什么）啊！是粉丝对吧！超——开心的！";
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "USER", "我好喜欢anon");
+        jdbc.update("INSERT INTO agent_messages(conversation_id,user_id,role,content,created_at) VALUES(?,?,?,?,NOW())",
+                conv, 1L, "ASSISTANT", old);
+
+        String copied = "诶嘿嘿！" + old.substring(4);   // 真机实测的形态：换个开头，整段照抄
+        when(streamLlm.stream(anyList(), anyList(), any()))
+                .thenAnswer(inv -> {
+                    StreamLlm.Listener l = inv.getArgument(2);
+                    l.onContent(copied);
+                    return new StreamLlm.Turn(copied, List.of());
+                })
+                .thenAnswer(inv -> {
+                    StreamLlm.Listener l = inv.getArgument(2);
+                    l.onContent("说点别的：最近在练新曲。");
+                    return new StreamLlm.Turn("说点别的：最近在练新曲。", List.of());
+                });
+
+        service.chat("我也是", conv, "anon", 1L, false, sink());
+
+        assertThat(textOfDeltas()).contains("最近在练新曲");
+        assertThat(textOfDeltas()).doesNotContain("是粉丝对吧");
+    }
 }
