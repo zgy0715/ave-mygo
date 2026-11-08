@@ -59,12 +59,16 @@ say "[2/8] Node: $(node -v)  /  Java: $(java -version 2>&1 | head -1)"
 say "[3/8] 更新代码（$BRANCH）"
 cd "$APP_DIR"
 if [ -d .git ]; then
-  git fetch --depth=1 origin "$BRANCH"
-  git reset --hard FETCH_HEAD
+  if git fetch --depth=1 origin "$BRANCH"; then
+    git reset --hard FETCH_HEAD
+    echo "    当前提交: $(git log --oneline -1)"
+  else
+    echo "    [警告] git 拉取失败（国内访问 GitHub 常见超时），继续用现有代码部署"
+  fi
 else
-  die "$APP_DIR 不是 git 仓库"
+  # 手动上传代码（scp/tar）的场景：没有 .git 也允许部署
+  echo "    非 git 目录，跳过代码更新（使用上传的代码）"
 fi
-echo "    当前提交: $(git log --oneline -1)"
 
 # ---------------------------------------------------------------- 4. 数据库
 say "[4/8] 数据库：$DB_NAME"
