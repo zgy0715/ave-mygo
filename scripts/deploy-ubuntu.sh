@@ -133,6 +133,14 @@ JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 JWT_EXPIRATION_HOURS=72
 EOF
 fi
+# 关键：.env 可能来自别的环境（如开发者本地），其 DB_USERNAME/DB_PASSWORD 与本机不符
+# → 一律用本次生成的库名/账号/密码覆盖，避免 "Access denied for user 'root'" 这类启动失败
+sed -i "s|^DB_URL=.*|DB_URL=jdbc:mysql://localhost:3306/$DB_NAME?useSSL=false\&serverTimezone=Asia/Shanghai\&allowPublicKeyRetrieval=true|" "$ENV_FILE"
+sed -i "s|^DB_USERNAME=.*|DB_USERNAME=$DB_USER|" "$ENV_FILE"
+sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$DB_PASS|" "$ENV_FILE"
+grep -q '^DB_URL=' "$ENV_FILE" || echo "DB_URL=jdbc:mysql://localhost:3306/$DB_NAME?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true" >> "$ENV_FILE"
+grep -q '^DB_USERNAME=' "$ENV_FILE" || echo "DB_USERNAME=$DB_USER" >> "$ENV_FILE"
+grep -q '^DB_PASSWORD=' "$ENV_FILE" || echo "DB_PASSWORD=$DB_PASS" >> "$ENV_FILE"
 grep -q '^JWT_EXPIRATION_HOURS=' "$ENV_FILE" || echo "JWT_EXPIRATION_HOURS=72" >> "$ENV_FILE"
 if [ -n "${LLM_API_KEY:-}" ] && ! grep -q '^LLM_API_KEY=' "$ENV_FILE"; then
   cat >> "$ENV_FILE" <<EOF
@@ -175,7 +183,14 @@ say "[7/8] 注册 systemd 服务 $SERVICE"
 JAR_ABS=$(ls "$BACKEND"/target/ave-mygo-*.jar 2>/dev/null | head -1 || true)
 [ -n "$JAR_ABS" ] || die "找不到 jar，请先构建（去掉 SKIP_BUILD=1）"
 TOTAL_MB=$(awk '/MemTotal/{printf "%d", $2/1024}' /proc/meminfo)
-HEAP=$(( TOTAL_MB / 2 )); [ "$HEAP" -gt 1024 ] && HEAP=1024; [ "$HEAP" -lt 512 ] && HEAP=512
+# 实测 2G 机型：MySQL + 系统已占 ~1GB，可用仅 ~900MB。RAM/2 会直接 OOM。
+if [ "$TOTAL_MB" -le 2048 ]; then
+  HEAP=640
+elif [ "$TOTAL_MB" -le 4096 ]; then
+  HEAP=1024
+else
+  HEAP=$(( TOTAL_MB / 2 )); [ "$HEAP" -gt 2048 ] && HEAP=2048
+fi
 echo "    内存 ${TOTAL_MB}MB → -Xmx${HEAP}m"
 
 cat > /etc/systemd/system/$SERVICE.service <<EOF
