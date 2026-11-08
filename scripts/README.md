@@ -14,8 +14,26 @@
 | `gen_seed.py` | 从开发库导出参考数据到 `db/seed/reference.sql`（幂等 upsert，只读 SELECT） | `$env:DB_PASSWORD="…"; python scripts\gen_seed.py` |
 | `audit_data.py` | 数据体检：统计各表条数、软删、外链缺失等 | `python scripts\audit_data.py` |
 | `audit_mv.py` | MV 链接核查（B 站 bvid / ep_id 可用性） | `python scripts\audit_mv.py` |
-| `cloudstudio.sh` | 腾讯云 CloudStudio 演示机一键部署/更新/重启（拉代码 → MySQL → 后端 → 前端 → nginx → 验证） | `bash scripts/cloudstudio.sh`、`REBUILD=1 bash scripts/cloudstudio.sh` |
+| `deploy-ubuntu.sh` | **独立服务器部署（当前线上方案）**：apt 装 JDK17/MySQL/Nginx/Maven → Node22 取自 npmmirror → 服务器**本地构建**后端与前端（Maven 走阿里云源、npm 走 npmmirror）→ systemd 常驻 → nginx 反代。幂等，重复执行即更新 | `sudo bash -c 'LLM_API_KEY=sk-xxx bash scripts/deploy-ubuntu.sh'` |
+| `cloudstudio.sh` | 腾讯云 CloudStudio 演示机部署（旧方案，工作区已被自有服务器取代） | `bash scripts/cloudstudio.sh` |
 
 Python 脚本依赖 `pymysql`（`pip install pymysql`），连接参数用环境变量覆盖：`DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`（默认 `127.0.0.1:3306`、`root`、`bandori_live`）。
 
 一次性脚本（历史重写、账号清理、README 拆分等）不在本目录，放在本地 `backup/oneoff/`，不入库。
+
+## 部署相关（服务器侧）
+
+线上部署走 `deploy-ubuntu.sh`，前提是代码已经在服务器上（scp 上传源码 tar，或 git 可达时自动拉取）。
+国内服务器到 GitHub / npmjs / Maven Central 通常不通，脚本已内置对策：
+
+- Maven：`/root/.m2/settings.xml` → `maven.aliyun.com/repository/public`
+- npm：`--registry=https://registry.npmmirror.com`
+- Node 22：从 npmmirror 的 binary 镜像取官方 tar.xz（不使用 NodeSource）
+
+常用运维：
+
+```bash
+sudo systemctl restart avemygo     # 重启后端
+sudo journalctl -u avemygo -f      # 跟日志
+sudo systemctl reload nginx        # 重载静态站
+```
