@@ -12,7 +12,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![ECharts](https://img.shields.io/badge/ECharts-%E7%9C%8B%E6%9D%BF-AA344D?logo=apacheecharts&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-qwen3:8b-000000?logo=ollama&logoColor=white)
-![JUnit](https://img.shields.io/badge/JUnit-5%20%C2%B7%20149%E7%94%A8%E4%BE%8B-25A162?logo=junit5&logoColor=white)
+![JUnit](https://img.shields.io/badge/JUnit-5%20%C2%B7%20168%E7%94%A8%E4%BE%8B-25A162?logo=junit5&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-82%E7%94%A8%E4%BE%8B-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-%E5%90%8C%E6%BA%90%E5%8F%8D%E4%BB%A3-009639?logo=nginx&logoColor=white)
@@ -45,13 +45,10 @@
 - [快速开始](#快速开始)
 - [测试](#测试)
 - [部署](#部署)
+- [移动端与素材](#移动端与素材)
 - [目录结构](#目录结构)
 - [文档索引](#文档索引)
-- [一周开发实录](#一周开发实录)
-- [踩坑记录：真实的错误](#踩坑记录真实的错误)
-- [难点与解决方案](#难点与解决方案)
-- [技术点与创新点](#技术点与创新点)
-- [数据可信度声明](#数据可信度声明)
+- [开发纪实](#开发纪实)
 
 ---
 
@@ -92,13 +89,13 @@
 | 层 | 选型 | 说明 |
 |---|---|---|
 | 后端 | **Spring Boot 4.1（Java 17）** | Spring MVC + Spring Security（JWT 自校验）+ Spring Data JPA（Hibernate 7.4） |
-| 数据库 | **MySQL 8.0** | 全表 InnoDB + utf8mb4_0900_ai_ci；表结构只信 Flyway（49 个迁移），JPA 仅 `ddl-auto: validate` |
-| 迁移 | **Flyway** | V1–V55；结构迁移 + 数据迁移（含全部曲库/专辑/成员种子数据），新环境一键自举 |
-| 前端 | **Vue 3 + Vite 8 + Pinia + Vue Router + Tailwind CSS 4** | 按路由代码分割，ECharts 异步加载 |
+| 数据库 | **MySQL 8.0** | 全表 InnoDB + utf8mb4_0900_ai_ci；表结构只信 Flyway（55 个迁移），JPA 仅 `ddl-auto: validate` |
+| 迁移 | **Flyway** | V1–V55；结构迁移 + 数据迁移（含全部曲库/专辑/成员种子数据），新环境一键自举；新增结构从 V56 起 |
+| 前端 | **Vue 3 + Vite 8 + Pinia + Vue Router + Tailwind CSS 4** | 按路由代码分割，ECharts 异步加载；移动端断点 767px |
 | 实时 | **SSE**（`SseEmitter` + 线程池） | AI 助手流式输出；开售提醒后台扫描 |
-| AI | **Ollama**（qwen3:8b，OpenAI 兼容端点） | 本地推理，不可用时规则引擎兜底，格式一致 |
-| 测试 | JUnit 5 + MockMvc（112 用例）／Vitest（23 用例）／Playwright（E2E 旅程） | 后端集成测试用真实 MySQL 测试库 |
-| 部署 | jar + nginx 同源反代 | CloudStudio 演示环境 / 任意 Linux VPS 均可 |
+| AI | **双通道：本地 Ollama / 云端 OpenAI 兼容 API** | 同一套客户端支持两条链路（Bearer 鉴权 + tool_calls 增量拼接）；不可用时规则引擎兜底 |
+| 测试 | JUnit 5 + MockMvc（168 用例）／Vitest（82 用例）／Playwright（20 用例） | 后端集成测试用真实 MySQL 测试库 |
+| 部署 | **Ubuntu 24.04 + systemd + nginx 同源反代** | `scripts/deploy-ubuntu.sh` 一键安装/构建/常驻；本地与服务器均可在同源下访问 |
 
 ---
 
@@ -160,8 +157,9 @@ npm run dev                     # http://localhost:5173（代理已配）
 > 参考数据（乐队/曲目/专辑/演出/票档/歌单）由迁移自带；如需把数据恢复到当前基线，直接执行
 > `db/seed/reference.sql`（幂等，可重复跑）：`mysql -u root -p bandori_live < db/seed/reference.sql`。
 >
-> 首页 Hero 视频（`frontend/public/assets/band-*.mp4`，各 26–30MB）**不入库**：克隆后首页自动降级为渐变背景，
-> 需要视频的话用管理端「Hero 视频上传」或手动放到 `frontend/public/assets/` 下即可。
+> 首页 Hero 背景素材随仓库分发：`frontend/public/assets/band-mygo-720p.mp4`、`band-mujica-720p.mp4`
+> （各 8.4MB，1280×720、无音轨）与两张 `*-poster.jpg` 首帧图。1080P 原片**不入库**，保留在本地
+> `assets-src/video/`，需要重新压制时从那里取。体积与带宽的取舍见 [移动端与素材](#移动端与素材)。
 
 ---
 
@@ -169,9 +167,9 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 | 层 | 命令 | 规模 |
 |---|---|---|
-| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | **149 用例**，含并发购票/支付取消/确认抢占、SSE 流式、限流、权限负例、令牌吊销 |
-| 前端单测 | `npm run test`（Vitest + jsdom） | **82 用例**（请求封装 / 播放器 / 表单校验 / 小灯事件流 / 首页区块） |
-| E2E 旅程 | `npm run test:e2e`（Playwright + Edge） | 游客浏览 / 歌单 / 购票 / **管理端删除全链路** |
+| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | **168 用例 / 35 个测试类**，含并发购票/支付取消/确认抢占、SSE 流式、限流、权限负例、令牌吊销、LLM 客户端鉴权与分片拼接、小灯复读治理 |
+| 前端单测 | `npm run test`（Vitest + jsdom） | **82 用例 / 10 个文件**（请求封装 / 播放器 / 表单校验 / 小灯事件流 / 首页区块） |
+| E2E 旅程 | `npm run test:e2e`（Playwright，本机用 Edge） | **20 用例 / 8 个 spec**：游客浏览 / 歌单 / 购票 / **管理端删除全链路** |
 
 E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
 
@@ -189,6 +187,8 @@ sudo bash scripts/deploy-ubuntu.sh
 
 部署参数与手动运维命令见 [scripts/README.md](scripts/README.md)。数据库备份脚本将新文件写入 `backup/db/`，不会移动其他本地备份文件。
 
+脚本做的事可按顺序对照排查：`apt` 装 JDK17/MySQL/Nginx/Maven → Node 22 取自 npmmirror 二进制 → 建库建账号（密码随机并复用）→ Maven 走阿里云源构建后端 → `npm ci`（npmmirror）+ `vite build` → 写 `backend/.env` → systemd 常驻（按内存定 `-Xmx`）→ Nginx 同源反代（SSE 300s、静态长缓存）→ 健康检查。
+
 **AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
 
 | 变量 | 说明 | 示例 |
@@ -205,18 +205,51 @@ sudo bash scripts/deploy-ubuntu.sh
 
 ---
 
+## 移动端与素材
+
+### 移动端适配（断点 767px）
+
+- **导航单行**：Logo 降为 `text-base`，窄屏隐藏 `/ LIVE` 与 `LOGIN` 英文，只留「登录 ↗」；`flex-nowrap + shrink-0` 禁止折行
+- **Hero 高度**：`calc(100svh - 4rem)` 扣掉 sticky 顶栏，底部演出信息不会被推出视口
+- **视频不自动下载**：手机端 `preload="none"` 且无 `autoplay`，先显示 poster 首帧，点「壱雫空 MV ▶」才 `load() + play()`
+- **加载过渡**：视频 `canplay` 后才 `opacity-1` 淡入，未就绪不会有黑框；视频与海报都失败才回退渐变兜底
+- **底部信息**：日期单行省略、标题最多两行，并为右下角悬浮球留出右侧空间
+
+### 素材与体积
+
+| 素材 | 位置 | 规格 | 入库 |
+|---|---|---|---|
+| Hero 视频（网页用） | `frontend/public/assets/band-*-720p.mp4` | 1280×720 · 89s/88s · 各 8.4MB | ✅ |
+| 首帧 poster | `frontend/public/assets/band-*-poster.jpg` | 1280 宽 · 58KB/45KB | ✅ |
+| OP 原片 | `assets-src/video/*_1080P.mp4` | 1920×1080 · 26MB/30MB | ❌ gitignore |
+| 封面图 | `frontend/public/img/covers/` | 700×700 · JPEG q82 | ✅ |
+
+压制参数（ffmpeg 免安装版即可）：
+
+```bash
+ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
+       -c:v libx264 -preset slow -crf 34 -pix_fmt yuv420p -an \
+       -movflags +faststart out-720p.mp4
+```
+
+`-an` 是因为页面 `<video muted autoplay loop>` 本来就不出声；`+faststart` 让 moov 前置，边下边播。
+`dist` 约 29MB（视频占 17MB）。1Mbps 量级的公网带宽下 8.4MB 需约 2 分钟缓冲，**所以移动端选择点播而非自动播放**——自动播放在窄带下等于让访客对着空画面等待。
+
+---
+
 ## 目录结构
 
 ```
 ├── backend/              # Spring Boot 后端
 │   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（已冻结，新结构从 V56 起）
 ├── frontend/              # Vue 3 前端
+│   ├── public/assets/     # Hero 视频(720p) 与 poster 首帧（随仓库分发）
 │   └── e2e/               # Playwright E2E
 ├── db/seed/reference.sql  # 参考数据幂等基线（乐队/曲目/专辑/演出/票档/歌单）
 ├── docs/                  # 现行设计文档 + 截图（docs/img/）
 │   └── archive/           # 历史任务书、审计报告、开发纪实
 ├── scripts/               # 本地开发、数据审计、备份、Ubuntu 部署（见 scripts/README.md）
-├── assets-src/            # 本地素材（OP 视频 / 原图，不入库）
+├── assets-src/            # 本地素材（video/ 放 OP 1080P 原片，images/ 放原图；不入库）
 ├── backup/                # 本地数据库/.git 备份（数据库导出放 backup/db/）与一次性脚本（不入库）
 └── AGENTS.md              # 工程全景（约定 / 数据模型 / 接口 / 红线）
 ```
@@ -236,6 +269,7 @@ sudo bash scripts/deploy-ubuntu.sh
 | [docs/13-小灯v2方案.md](docs/13-小灯v2方案.md) | 小灯 v2：删模式开关 + 对话质量重做 |
 | [docs/17-后续演进计划.md](docs/17-后续演进计划.md) | 产品演进：来源基座 / 演出档案闭环 / 个人空间 / AI 引用 |
 | [docs/18-工程深度与体量方案.md](docs/18-工程深度与体量方案.md) | 七个 L3 模块、可量化证明与落地可行性 |
+| [docs/19-未完成事项清单.md](docs/19-未完成事项清单.md) | 未完成项与已知风险（P0/P1 分级） |
 | [docs/metrics.md](docs/metrics.md) | 项目度量快照（规模/测试/数据的**唯一数字口径**） |
 
 历史文档（一次性任务书、数据审计、演出数据核验、开发纪实）统一放在

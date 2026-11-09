@@ -10,10 +10,10 @@
 
 | 维度 | 数值 | 取数命令 |
 |---|---|---|
-| 后端 Java 文件 | **119** | `find backend/src/main/java -name "*.java" \| wc -l` |
-| 后端代码行 | **8,252** | `find backend/src/main/java -name "*.java" -exec cat {} + \| wc -l` |
+| 后端 Java 文件 | **121** | `find backend/src/main/java -name "*.java" \| wc -l` |
+| 后端代码行 | **8,571** | `find backend/src/main/java -name "*.java" -exec cat {} + \| wc -l` |
 | 前端源文件（不含测试） | **65**（其中 `.vue` **43**） | `find frontend/src -name "*.vue" -o -name "*.js" \| grep -v __tests__ \| wc -l` |
-| 前端代码行（不含测试） | **8,150** | 同上 `\| xargs cat \| wc -l` |
+| 前端代码行（不含测试） | **8,225** | 同上 `\| xargs cat \| wc -l` |
 | 后端接口（Mapping 注解） | **61** | `grep -rhoE "@(Get\|Post\|Patch\|Put\|Delete)Mapping" src/main/java --include=*Controller.java \| wc -l` |
 | Flyway 迁移 | **55 个文件（V1–V55）** | `ls src/main/resources/db/migration/*.sql \| wc -l` |
 | 数据库表 | **19 张业务表** + `flyway_schema_history` | `SELECT COUNT(*) FROM information_schema.tables ...` |
@@ -22,7 +22,7 @@
 
 | 层 | 规模 | 命令 |
 |---|---|---|
-| 后端集成测试 | **149 用例 / 31 个测试类** | `./mvnw test` |
+| 后端集成测试 | **168 用例 / 35 个测试类** | `./mvnw test` |
 | 前端单测 | **82 用例 / 10 个文件** | `npm run test` |
 | E2E | **20 用例 / 8 个 spec** | `npx playwright test --list` |
 
