@@ -79,8 +79,8 @@ const logoErr = reactive({})
 
 /** 首页 Hero 双 MV：可切换；当前支失效自动跳另一支；全失效回退 aurora */
 const HERO_VIDEOS = [
-  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo.mp4' },
-  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica.mp4' },
+  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo-720p.mp4' },
+  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica-720p.mp4' },
 ]
 const activeVideoId = ref('mygo')
 const videoErr = reactive({})
