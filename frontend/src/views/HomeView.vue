@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventCard from '@/components/EventCard.vue'
 import PastEventCard from '@/components/PastEventCard.vue'
@@ -79,21 +79,62 @@ const logoErr = reactive({})
 
 /** 首页 Hero 双 MV：可切换；当前支失效自动跳另一支；全失效回退 aurora */
 const HERO_VIDEOS = [
-  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo-720p.mp4' },
-  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica-720p.mp4' },
+  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo-720p.mp4', poster: '/assets/band-mygo-poster.jpg' },
+  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica-720p.mp4', poster: '/assets/band-mujica-poster.jpg' },
 ]
 const activeVideoId = ref('mygo')
 const videoErr = reactive({})
+const posterErr = reactive({})
+const videoReady = reactive({})   // canplay 之后才允许视频显形，避免黑帧/灰框
 const activeVideo = computed(() => HERO_VIDEOS.find((v) => v.id === activeVideoId.value))
+
+/**
+ * 移动端策略（2026-11-09）：不自动下载 8.4MB 视频。
+ * 线上带宽约 68KB/s，自动播放等于让用户对着灰屏等两分钟——
+ * 改为「先出 poster 首帧，点 MV 名才加载播放」。
+ */
+const isMobile = ref(false)
+const videoEl = ref(null)
+onMounted(() => {
+  // jsdom / 老浏览器没有 matchMedia：缺失时按桌面处理（自动播放），不影响主流程
+  isMobile.value = window.matchMedia?.('(max-width: 767px)')?.matches ?? false
+})
 
 function onVideoError() {
   videoErr[activeVideoId.value] = true
+  videoReady[activeVideoId.value] = false
   const other = HERO_VIDEOS.find((v) => v.id !== activeVideoId.value && !videoErr[v.id])
   if (other) activeVideoId.value = other.id
 }
 
-/** 视频在播 → 白字透视频（暗雾压底）；aurora 兜底 → 保持墨字（浅底） */
-const videoActive = computed(() => !!activeVideo.value && !videoErr[activeVideo.value.id])
+/** 点 MV 名：切歌；移动端额外触发加载并播放（需用户手势，符合浏览器自动播放策略） */
+async function pickVideo(id) {
+  activeVideoId.value = id
+  if (!isMobile.value || videoErr[id]) return
+  await nextTick()
+  const el = videoEl.value
+  if (!el) return
+  el.load()
+  try {
+    await el.play()
+  } catch {
+    // 被浏览器拦下就留在 poster，用户再点一次即可
+  }
+}
+
+/** 有画面可看（视频未失败，或海报还在）→ 白字透画面；两者都失败才回 aurora 墨字 */
+const videoActive = computed(() => {
+  const v = activeVideo.value
+  if (!v) return false
+  return !videoErr[v.id] || !posterErr[v.id]
+})
+
+/** 视频与海报都不可用才显示 aurora 兜底 */
+const showAurora = computed(() => {
+  const v = activeVideo.value
+  if (!v) return true
+  return !!videoErr[v.id] && !!posterErr[v.id]
+})
 
 /** 「11.01 Sun.」式日期：官网情报区同款格式 */
 const shortDate = computed(() => {
@@ -113,19 +154,39 @@ const gradientOf = (slug) =>
 <template>
   <!-- Hero：满屏视频 + 中央字标（anontokyo 构图，保留） -->
   <section class="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden">
-    <!-- Hero 双 MV 背景：chips 切换，失效自动跳另一支，全失效回退 aurora -->
-    <video
-      v-if="activeVideo && !videoErr[activeVideo.id]"
-      :key="activeVideo.id"
-      class="animate-kenburns absolute inset-0 h-full w-full object-cover"
-      :src="activeVideo.src"
-      autoplay muted loop playsinline
-      @error="onVideoError"
-    />
-    <div v-else class="absolute inset-0 overflow-hidden bg-base" aria-hidden="true">
+    <!-- 兜底层：仅当视频与海报都不可用（极弱网 / 文件缺失）才出现 -->
+    <div v-if="showAurora" class="absolute inset-0 overflow-hidden bg-base" aria-hidden="true">
       <div class="animate-drift absolute -left-1/4 top-[-25%] h-[85vmax] w-[85vmax] rounded-full opacity-25 blur-3xl" style="background: radial-gradient(circle, #7bd, transparent 62%)" />
       <div class="animate-drift-slow absolute -right-1/4 bottom-[-30%] h-[75vmax] w-[75vmax] rounded-full opacity-20 blur-3xl" style="background: radial-gradient(circle, #f89, transparent 62%)" />
     </div>
+
+    <!-- 海报层：视频就绪前一直垫在下面。原来视频没加载完就是一片灰，手机端尤其明显 -->
+    <img
+      v-if="activeVideo && !posterErr[activeVideo.id]"
+      :key="activeVideo.poster"
+      :src="activeVideo.poster"
+      alt=""
+      class="absolute inset-0 h-full w-full object-cover"
+      @error="posterErr[activeVideo.id] = true"
+    />
+
+    <!-- 视频层：桌面自动播放；移动端 preload=none，点 MV 名才加载（省 8.4MB 流量与等待） -->
+    <video
+      v-if="activeVideo && !videoErr[activeVideo.id]"
+      :key="activeVideo.id"
+      ref="videoEl"
+      class="animate-kenburns absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
+      :class="videoReady[activeVideo.id] ? 'opacity-100' : 'opacity-0'"
+      :src="activeVideo.src"
+      :poster="activeVideo.poster"
+      :autoplay="!isMobile"
+      :preload="isMobile ? 'none' : 'metadata'"
+      muted
+      loop
+      playsinline
+      @canplay="videoReady[activeVideoId] = true"
+      @error="onVideoError"
+    />
 
     <!-- 雾面：视频模式暗调压底（白字透视频），aurora 模式浅雾保黑字 -->
     <div
@@ -146,7 +207,7 @@ const gradientOf = (slug) =>
     <div class="relative flex flex-1 flex-col items-center justify-center px-4 text-center">
       <p class="micro-accent mb-4" :class="videoActive && '!text-white/75'" v-reveal>BAN!DREAM! FAN PROJECT — 2026</p>
       <h1
-        class="display text-[15vw] leading-[0.95] sm:text-[8.5rem]"
+        class="display text-[13vw] leading-[0.95] sm:text-[8.5rem]"
         :class="videoActive
           ? 'text-white/90 [text-shadow:0_2px_40px_rgba(0,0,0,.35)]'
           : 'text-ink'"
@@ -159,32 +220,32 @@ const gradientOf = (slug) =>
       </p>
     </div>
 
-    <!-- MV 切换 chips：右下、情报带上方 -->
-    <div class="absolute bottom-24 right-6 z-10 flex gap-2 sm:bottom-28 sm:right-10">
+    <!-- MV 切换 chips：桌面右下情报带上方；窄屏移到右上（避开底部演出信息与右下 AI 悬浮球），点了才加载视频 -->
+    <div class="absolute right-4 top-20 z-10 flex gap-2 sm:bottom-40 sm:right-10 sm:top-auto">
       <button
         v-for="v in HERO_VIDEOS"
         :key="v.id"
-        class="rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors duration-300"
+        class="rounded-full border px-2.5 py-1 text-[11px] font-medium backdrop-blur transition-colors duration-300 sm:px-3 sm:py-1.5 sm:text-xs"
         :class="activeVideoId === v.id && !videoErr[v.id]
           ? 'border-primary bg-primary text-white'
           : videoErr[v.id]
             ? 'border-line bg-surface/70 text-faint line-through'
             : 'border-line bg-surface/80 text-dim hover:border-primary hover:text-primary'"
         :disabled="videoErr[v.id]"
-        @click="activeVideoId = v.id"
+        @click="pickVideo(v.id)"
       >
-        {{ v.label }}
+        {{ v.label }}<span v-if="isMobile && !videoReady[v.id]" class="ml-1">▶</span>
       </button>
     </div>
 
-    <div class="relative flex items-end justify-between gap-6 px-6 pb-7 sm:px-10">
+    <div class="relative flex items-end justify-between gap-6 pb-7 pl-6 pr-[5.5rem] sm:px-10">
       <p class="micro hidden sm:block">FAN PROJECT ✳ NOT OFFICIAL</p>
       <p class="micro animate-scroll-hint absolute left-1/2 hidden -translate-x-1/2 sm:block">SCROLL DOWN ↓</p>
 
-      <RouterLink v-if="featured" :to="`/events/${featured.id}`" class="group ml-auto text-right">
+      <RouterLink v-if="featured" :to="`/events/${featured.id}`" class="group ml-auto max-w-[72%] text-right sm:max-w-none">
         <p class="mono text-sm font-medium text-primary tabular">{{ shortDate }} @{{ featured.venue }}</p>
         <p class="mt-1 text-sm font-bold sm:text-[16px]">{{ featured.title }}</p>
-        <p class="micro mt-1.5 transition-colors duration-300 group-hover:!text-primary">
+        <p class="micro mt-1.5 hidden transition-colors duration-300 group-hover:!text-primary sm:block">
           TICKET ON SALE — 立即购票 ↗
         </p>
       </RouterLink>

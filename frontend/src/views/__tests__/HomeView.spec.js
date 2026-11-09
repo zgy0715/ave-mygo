@@ -45,6 +45,15 @@ const mountHome = () =>
 
 describe('HomeView 数据加载', () => {
   beforeEach(() => {
+    // jsdom 不实现 matchMedia，Hero 的移动端判断会抛错；这里补一个最小实现
+    if (typeof window.matchMedia !== 'function') {
+      window.matchMedia = (query) => ({
+        matches: false, media: query, onchange: null,
+        addListener: () => {}, removeListener: () => {},
+        addEventListener: () => {}, removeEventListener: () => {},
+        dispatchEvent: () => false,
+      })
+    }
     listEvents.mockReset()
     getEvent.mockReset()
     listSongs.mockReset()
