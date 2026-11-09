@@ -13,15 +13,15 @@ const route = useRoute()
 
 <template>
   <header class="sticky top-0 z-30 border-b border-line bg-base/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
-    <nav class="wrap flex h-16 items-center justify-between gap-4 !pr-16 sm:!pr-24">
-      <!-- Logo：衬线 + mono 双层（给右缘 MENU 页签留出位置） -->
-      <RouterLink to="/" class="flex items-baseline gap-2">
-        <span class="serif text-xl font-semibold tracking-wide text-ink">BanG Dream!</span>
-        <span class="micro-accent">/ LIVE</span>
+    <nav class="wrap flex h-16 flex-nowrap items-center justify-between gap-3 !pr-16 sm:gap-4 sm:!pr-24">
+      <!-- Logo：衬线 + mono 双层（给右缘 MENU 页签留出位置）；窄屏禁止折行 -->
+      <RouterLink to="/" class="flex shrink-0 items-baseline gap-2 whitespace-nowrap">
+        <span class="serif text-base font-semibold tracking-wide text-ink sm:text-xl">BanG Dream!</span>
+        <span class="micro-accent hidden sm:inline">/ LIVE</span>
       </RouterLink>
 
       <!-- 右侧：搜索 + 登录态 -->
-      <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex shrink-0 items-center gap-2 sm:gap-3">
         <SearchBox />
         <template v-if="auth.isLogin">
           <RouterLink
@@ -48,8 +48,8 @@ const route = useRoute()
             {{ auth.nickname.slice(0, 1).toUpperCase() }}
           </RouterLink>
         </template>
-        <RouterLink v-else to="/login" class="link-ext mono text-xs tracking-[0.2em] text-ink">
-          登录 LOGIN <span class="arrow">↗</span>
+        <RouterLink v-else to="/login" class="link-ext mono whitespace-nowrap text-xs tracking-[0.2em] text-ink">
+          登录<span class="hidden sm:inline"> LOGIN</span> <span class="arrow">↗</span>
         </RouterLink>
       </div>
     </nav>
