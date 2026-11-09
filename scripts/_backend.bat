@@ -7,7 +7,7 @@ call "%~dp0env.bat"
 
 REM Local dev / E2E: relax per-IP rate limits so the Playwright suite
 REM (which registers+logs in ~40 times) does not hit 429 mid-run.
-REM Production limits stay strict -- cloudstudio.sh does not set these.
+REM Production limits stay strict -- deploy-ubuntu.sh does not set these.
 set "RATE_LIMIT_AUTH=3000"
 set "RATE_LIMIT_ORDER=3000"
 set "RATE_LIMIT_ASSISTANT=3000"

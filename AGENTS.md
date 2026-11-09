@@ -73,7 +73,7 @@ D:/全栈/
 ├── db/seed/reference.sql         # 参考数据基线（幂等；新环境回放迁移后执行）
 ├── docs/                         # 现行设计 01–18 + metrics + SQL 总览
 │   └── archive/                  # 历史任务书 / 数据审计 / 开发纪实（不作为现行规范）
-├── scripts/                      # build / start / check / backup-db / gen_seed（说明见 scripts/README.md）
+├── scripts/                      # 本地开发、审计、备份、Ubuntu 部署（说明见 scripts/README.md）
 ├── assets-src/                   # 本地素材：video/（OP 视频）、images/（原图）——不入库
 ├── backup/                       # 本地数据库/.git 备份 + oneoff/ 一次性脚本——不入库
 └── AGENTS.md                     # 本文档

@@ -181,19 +181,13 @@ E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForRespons
 
 ## 部署
 
-演示环境（腾讯云 CloudStudio）已跑通全流程，生产迁移到任意 Linux VPS 步骤相同：
+当前服务器部署入口是 `scripts/deploy-ubuntu.sh`，面向 Ubuntu 22.04/24.04。脚本会安装运行依赖、构建前后端，并配置 systemd 与 Nginx。请在仓库根目录、服务器代码目录中执行：
 
 ```bash
-# 后端
-./mvnw -q package -DskipTests
-nohup env DB_URL=... DB_USERNAME=... DB_PASSWORD=... JWT_SECRET=... \
-  java -jar target/ave-mygo-*.jar > backend.log 2>&1 &
-
-# 前端（关键：同源路径，覆盖 .env.production 的 localhost）
-cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm run build
-
-# nginx：托 dist + /api 反代 8080（配置见 docs/08a-上线检查清单.md）
+sudo bash scripts/deploy-ubuntu.sh
 ```
+
+部署参数与手动运维命令见 [scripts/README.md](scripts/README.md)。数据库备份脚本将新文件写入 `backup/db/`，不会移动其他本地备份文件。
 
 **AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
 
@@ -202,10 +196,6 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 | `LLM_BASE_URL` | OpenAI 兼容的 chat completions 地址 | 本地 `http://localhost:11434/v1/chat/completions`；云端如 `https://api.deepseek.com/v1/chat/completions` |
 | `LLM_MODEL` | 模型名（云端必须显式配置） | `qwen3:8b` / `deepseek-chat` |
 | `LLM_API_KEY` | 云 API Key（本地 Ollama 留空） | `sk-...` |
-
-> ⚠️ 云端部署的两处已知限制：① 代码目前**不发 Authorization 头**，接云 API 前需要补
-> （见「遗留事项」）；② 流式 `tool_calls` 解析按 Ollama 的「整块到达」实现，
-> 标准 OpenAI 的增量分片需要改成按 index 累加。这两条是接云端 LLM 的前置改动。
 
 **限流相关**：`RATE_LIMIT_AUTH` / `RATE_LIMIT_ORDER` / `RATE_LIMIT_ASSISTANT` /
 `RATE_LIMIT_DEFAULT`（默认 10/20/20/120 每分钟）、`RATE_LIMIT_TRUSTED_PROXIES`
@@ -225,9 +215,9 @@ cd frontend && VITE_API_BASE=/api/v1 npm install && VITE_API_BASE=/api/v1 npm ru
 ├── db/seed/reference.sql  # 参考数据幂等基线（乐队/曲目/专辑/演出/票档/歌单）
 ├── docs/                  # 现行设计文档 + 截图（docs/img/）
 │   └── archive/           # 历史任务书、审计报告、开发纪实
-├── scripts/               # 构建 / 启动 / 基线检查 / 备份（见 scripts/README.md）
+├── scripts/               # 本地开发、数据审计、备份、Ubuntu 部署（见 scripts/README.md）
 ├── assets-src/            # 本地素材（OP 视频 / 原图，不入库）
-├── backup/                # 本地数据库与 .git 备份、一次性脚本（不入库）
+├── backup/                # 本地数据库/.git 备份（数据库导出放 backup/db/）与一次性脚本（不入库）
 └── AGENTS.md              # 工程全景（约定 / 数据模型 / 接口 / 红线）
 ```
 
