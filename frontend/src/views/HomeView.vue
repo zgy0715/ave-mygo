@@ -242,9 +242,9 @@ const gradientOf = (slug) =>
       <p class="micro hidden sm:block">FAN PROJECT ✳ NOT OFFICIAL</p>
       <p class="micro animate-scroll-hint absolute left-1/2 hidden -translate-x-1/2 sm:block">SCROLL DOWN ↓</p>
 
-      <RouterLink v-if="featured" :to="`/events/${featured.id}`" class="group ml-auto max-w-[72%] text-right sm:max-w-none">
-        <p class="mono text-sm font-medium text-primary tabular">{{ shortDate }} @{{ featured.venue }}</p>
-        <p class="mt-1 text-sm font-bold sm:text-[16px]">{{ featured.title }}</p>
+      <RouterLink v-if="featured" :to="`/events/${featured.id}`" class="group ml-auto max-w-[88%] pr-16 text-right sm:max-w-none sm:pr-0">
+        <p class="mono truncate text-sm font-medium text-primary tabular">{{ shortDate }} @{{ featured.venue }}</p>
+        <p class="mt-1 line-clamp-2 text-sm font-bold sm:line-clamp-none sm:text-[16px]">{{ featured.title }}</p>
         <p class="micro mt-1.5 hidden transition-colors duration-300 group-hover:!text-primary sm:block">
           TICKET ON SALE — 立即购票 ↗
         </p>
