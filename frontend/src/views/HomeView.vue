@@ -152,8 +152,8 @@ const gradientOf = (slug) =>
 </script>
 
 <template>
-  <!-- Hero：满屏视频 + 中央字标（anontokyo 构图，保留） -->
-  <section class="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden">
+  <!-- Hero：满屏视频 + 中央字标（anontokyo 构图，保留）；高度扣掉 sticky 顶栏 4rem，否则底部信息带被推出视口 -->
+  <section class="relative flex h-[calc(100svh-4rem)] min-h-[560px] flex-col overflow-hidden">
     <!-- 兜底层：仅当视频与海报都不可用（极弱网 / 文件缺失）才出现 -->
     <div v-if="showAurora" class="absolute inset-0 overflow-hidden bg-base" aria-hidden="true">
       <div class="animate-drift absolute -left-1/4 top-[-25%] h-[85vmax] w-[85vmax] rounded-full opacity-25 blur-3xl" style="background: radial-gradient(circle, #7bd, transparent 62%)" />
@@ -238,7 +238,7 @@ const gradientOf = (slug) =>
       </button>
     </div>
 
-    <div class="relative flex items-end justify-between gap-6 pb-7 pl-6 pr-[5.5rem] sm:px-10">
+    <div class="relative flex items-end justify-between gap-6 pb-7 pl-6 pr-[5.5rem] sm:pl-10 sm:pr-24">
       <p class="micro hidden sm:block">FAN PROJECT ✳ NOT OFFICIAL</p>
       <p class="micro animate-scroll-hint absolute left-1/2 hidden -translate-x-1/2 sm:block">SCROLL DOWN ↓</p>
 
