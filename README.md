@@ -1,296 +1,231 @@
-# BanG Dream! Live — MyGO!!!!! × Ave Mujica 粉丝站
+# BanG Dream! Live
 
-![Java](https://img.shields.io/badge/Java-17-EA2D2E?logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
-![Spring Security](https://img.shields.io/badge/Spring%20Security-JWT%20%E8%87%AA%E6%A0%A1%E9%AA%8C-6DB33F)
-![JPA](https://img.shields.io/badge/JPA-Hibernate%207-59666C?logo=hibernate&logoColor=white)
-![Flyway](https://img.shields.io/badge/Flyway-V1--V55-CC0205?logo=flyway&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
-![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
-![Pinia](https://img.shields.io/badge/Pinia-Store-F7D336?logo=pinia&logoColor=black)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
-![ECharts](https://img.shields.io/badge/ECharts-%E7%9C%8B%E6%9D%BF-AA344D?logo=apacheecharts&logoColor=white)
-![Ollama](https://img.shields.io/badge/Ollama-qwen3:8b-000000?logo=ollama&logoColor=white)
-![JUnit](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-Tests-6E9F18?logo=vitest&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)
-![nginx](https://img.shields.io/badge/nginx-%E5%90%8C%E6%BA%90%E5%8F%8D%E4%BB%A3-009639?logo=nginx&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-blue)
+[![CI](https://github.com/zgy0715/ave-mygo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zgy0715/ave-mygo/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-17-EA2D2E)
+![Vue](https://img.shields.io/badge/Vue-3-4FC08D)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-> 一个面向 BanG Dream! 粉丝的全栈 Web 应用：曲库试听、B 站 MV、演出票务（防超卖）、收藏与歌单、评论与开售提醒、管理端、AI 助手。
-> 由个人独立完成前后端、数据库、测试与部署，用于学习与作品展示；原创代码采用 MIT 许可。
+一个围绕 MyGO!!!!! × Ave Mujica 的个人全栈粉丝站，包含音乐目录、官方外链试听与 MV 嵌入、演出票务、收藏歌单、评论、管理端和 AI 助手。
 
-**许可**：原创代码、脚本和文档见 [MIT LICENSE](LICENSE)；第三方音乐、视频、图片、字体与商标不纳入该授权，见 [NOTICE](NOTICE.md)。本站使用官方外链试听与播放器嵌入，具体内容的使用和分发仍须遵守权利方要求。
+项目由个人独立开发，开发周期约一个月，覆盖前后端、数据库迁移、自动化测试与服务器部署。购票和支付用于演示，不接入真实支付。
 
----
+**在线演示：[http://193.112.16.57/](http://193.112.16.57/)**。演示服务器由维护者单独更新，线上版本可能与当前主分支不同。
 
-## 页面与素材
+## 导航
 
-项目包含首页、曲库、歌曲详情、票务和管理看板。含未核实授权素材的旧截图仅保留本地，
-默认克隆和构建使用渐变、文字降级；素材路径、清单与替换方式见 [开源许可与素材](docs/20-开源许可与素材.md)。
+- [功能与工程实现](#功能与工程实现)
+- [技术栈与结构](#技术栈与结构)
+- [本地运行](#本地运行)
+- [图片与视频](#图片与视频)
+- [测试与 CI](#测试与-ci)
+- [部署到 Ubuntu](#部署到-ubuntu)
+- [维护与已知边界](#维护与已知边界)
+- [文档与许可](#文档与许可)
 
----
+## 功能与工程实现
 
-## 目录
-
-- [功能总览](#功能总览)
-- [技术栈](#技术栈)
-- [系统架构](#系统架构)
-- [快速开始](#快速开始)
-- [测试](#测试)
-- [部署](#部署)
-- [移动端与素材](#移动端与素材)
-- [目录结构](#目录结构)
-- [文档索引](#文档索引)
-- [开发纪实](#开发纪实)
-
----
-
-## 功能总览
-
-### 面向访客 / 登录用户
-
-| 模块 | 说明 |
+| 功能 | 实现 |
 |---|---|
-| 曲库 | 55 首歌（MyGO!!!!! / Ave Mujica / sumimi），乐队筛选、关键词搜索（匹配歌名 + 乐队名）、专辑聚合 |
-| 试听 | iTunes 官方 30 秒预览外链（49/55 首有源，其余官方未上架，不爬取版权音源） |
-| MV | Bilibili 官方账号内嵌播放（优先 MyGO_AveMujica 官方号），番剧页降级为跳转卡片 |
-| 演出票务 | 场次/票档/余票展示 → 下单（15 分钟支付倒计时）→ 模拟支付；防超卖、限购校验 |
-| 我的订单 | 状态机全展示：待支付 / 已支付 / 已取消 / 已过期 / 已退款 |
-| 收藏 | 歌曲 / 演出双向收藏，我的收藏页 |
-| 歌单 | 建歌单、加歌、就地新建、歌单详情播放 |
-| 评论 | 歌曲评论（发 / 删 / 列表） |
-| 开售提醒 | 订阅演出，开售时站内提醒（定时任务扫描） |
-| AI 助手 | 四人格人设（小灯 / 祥子 / まな / にゃむ），SSE 流式打字机输出，LLM 不可用时规则引擎兜底 |
-| 登录守卫 | 游客点播放 / 购票 → 引导弹窗，登录后回原页 |
+| 音乐目录 | 歌曲、专辑、乐队与成员；乐队筛选、关键词搜索、收藏、歌单、评论 |
+| 试听与 MV | 官方试听外链、Bilibili 播放器嵌入；外部内容不可用时提供降级展示 |
+| 演出票务 | 演出、场次、票档、余票与曲目单；下单、模拟支付、取消、超时取消与管理员退款 |
+| 个人账户 | 注册登录、JWT 认证、个人资料与订单；切换账号时清理缓存，阻止旧请求污染新账号 |
+| 管理端 | 歌曲与演出管理、票档库存、订单退款、用户管理、数据看板、Hero 视频上传 |
+| AI 助手 | 多人格对话、SSE 流式响应、站内工具查询；写操作需管理员权限和二次确认 |
 
-### 管理端（仅 ADMIN）
+工程实现重点：
 
-| 模块 | 说明 |
+- 订单事务中校验库存与限购，数据库 CHECK 约束作为超卖兜底；价格快照随订单保存。
+- 支付、取消、退款按订单状态机执行，取消和退款回滚库存；超时订单由定时任务处理。
+- Controller → Service → Repository 分层；Jakarta Validation 校验输入，统一业务响应与异常处理。
+- Spring Security 在后端校验身份和角色；前端路由守卫用于交互引导。
+- 通过 Flyway 管理数据库历史，JPA 只验证结构；旧迁移冻结，新结构追加版本。
+- 流式对话支持取消、重置和上下文隔离，工具操作留有审计记录。
+
+## 技术栈与结构
+
+| 层 | 技术 |
 |---|---|
-| 数据看板 | 近 30 天营收 / 订单趋势（ECharts），各场次上座率 |
-| 歌曲管理 | 行内编辑（音源 / MV / 标签 / 上下架），新建歌曲 |
-| 演出管理 | 演出 / 场次 / 票档三级新建与编辑；**三级删除**（软删 + 未完成订单拦截 40903 + 级联） |
-| 票档控制 | 下架 / 恢复（status 0/1），库存不得小于已售 |
-| 订单管理 | 按状态 / 场次 / 用户筛选，退款（自动回滚库存） |
-| 用户管理 | 用户列表、封禁 / 解封（禁止封自己与管理员） |
-| Setlist 录入 | 给场次录入曲目与安可标记 |
+| 后端 | Java 17、Spring Boot 4.1.1、Spring Security、Spring Data JPA、Jackson 3 |
+| 数据库 | MySQL 8.0、Flyway；生产与测试使用独立数据库 |
+| 前端 | Vue 3、Vite、Pinia、Vue Router、Tailwind CSS、ECharts |
+| AI | 本地 Ollama，或 OpenAI 兼容的云端 Chat Completions 接口 |
+| 测试 | JUnit、Mockito、MockMvc、Vitest、Playwright |
+| 部署 | Ubuntu、systemd、Nginx 同源反向代理 |
 
----
-
-## 技术栈
-
-| 层 | 选型 | 说明 |
-|---|---|---|
-| 后端 | **Spring Boot 4.1（Java 17）** | Spring MVC + Spring Security（JWT 自校验）+ Spring Data JPA（Hibernate 7.4） |
-| 数据库 | **MySQL 8.0** | 全表 InnoDB + utf8mb4_0900_ai_ci；表结构只信 Flyway（55 个迁移），JPA 仅 `ddl-auto: validate` |
-| 迁移 | **Flyway** | V1–V55；结构迁移 + 数据迁移（含全部曲库/专辑/成员种子数据），新环境一键自举；新增结构从 V56 起 |
-| 前端 | **Vue 3 + Vite 8 + Pinia + Vue Router + Tailwind CSS 4** | 按路由代码分割，ECharts 异步加载；移动端断点 767px |
-| 实时 | **SSE**（`SseEmitter` + 线程池） | AI 助手流式输出；开售提醒后台扫描 |
-| AI | **双通道：本地 Ollama / 云端 OpenAI 兼容 API** | 同一套客户端支持两条链路（Bearer 鉴权 + tool_calls 增量拼接）；不可用时规则引擎兜底 |
-| 测试 | JUnit 5 + MockMvc（168 用例）／Vitest（82 用例）／Playwright（20 用例） | 后端集成测试用真实 MySQL 测试库 |
-| 部署 | **Ubuntu 24.04 + systemd + nginx 同源反代** | `scripts/deploy-ubuntu.sh` 一键安装/构建/常驻；本地与服务器均可在同源下访问 |
-
----
-
-## 系统架构
-
-```
-                    ┌────────────────────────────────────┐
-   浏览器 ────────► │  nginx :80                         │
-                    │  ├─ /            → frontend/dist   │  Vue 3 静态资源
-                    │  └─ /api/**      → 127.0.0.1:8080  │  同源反代（免 CORS）
-                    └────────────────┬───────────────────┘
-                                     │
-                    ┌────────────────▼───────────────────┐
-                    │  Spring Boot 4.1 :8080             │
-                    │  ├─ Security：JWT 过滤器 + RBAC     │
-                    │  ├─ 限流：IP 固定窗口（按组配额）    │
-                    │  ├─ Controller → Service → Repo    │
-                    │  ├─ Flyway：V1–V55 迁移            │
-                    │  ├─ 定时任务：场次状态机/提醒/超时   │
-                    │  └─ SSE：AI 助手流式                │
-                    └────────────────┬───────────────────┘
-                                     │
-                    ┌────────────────▼───────────────────┐
-                    │  MySQL 8 (bandori_live)            │
-                    │  19 张表 · InnoDB · utf8mb4        │
-                    │  外链：iTunes 预览 / B 站 iframe    │
-                    └────────────────────────────────────┘
+```text
+backend/       Spring Boot 服务与 Flyway 迁移
+frontend/      Vue 页面、组件、前端测试及可选本地 public 素材
+db/seed/       可选参考数据补录，不包含用户和订单
+scripts/       本地启动、检查、备份与 Ubuntu 部署工具
+docs/          当前设计、素材说明和 metrics；archive/ 为历史记录
+var/           服务器持久素材与部署辅助文件，不入 Git
+backup/        本地备份与一次性验证产物，不入 Git
 ```
 
----
+业务数据、接口和测试数量统一见 [docs/metrics.md](docs/metrics.md)，其中标注了各项快照日期。
 
-## 快速开始
+## 本地运行
 
-**前置**：JDK 17+、MySQL 8、Node 22+。
+前置条件：JDK 17、MySQL 8.0、Node 22.18+（22.x）或 24.12+。CI 使用 [.nvmrc](.nvmrc) 固定的 Node 版本。
 
 ```bash
-# 1. 数据库：保证 MySQL 在跑即可，库和表由 Flyway 首次启动自动创建并灌入种子数据
-# 2. 后端配置（敏感信息不入库）
+git clone https://github.com/zgy0715/ave-mygo.git
+cd ave-mygo
 cd backend
-cat > .env <<'EOF'
-DB_URL=jdbc:mysql://localhost:3306/bandori_live?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-DB_USERNAME=root
-DB_PASSWORD=你的数据库密码
-JWT_SECRET=至少32位的随机字符串
-JWT_EXPIRATION_HOURS=72
-EOF
-
-# 3. 后端（Windows: mvnw.cmd / Linux: chmod +x mvnw 后 ./mvnw）
-./mvnw spring-boot:run          # http://localhost:8080
-
-# 4. 前端
-cd ../frontend
-npm install
-npm run dev                     # http://localhost:5173（代理已配）
+cp .env.example .env
+# 编辑 .env，填写本机数据库连接和至少 32 字节的随机 JWT_SECRET。
+# Linux / macOS：
+bash ./mvnw spring-boot:run
 ```
 
-管理员账号：将 `user` 表目标用户 `role` 改为 `ADMIN`（参考迁移 `V22__admin_user.sql`）。
-
-> 参考数据由迁移自带，新环境完整运行 Flyway 即可。可选执行
-> `mysql --default-character-set=utf8mb4 -u root -p bandori_live < db/seed/reference.sql`
-> 更新乐队/成员/专辑/歌曲元数据，并按业务键补齐缺失的演出、场次、票档与曲目单。
-> 请在维护期间单进程执行：已有演出域记录（含软删行）保持原样，新票档已售数为 0，
-> 不覆盖库存、订单或限购配额；此文件不用于恢复交易数据。使用边界见 [脚本说明](scripts/README.md)。
->
-> 本地开发默认加载已有 public 素材，新克隆缺少素材时使用渐变与文字降级。默认生产构建不打包本地素材；
-> 需要随构建打包时，在确认使用权后设置 `INCLUDE_LOCAL_ASSETS=1`，也可设置 `0` 关闭开发时的加载。
-> 服务器更新会保留现有素材，持久目录与替换方式见 [素材说明](docs/20-开源许可与素材.md)。
-
-管理端可替换两个首页背景视频（MP4，最多100MB，上传超时5分钟）。播放、上传和检测统一使用
-`/assets/band-{slot}-720p.mp4`；本地默认写入 `frontend/public/assets`。Ubuntu 部署脚本将上传内容
-保存在独立的 `var/hero-assets/`，由 Nginx 提供并重新验证缓存，后续前端构建保留已上传视频。
-素材需自行准备适合网页播放的版本，上传不负责转码或更新 poster 首帧图。
-
----
-
-## 测试
-
-| 层 | 命令 | 规模 |
-|---|---|---|
-| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | 并发购票、订单流转、权限、SSE、限流等；数量见 [metrics](docs/metrics.md) |
-| 前端单测 | `npm run test`（Vitest + jsdom） | 请求、账户隔离、评论、助手与页面回归；数量见 [metrics](docs/metrics.md) |
-| E2E 旅程 | `npm run test:e2e`（Playwright，本机用 Edge） | 游客、歌单、购票和管理端；本轮未运行，历史数量见 [metrics](docs/metrics.md) |
-
-E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
-
-一键跑后端 + 前端基线：`scripts\check.bat`（E2E 加参数：`scripts\check.bat e2e`）。
-Linux/macOS 使用 `bash scripts/check.sh`；PowerShell 7 也可执行 `./scripts/check.ps1`。追加 `tools` 只验证本机工具，发现规则见 [scripts/README.md](scripts/README.md)。
-
-GitHub Actions 在 push、PR 和手动触发时运行：Java 17 + 临时 MySQL 8.0 执行后端测试及打包，
-Node 24 执行 `npm ci`、前端单测与构建。测试库每次独立创建，CI 使用的公开测试口令不用于部署。
-工作流只授予读取仓库权限，第三方 Action 固定到完整提交哈希，由 Dependabot 跟踪更新。
-
----
-
-## 部署
-
-当前服务器部署入口是 `scripts/deploy-ubuntu.sh`，面向 Ubuntu 22.04/24.04。脚本会安装运行依赖、构建前后端，并配置 systemd 与 Nginx。请在仓库根目录、服务器代码目录中执行：
+另开终端启动前端：
 
 ```bash
+cd ave-mygo/frontend
+npm ci
+npm run dev
+```
+
+Windows 可先安装前端依赖、配置 `backend/.env`，再从仓库根目录执行 `scripts\start.bat`。
+脚本优先运行已有后端 jar；后端源码更新后，可先执行 `scripts\build.bat` 或使用 Maven 从源码启动。
+中文目录下 Maven wrapper 的非交互限制和缓存定位方式见 [脚本说明](scripts/README.md)。
+
+| 地址 | 用途 |
+|---|---|
+| `http://localhost:5173/` | 前端开发服务器 |
+| `http://localhost:8080/api/v1/health` | 后端进程存活 |
+| `http://localhost:8080/api/v1/ready` | 后端与数据库就绪 |
+
+前端开发默认直接请求 `http://localhost:8080/api/v1`，通过后端 CORS 配置允许访问；需要变更时设置 `VITE_API_BASE`，模板见 [frontend/.env.example](frontend/.env.example)。生产构建默认使用 `/api/v1`，由 Nginx 转发。
+
+后端读取工作目录下的 `.env`。首次启动自动执行 Flyway；V1–V55 不得修改，新结构从当前最大版本之后追加。可选参考种子和重复导入规则见 [scripts/README.md](scripts/README.md)。不要将测试配置指向生产库。
+
+自行注册普通账号后，按维护需要授予管理员角色；项目不提供公开管理员密码。管理页面为 `/admin`，后端仍会独立校验 ADMIN 权限。
+
+AI 为可选能力：本地可运行 Ollama；云端配置 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY`。未配置或模型不可用时，对话可能提示不可用或使用规则兜底，曲库和票务不依赖模型。
+
+## 图片与视频
+
+**代码仓库与运行素材分别维护。** 本地已有图片和视频不会被删除，但不随当前 Git 版本分发；新克隆没有素材时显示渐变和文字占位。
+
+| 场景 | 行为 |
+|---|---|
+| `npm run dev` | 默认读取本地 `frontend/public/`，可查看已有页面效果 |
+| `INCLUDE_LOCAL_ASSETS=0 npm run dev` | 显式关闭本地素材 |
+| `npm run build` | 默认不将 `public/` 打入构建产物，CI 验证此模式 |
+| `INCLUDE_LOCAL_ASSETS=1 npm run build` | 显式将自行准备并确认可使用的素材一并打包 |
+| Ubuntu 部署 | Nginx 从持久目录提供素材，前端重新构建不清理这些目录 |
+
+上表环境变量写法适用于 Bash；PowerShell 可先设置 `$env:INCLUDE_LOCAL_ASSETS='1'`，再执行构建命令。
+
+| 服务器目录（相对项目根目录） | 对外路径 |
+|---|---|
+| `var/site-assets/img/` | `/img/` 下的封面、成员图、Logo |
+| `var/site-assets/assets/band-*-poster.jpg` | 首页视频首帧的同名 `/assets/` 路径 |
+| `var/site-assets/favicon.ico` | `/favicon.ico` |
+| `var/hero-assets/band-*-720p.mp4` | 首页背景视频的同名 `/assets/` 路径 |
+
+部署脚本通过 [preserve-assets.sh](scripts/preserve-assets.sh)，在自动拉取和构建前从现有 `frontend/public/`、旧 `frontend/dist/` 依次补齐持久目录，已有文件不覆盖。管理端上传仍写入独立 Hero 目录。
+
+首次更新旧站前必须备份素材；不要先重建或清理旧 dist。新服务器需要单独上传素材，替换已有素材时直接更新持久目录中的对应文件。
+具体路径、来源记录与使用边界见 [开源许可与素材](docs/20-开源许可与素材.md)及[素材清单](docs/assets-manifest.csv)。
+
+## 测试与 CI
+
+从仓库根目录执行：
+
+```powershell
+scripts\check.bat          # Windows：后端测试与前端单测
+scripts\check.bat tools    # 仅检查运行工具
+```
+
+```bash
+bash scripts/check.sh       # Linux / macOS：相同基线
+cd frontend
+npm run build              # 生产构建
+cd ..
+python scripts/check-assets.py --dist
+```
+
+后端集成测试使用 `bandori_live_test`，部分种子回放测试会创建独立测试库；测试账号需有相应建库权限。前端单测无需启动网站。完整运行条件见 [测试与验收](docs/08b-测试与验收.md)。
+
+E2E 为可选检查，需前后端均运行，命令为 `scripts\check.bat e2e`。它会注册测试账号、创建订单等，应仅在专用测试环境运行；本轮 E2E 未执行，不能将历史快照当作本轮验收结果。
+
+GitHub Actions 在 push、PR 和手动触发时执行后端 MySQL 集成测试与打包、前端单测与构建，以及部署脚本语法和素材检查。工作流仅有仓库读取权限，第三方 Action 固定到提交哈希。
+
+## 部署到 Ubuntu
+
+当前入口为 [scripts/deploy-ubuntu.sh](scripts/deploy-ubuntu.sh)，面向 Ubuntu 22.04/24.04、x86_64，建议项目目录 `/opt/ave-mygo`。路径必须是无空格的规范绝对路径；应用由专用账号运行，后端仅监听本机 8080，Nginx 对外提供 80。
+
+### 新服务器
+
+在已经安装 Git 的服务器上：
+
+```bash
+sudo git clone https://github.com/zgy0715/ave-mygo.git /opt/ave-mygo
+cd /opt/ave-mygo
+# 如需完整图片视频，先按上方持久目录上传自行准备的素材。
 sudo bash scripts/deploy-ubuntu.sh
 ```
 
-部署参数与手动运维命令见 [scripts/README.md](scripts/README.md)。数据库备份脚本将新文件写入 `backup/db/`，不会移动其他本地备份文件。
+脚本会安装运行依赖、构建前后端、创建独立数据库账号与随机凭据，配置 systemd 和 Nginx，并验证就绪接口。公网访问需放行 80；MySQL 和应用端口无需直接对外开放。域名和 HTTPS 需在服务器上另外配置。
 
-已有站点更新前，先备份 `frontend/public/`、`frontend/dist/`、`backend/.env` 及已有素材持久目录。
-部署脚本在拉取与构建之前，将现有图片、视频补齐至 `var/site-assets/` 和 `var/hero-assets/`，
-由 Nginx 独立提供，重新构建不会清空这些素材。新服务器须单独上传素材，代码仓库不包含它们。
+### 更新已有站点
 
-脚本默认部署当前干净检出；显式设置 `USE_GIT=1` 才进行快进更新。它安装运行依赖、按 `.nvmrc` 准备 Node、创建专用数据库账号、构建前后端、以 `avemygo` 系统账号运行后端，并验证数据库 readiness 和 Nginx 代理。重复执行保留已有凭据；探针失败会返回非零，部署前请保留上一发布版本。配置渲染与权限说明见脚本文档。
-
-**AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
-
-| 变量 | 说明 | 示例 |
-|---|---|---|
-| `LLM_BASE_URL` | OpenAI 兼容的 chat completions 地址 | 本地 `http://localhost:11434/v1/chat/completions`；云端如 `https://api.deepseek.com/v1/chat/completions` |
-| `LLM_MODEL` | 模型名（云端必须显式配置） | `qwen3:8b` / `deepseek-chat` |
-| `LLM_API_KEY` | 云 API Key（本地 Ollama 留空） | `sk-...` |
-
-**限流相关**：`RATE_LIMIT_AUTH` / `RATE_LIMIT_ORDER` / `RATE_LIMIT_ASSISTANT` /
-`RATE_LIMIT_DEFAULT`（默认 10/20/20/120 每分钟）、`RATE_LIMIT_TRUSTED_PROXIES`
-（只有这些代理地址发来的 `X-Forwarded-For` 才被采信）。
-
-上线自检清单：`/ready` 探针、生产 CORS 域名、限流阈值、数据库备份脚本（`scripts/backup-db.bat`）、日志级别。
-
----
-
-## 移动端与素材
-
-### 移动端适配（断点 767px）
-
-- **导航单行**：Logo 降为 `text-base`，窄屏隐藏 `/ LIVE` 与 `LOGIN` 英文，只留「登录 ↗」；`flex-nowrap + shrink-0` 禁止折行
-- **Hero 高度**：`calc(100svh - 4rem)` 扣掉 sticky 顶栏，底部演出信息不会被推出视口
-- **视频不自动下载**：手机端 `preload="none"` 且无 `autoplay`，先显示 poster 首帧，点「壱雫空 MV ▶」才 `load() + play()`
-- **加载过渡**：视频 `canplay` 后才 `opacity-1` 淡入，未就绪不会有黑框；视频与海报都失败才回退渐变兜底
-- **底部信息**：日期单行省略、标题最多两行，并为右下角悬浮球留出右侧空间
-
-### 素材与体积
-
-| 素材 | 位置 | 规格 | 入库 |
-|---|---|---|---|
-| Hero 视频（网页用） | `frontend/public/assets/band-*-720p.mp4` | 自备已授权 MP4 | ❌ |
-| 首帧 poster | `frontend/public/assets/band-*-poster.jpg` | 自备已授权图片 | ❌ |
-| OP 原片 | `assets-src/video/*_1080P.mp4` | 1920×1080 · 26MB/30MB | ❌ gitignore |
-| 封面图 | `frontend/public/img/covers/` | 自备已授权图片 | ❌ |
-
-压制参数（ffmpeg 免安装版即可）：
+1. 先备份数据库、`backend/.env`、前端 `public/` 与旧 `dist/`，以及已有 `var/site-assets/`、`var/hero-assets/`。备份应放在部署目录之外。
+2. 核对现有部署路径、数据库账号与 Nginx 配置。新版要求专用非 root 数据库账号；旧站若仍使用 root，应先完成账号迁移。脚本不会自动重置密码或覆盖不匹配的连接配置。
+3. 保存服务器工作区的实际改动，再更新 `main`。首次采用本版脚本时，即使拉取已移除旧 public 文件，只要旧 dist 仍在，就可以补齐素材。不要先手动重建前端。
+4. 在项目根目录运行部署入口。已采用本版部署方式的站点，可使用以下命令自动快进更新：
 
 ```bash
-ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
-       -c:v libx264 -preset slow -crf 34 -pix_fmt yuv420p -an \
-       -movflags +faststart out-720p.mp4
+sudo env USE_GIT=1 BRANCH=main DB_USER=bandori bash scripts/deploy-ubuntu.sh
 ```
 
-`-an` 是因为页面 `<video muted autoplay loop>` 本来就不出声；`+faststart` 让 moov 前置，边下边播。
-默认构建不包含本机 public 素材。启用已授权视频后，实际包体与加载耗时取决于该文件；移动端采用点播以控制带宽。逐文件来源核验状态与哈希见 [素材清单](docs/assets-manifest.csv)。
+`DB_USER` 应与现有 `backend/.env` 的 `DB_USERNAME` 一致；数据库名可通过 `DB_NAME` 指定。默认部署当前干净检出，不自动拉取；拉取失败、分支分叉或工作区有改动时停止。禁止用强制重置覆盖服务器实际改动。
 
----
+脚本会构建并替换当前 jar / dist，再重启后端、重载 Nginx。**它不提供自动发布回滚**，执行前须保留上一版本及其配置和素材。已有自定义域名、TLS 或其他虚拟主机的服务器，应先合并 Nginx 配置，不能直接用默认配置替换。
 
-## 目录结构
+部署脚本涉及安装软件、创建专用账号、写入 systemd / Nginx 配置和重启服务；首次执行前应确认这些系统变更符合当前服务器环境。
 
-```
-├── backend/              # Spring Boot 后端
-│   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（已冻结，新结构从 V56 起）
-├── frontend/              # Vue 3 前端
-│   ├── public/assets/     # 可选本地视频与首帧（默认不分发）
-│   └── e2e/               # Playwright E2E
-├── db/seed/reference.sql  # 目录元数据更新 + 演出域按业务键补录（保留交易数据）
-├── docs/                  # 现行设计、许可与素材清单；旧截图仅本地保留
-│   └── archive/           # 历史任务书、审计报告、开发纪实
-├── scripts/               # 本地开发、数据审计、备份、Ubuntu 部署（见 scripts/README.md）
-├── assets-src/            # 本地素材（video/ 放 OP 1080P 原片，images/ 放原图；不入库）
-├── backup/                # 本地数据库/.git 备份（数据库导出放 backup/db/）与一次性脚本（不入库）
-└── AGENTS.md              # 工程全景（约定 / 数据模型 / 接口 / 红线）
+### 部署验收与运维
+
+```bash
+curl -fsS http://127.0.0.1/api/v1/ready
+sudo systemctl status avemygo nginx
+sudo journalctl -u avemygo -n 100 --no-pager
+# 修改配置后的维护操作：
+sudo systemctl restart avemygo
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-## 文档索引
+通过服务器 IP 或域名检查首页、歌曲封面、两个 Hero 视频、登录、下单与模拟支付；有云模型时再检查流式对话。检查浏览器没有请求访客机器的 localhost。数据库就绪并不能替代这些页面与业务验收。
 
-| 文档 | 内容 |
+可先在本机只生成候选配置，查看路径与服务权限，命令见 [脚本说明](scripts/README.md)。生产环境变量、限流和备份要求见 [上线检查清单](docs/08a-上线检查清单.md)。
+
+## 维护与已知边界
+
+- 主维护分支为 `main`；本轮清理关闭未合并的自动依赖升级，继续使用已验证的依赖版本。依赖升级改为人工评估，不自动创建升级分支。
+- 原创代码、脚本与文档采用 MIT；第三方内容的权利独立处理，不能因代码开源而视为素材已获授权。
+- 当前版本已排除未核实的本地素材，旧 Git 历史仍可能包含这些文件；本轮没有重写历史。
+- 当前演出票务与支付是模拟业务；AI 依赖模型服务，外链试听和播放器依赖原站可用性。
+- 部署脚本面向单机 Ubuntu，构建发生在服务器原目录，不是容器编排或带自动回滚的发布系统。
+- 测试通过不等于线上版本已更新。服务器由维护者执行部署并完成验收，实际验收状态应按当次结果记录。
+
+## 文档与许可
+
+| 文档 | 用途 |
 |---|---|
-| [docs/04-需求说明.md](docs/04-需求说明.md) | 产品需求与页面结构 |
-| [docs/05-数据库设计.md](docs/05-数据库设计.md) | 数据库建模（含 V50–V55 新增 3 张表） |
-| [docs/06-接口设计.md](docs/06-接口设计.md) | REST 契约 |
-| [docs/08a-上线检查清单.md](docs/08a-上线检查清单.md) | 生产部署自检 |
-| [docs/08b-测试与验收.md](docs/08b-测试与验收.md) | 测试策略 |
-| [docs/09b-环境与依赖清单.md](docs/09b-环境与依赖清单.md) | 本机/部署环境与依赖版本 |
-| [docs/SQL迁移总览.md](docs/SQL迁移总览.md) | V1–V55 迁移明细 |
-| [docs/10-Agent运营层设计.md](docs/10-Agent运营层设计.md) | Agent 能力设计（工具/循环/门控/审计/多轮/预热） |
-| [docs/13-小灯v2方案.md](docs/13-小灯v2方案.md) | 小灯 v2：删模式开关 + 对话质量重做 |
-| [docs/17-后续演进计划.md](docs/17-后续演进计划.md) | 产品演进：来源基座 / 演出档案闭环 / 个人空间 / AI 引用 |
-| [docs/18-工程深度与体量方案.md](docs/18-工程深度与体量方案.md) | 七个 L3 模块、可量化证明与落地可行性 |
-| [docs/19-未完成事项清单.md](docs/19-未完成事项清单.md) | 未完成项与已知风险（P0/P1 分级） |
-| [docs/20-开源许可与素材.md](docs/20-开源许可与素材.md) | MIT 授权范围、素材排除、来源清单与替换说明 |
-| [docs/metrics.md](docs/metrics.md) | 项目度量快照（规模/测试/数据的**唯一数字口径**） |
+| [AGENTS.md](AGENTS.md) | 项目全景、工程约定与业务红线 |
+| [需求说明](docs/04-需求说明.md) | 产品目标与业务范围 |
+| [数据库设计](docs/05-数据库设计.md) / [迁移总览](docs/SQL迁移总览.md) | 数据模型与迁移历史 |
+| [接口设计](docs/06-接口设计.md) | 接口契约 |
+| [开发规范](docs/02-开发规范.md) | 命名、分层、Git 与敏感信息约定 |
+| [上线检查](docs/08a-上线检查清单.md) / [测试验收](docs/08b-测试与验收.md) | 测试与部署核对 |
+| [脚本说明](scripts/README.md) | 启动、检查、备份和部署工具 |
+| [Agent 设计](docs/10-Agent运营层设计.md) | 工具、循环、确认门控、审计与多轮对话 |
+| [后续演进](docs/17-后续演进计划.md) / [工程深度](docs/18-工程深度与体量方案.md) | 可选后续方向，不作为本轮发布完成声明 |
+| [素材说明](docs/20-开源许可与素材.md) / [项目度量](docs/metrics.md) | 素材路径及统一数字口径 |
+| [历史记录](docs/archive/) | 一次性任务、审查修复与开发纪实 |
 
-历史文档（一次性任务书、数据审计、演出数据核验、开发纪实）统一放在
-[docs/archive/](docs/archive/)，不再逐个列出。
-
----
-
-## 开发纪实
-
-小灯 Agent 化升级、代码审阅修复、一周开发实录、踩坑记录已归档：
-[docs/archive/开发纪实-2026-10至11.md](docs/archive/开发纪实-2026-10至11.md)。
+许可见 [LICENSE](LICENSE) 与 [NOTICE.md](NOTICE.md)。
