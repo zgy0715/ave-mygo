@@ -27,7 +27,6 @@ const player = usePlayerStore()
 const open = ref(false)
 const input = ref('')
 const maximized = ref(false)
-const confirming = ref(false)
 
 /**
  * 多轮上下文标识：**按人格各自一个**（2026-11-05 修）。
@@ -44,7 +43,6 @@ function convIdFor(pid) {
   }
   return id
 }
-const conversationId = computed(() => convIdFor(persona.value))
 
 /* ---- 线程：按人格分，各自独立 ---- */
 let msgSeq = 0
@@ -55,12 +53,15 @@ const threads = reactive(Object.fromEntries(PERSONAS.map((p) => [p.id, {
   sessionId: '',
   loading: false,
   error: '',
+  revision: 0,
+  confirming: false,
 }])))
 const persona = ref('xiaodeng')
 const thread = computed(() => threads[persona.value])
 const messages = computed(() => thread.value.messages)
 const loading = computed(() => thread.value.loading)
 const error = computed(() => thread.value.error)
+const confirming = computed(() => thread.value.confirming)
 const currentPersona = computed(() => PERSONAS.find((p) => p.id === persona.value) || PERSONAS[0])
 const chipById = (id) => PERSONAS.find((p) => p.id === id)?.chip || '小灯'
 
@@ -106,10 +107,17 @@ function getSessionId(pid) {
 
 /* ---- 清空 / 切人格 ---- */
 function clearThread() {
+  const pid = persona.value
   const t = thread.value
+  t.controller?.abort()
+  t.controller = null
+  t.revision++
+  t.loading = t.confirming = false
   t.messages.splice(0, t.messages.length, mkGreeting(currentPersona.value))
   t.sessionId = ''
   t.error = ''
+  for (const prefix of ['assistant_conv:', 'assistant_session:', 'assistant_thread:']) sessionStorage.removeItem(prefix + pid)
+  persist(pid)
 }
 function switchPersona(id) {
   if (!id || persona.value === id || !threads[id]) return
@@ -140,13 +148,14 @@ function upsertTool(tools, evt) {
   tools.push({ name: evt.name, status: evt.status, summary: evt.summary || '' })
 }
 
-function pushSystem(text, extra = {}) {
-  thread.value.messages.push({ id: ++msgSeq, role: 'system', text, at: Date.now(), ...extra })
+function pushSystem(text, extra = {}, target = thread.value) {
+  target.messages.push({ id: ++msgSeq, role: 'system', text, at: Date.now(), ...extra })
 }
 
 /* ---- 发送（唯一链路：v2 事件流） ---- */
 async function send(text, opts = {}) {
   const t = thread.value
+  const pid = persona.value
   const content = (text ?? input.value).trim()
   if (!content || t.loading) return
 
@@ -169,10 +178,11 @@ async function send(text, opts = {}) {
     // 这里只需把 id 传过去，不要再往 message 里塞口吻提示（会污染用户消息、污染上下文）
     await chatV2({
       message: content,
-      conversationId: conversationId.value,
-      persona: persona.value,
+      conversationId: convIdFor(pid),
+      persona: pid,
       signal: controller.signal,
       onEvent: (evt) => {
+        if (t.controller !== controller || controller.signal.aborted) return
         switch (evt.type) {
           case 'delta':
             rb.text += evt.text || ''
@@ -195,7 +205,7 @@ async function send(text, opts = {}) {
             // 50301 = LLM 未就绪：给明确提示，不白屏
             pushSystem(String(evt.code) === '50301' || evt.code === 50301
               ? '小灯暂时离线（LLM 服务未就绪），稍后再试。'
-              : `出错了：${evt.message || evt.code || '未知错误'}`)
+              : `出错了：${evt.message || evt.code || '未知错误'}`, {}, t)
             break
           default:
             break
@@ -203,44 +213,53 @@ async function send(text, opts = {}) {
       },
     })
   } catch (e) {
+    if (t.controller !== controller) return
     if (e?.name === 'AbortError' || controller.signal.aborted) {
       if (!rb.text && !rb.pending) rb.text = '（已停止生成）'
     } else {
       // v2 流不可用（老后端 / 代理不支持流式）→ 降级 v1 一次性
       try {
-        const data = await chatWithAssistant({ message: content, sessionId: getSessionId(persona.value), persona: persona.value })
+        const data = await chatWithAssistant({ message: content, sessionId: getSessionId(pid), persona: pid }, { signal: controller.signal })
+        if (t.controller !== controller || controller.signal.aborted) return
         rb.text = data.reply
         if (data.personaName) rb.name = data.personaName
       } catch {
+        if (t.controller !== controller || controller.signal.aborted) return
         t.messages.splice(t.messages.indexOf(rb), 1)
-        pushSystem('小灯走神了，发送失败。', { action: 'retry', payload: content })
+        pushSystem('小灯走神了，发送失败。', { action: 'retry', payload: content }, t)
       }
     }
   } finally {
     rb.streaming = false
-    sentThread.loading = false
-    sentThread.controller = null
+    if (sentThread.controller === controller) {
+      sentThread.loading = false
+      sentThread.controller = null
+    }
   }
 }
 
 /** 确认卡片：绑定各自的 pending 对象，不猜全局 */
 async function confirm(pending, approve) {
+  const target = thread.value
+  const revision = target.revision
   if (!pending || pending.state !== 'PENDING' || confirming.value) return
-  confirming.value = true
+  target.confirming = true
   try {
     const data = await agentConfirm(pending.token, approve)
+    if (target.revision !== revision) return
     pending.state = data.status
     pending.result = data.result || ''
   } catch (e) {
+    if (target.revision !== revision) return
     const msg = String(e.message)
     if (/40902|已处理|已失效|过期|40004|不存在/.test(msg)) {
       pending.state = 'FAILED'
       pending.result = '这次确认已失效，请重新下达指令'
     } else {
-      pushSystem(`确认出错：${msg}`)
+      pushSystem(`确认出错：${msg}`, {}, target)
     }
   } finally {
-    confirming.value = false
+    if (target.revision === revision) target.confirming = false
   }
 }
 
@@ -282,6 +301,7 @@ function onGlobalKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onBeforeUnmount(() => {
+  for (const t of Object.values(threads)) { t.controller?.abort(); t.controller = null }
   setBodyScrollLock(false)
   window.removeEventListener('keydown', onGlobalKey)
   clearTimeout(persistTimer)

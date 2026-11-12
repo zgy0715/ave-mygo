@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -22,6 +22,8 @@ vi.mock('@/stores/player', () => ({ usePlayerStore: () => ({ current: null, barC
 
 const { default: AssistantWidget } = await import('@/components/AssistantWidget.vue')
 const { useAuthStore } = await import('@/stores/auth')
+let widgets = []
+afterEach(() => { widgets.forEach((w) => w.unmount()); widgets = [] })
 
 async function mountWidget(role = 'USER') {
   const pinia = createPinia()
@@ -29,7 +31,9 @@ async function mountWidget(role = 'USER') {
   const auth = useAuthStore()
   auth.user = { id: 1, username: 'u', nickname: '用户', role }
   auth.token = 't'
-  return mount(AssistantWidget, { global: { plugins: [pinia] } })
+  const wrapper = mount(AssistantWidget, { global: { plugins: [pinia] } })
+  widgets.push(wrapper)
+  return wrapper
 }
 
 const openPanel = async (w) => {
@@ -58,6 +62,29 @@ describe('AssistantWidget（v2 单链路）', () => {
     chatV2.mockReset()
     chatWithAssistant.mockReset()
     agentConfirm.mockReset()
+  })
+
+  it('清空时终止旧流并更换会话标识，旧流不能污染或解锁新请求', async () => {
+    let oldRequest, newRequest, finishOld, finishNew
+    chatV2.mockImplementationOnce((p) => { oldRequest = p; return new Promise((r) => { finishOld = r }) })
+      .mockImplementationOnce((p) => { newRequest = p; return new Promise((r) => { finishNew = r }) })
+    const w = await mountWidget()
+    const panel = await openPanel(w)
+    await sendMsg(panel, '旧问题')
+    await panel.find('button[aria-label="清空当前对话"]').trigger('click')
+    expect(oldRequest.signal.aborted).toBe(true)
+    await sendMsg(panel, '新问题')
+    expect(newRequest.conversationId).not.toBe(oldRequest.conversationId)
+    oldRequest.onEvent({ type: 'error', message: '旧错误' })
+    finishOld({})
+    await flushPromises()
+    expect(w.text()).not.toContain('旧错误')
+    expect(w.findComponent({ name: 'AssistantComposer' }).props('loading')).toBe(true)
+    newRequest.onEvent({ type: 'delta', text: '新回答' })
+    finishNew({})
+    await flushPromises()
+    expect(w.text()).toContain('新回答')
+    expect(w.findComponent({ name: 'AssistantComposer' }).props('loading')).toBe(false)
   })
 
   it('面板没有「运营」开关和字样', async () => {

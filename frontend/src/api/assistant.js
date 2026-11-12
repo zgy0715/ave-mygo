@@ -65,4 +65,4 @@ export async function chatV2({ message, conversationId, persona, onEvent, signal
  * v1 一次性问答：v2 流不可用时的兜底（老后端 / 代理不支持流式）
  * 返回 { reply, intent, personaName }
  */
-export const chatWithAssistant = (body) => request.post('/assistant/chat', body, { timeout: 60_000 })
+export const chatWithAssistant = (body, config = {}) => request.post('/assistant/chat', body, { ...config, timeout: 60_000 })
