@@ -114,4 +114,16 @@ class EventApiTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.length()").value(0));
     }
+
+    @Test
+    @DisplayName("E06 草稿/已删演出的曲表也按不存在处理")
+    void e06_hiddenEventSetlist() throws Exception {
+        jdbc.update("UPDATE live_session SET event_id = ? WHERE id = ?", draftId, sessionId);
+        mvc.perform(get("/api/v1/events/sessions/" + sessionId + "/setlist"))
+                .andExpect(jsonPath("$.code").value(40401));
+        jdbc.update("UPDATE live_session SET event_id = ? WHERE id = ?", publishedId, sessionId);
+        jdbc.update("UPDATE live_event SET is_deleted = 1 WHERE id = ?", publishedId);
+        mvc.perform(get("/api/v1/events/sessions/" + sessionId + "/setlist"))
+                .andExpect(jsonPath("$.code").value(40401));
+    }
 }

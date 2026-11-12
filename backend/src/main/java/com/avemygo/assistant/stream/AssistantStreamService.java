@@ -246,7 +246,7 @@ public class AssistantStreamService {
                 String result;
                 String status;
                 try {
-                    result = tool.handler().execute(args);
+                    result = registry.executeRead(tool.name(), args, admin);
                     status = AgentToolCall.EXECUTED;
                 } catch (Exception e) {
                     result = "执行失败：" + rootMessage(e);
@@ -292,7 +292,7 @@ public class AssistantStreamService {
         try {
             sink.emit("tool", Map.of("name", toolName, "status", "RUNNING",
                     "summary", runningSummary(toolName)));
-            String result = tool.handler().execute(Map.of());
+            String result = registry.executeRead(toolName, Map.of(), false);
             audit(conv, userId, toolName, tool.risk().name(), "{}", result,
                     AgentToolCall.EXECUTED, null);
             sink.emit("tool", Map.of("name", toolName, "status", "OK",

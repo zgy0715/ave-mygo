@@ -108,42 +108,17 @@ public class AgentToolRegistry {
         // 刻意不提供 status 参数：8B 模型会把「所有演出」自作主张加成 status=PUBLISHED，
         // 漏掉已结束的场次。去掉参数 = 结构上不可能过滤错（每条记录自带状态，用户自己看）
         register(new AgentTool("list_events",
-                "列出最近 10 场演出（管理视角，含草稿/已发布/已结束，每条都带状态）。无需任何参数。",
+                "列出最近 10 场当前身份可见的演出，每条都带状态。无需任何参数。",
                 AgentTool.Risk.READ,
                 schema(Map.of(), List.of()),
-                args -> {
-                    var page = eventRepository.searchAdmin(null, null,
-                            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id")));
-                    if (page.isEmpty()) return "当前没有演出记录。";
-                    List<String> lines = new ArrayList<>();
-                    for (LiveEvent e : page.getContent()) {
-                        lines.add("- id=%d 《%s》 %s @%s".formatted(
-                                e.getId(), e.getTitle(), e.getStatus(), e.getVenue()));
-                    }
-                    return "共 %d 场：\n%s".formatted(page.getNumberOfElements(), String.join("\n", lines));
-                }));
+                args -> listEvents(true)));
 
         register(new AgentTool("list_sessions",
                 "查看某个演出的全部场次及其票档（含票档 id、价格、库存、上下架状态）。",
                 AgentTool.Risk.READ,
                 schema(Map.of("eventId", Map.of("type", "integer", "description", "演出 id")),
                         List.of("eventId")),
-                args -> {
-                    long eventId = reqLong(args, "eventId");
-                    List<LiveSession> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(eventId);
-                    if (sessions.isEmpty()) return "该演出还没有场次。";
-                    StringBuilder sb = new StringBuilder();
-                    for (LiveSession s : sessions) {
-                        sb.append("- 场次 id=%d %s %s 状态=%s\n".formatted(
-                                s.getId(), s.getName(), s.getStartTime(), s.getStatus()));
-                        for (TicketType t : ticketTypeRepository.findBySessionIdOrderByIdAsc(s.getId())) {
-                            sb.append("    票档 id=%d %s ¥%s 库存%d/已售%d 状态=%s\n".formatted(
-                                    t.getId(), t.getName(), t.getPrice(),
-                                    t.getTotalStock(), t.getSoldCount(), t.getStatus()));
-                        }
-                    }
-                    return sb.toString();
-                }));
+                args -> listSessions(reqLong(args, "eventId"), true)));
 
         register(new AgentTool("list_members",
                 "列出乐队成员（姓名 / 担当 / CV）。可按乐队名筛选，如 MyGO、Ave Mujica。",
@@ -181,26 +156,7 @@ public class AgentToolRegistry {
                 AgentTool.Risk.READ,
                 schema(Map.of("eventId", Map.of("type", "integer", "description", "演出 id")),
                         List.of("eventId")),
-                args -> {
-                    long id = reqLong(args, "eventId");
-                    LiveEvent e = eventRepository.findById(id)
-                            .orElseThrow(() -> new IllegalArgumentException("演出 id=" + id + " 不存在"));
-                    List<LiveSession> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(id);
-                    int ticketCount = 0;
-                    int remaining = 0;
-                    for (LiveSession s : sessions) {
-                        List<TicketType> tts = ticketTypeRepository.findBySessionIdOrderByIdAsc(s.getId());
-                        ticketCount += tts.size();
-                        for (TicketType t : tts) remaining += Math.max(0, t.getTotalStock() - t.getSoldCount());
-                    }
-                    return """
-                            id=%d 《%s》
-                            状态：%s
-                            场馆：%s
-                            场次：%d 个
-                            票档：%d 个，余票合计 %d""".formatted(e.getId(), e.getTitle(), e.getStatus(),
-                            e.getVenue(), sessions.size(), ticketCount, remaining);
-                }));
+                args -> eventSummary(reqLong(args, "eventId"), true)));
 
         // ---------- 写工具（必须人工确认） ----------
         register(new AgentTool("update_song_mv",
@@ -414,6 +370,72 @@ public class AgentToolRegistry {
 
     public AgentTool get(String name) {
         return name == null ? null : tools.get(name);
+    }
+
+    /** 流式助手的只读入口；身份由服务端传入，不能由模型参数提升权限。 */
+    public String executeRead(String name, Map<String, Object> args, boolean admin) throws Exception {
+        AgentTool tool = get(name);
+        if (tool == null || tool.isWrite()) throw new IllegalArgumentException("不可用的只读工具");
+        return switch (name) {
+            case "list_events" -> listEvents(admin);
+            case "list_sessions" -> listSessions(reqLong(args, "eventId"), admin);
+            case "get_event" -> eventSummary(reqLong(args, "eventId"), admin);
+            default -> tool.handler().execute(args);
+        };
+    }
+
+    private String listEvents(boolean admin) {
+        var pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id"));
+        var page = admin ? eventRepository.searchAdmin(null, null, pageable)
+                : eventRepository.search(null, null, pageable);
+        if (page.isEmpty()) return "当前没有演出记录。";
+        List<String> lines = page.stream().map(e -> "- id=%d 《%s》 %s @%s".formatted(
+                e.getId(), e.getTitle(), e.getStatus(), e.getVenue())).toList();
+        return "共 %d 场：\n%s".formatted(page.getNumberOfElements(), String.join("\n", lines));
+    }
+
+    private LiveEvent visibleEvent(long id, boolean admin) {
+        return eventRepository.findById(id).filter(e -> admin || !"DRAFT".equals(e.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("演出不存在"));
+    }
+
+    private List<TicketType> visibleTickets(List<LiveSession> sessions, boolean admin) {
+        if (sessions.isEmpty()) return List.of();
+        return ticketTypeRepository.findBySessionIdIn(sessions.stream().map(LiveSession::getId).toList())
+                .stream().filter(ticket -> admin || Byte.valueOf((byte) 1).equals(ticket.getStatus())).toList();
+    }
+
+    private String listSessions(long eventId, boolean admin) {
+        visibleEvent(eventId, admin);
+        List<LiveSession> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(eventId);
+        if (sessions.isEmpty()) return "该演出还没有场次。";
+        var tickets = visibleTickets(sessions, admin).stream()
+                .collect(java.util.stream.Collectors.groupingBy(TicketType::getSessionId));
+        StringBuilder result = new StringBuilder();
+        for (LiveSession session : sessions) {
+            result.append("- 场次 id=%d %s %s 状态=%s\n".formatted(
+                    session.getId(), session.getName(), session.getStartTime(), session.getStatus()));
+            for (TicketType ticket : tickets.getOrDefault(session.getId(), List.of())) {
+                result.append("    票档 id=%d %s ¥%s 库存%d/已售%d 状态=%s\n".formatted(
+                        ticket.getId(), ticket.getName(), ticket.getPrice(),
+                        ticket.getTotalStock(), ticket.getSoldCount(), ticket.getStatus()));
+            }
+        }
+        return result.toString();
+    }
+
+    private String eventSummary(long id, boolean admin) {
+        LiveEvent event = visibleEvent(id, admin);
+        List<LiveSession> sessions = sessionRepository.findByEventIdOrderByStartTimeAsc(id);
+        List<TicketType> tickets = visibleTickets(sessions, admin);
+        int remaining = tickets.stream().mapToInt(ticket -> Math.max(0, ticket.availableStock())).sum();
+        return """
+                id=%d 《%s》
+                状态：%s
+                场馆：%s
+                场次：%d 个
+                票档：%d 个，余票合计 %d""".formatted(event.getId(), event.getTitle(), event.getStatus(),
+                event.getVenue(), sessions.size(), tickets.size(), remaining);
     }
 
     public List<Map<String, Object>> schemas() {

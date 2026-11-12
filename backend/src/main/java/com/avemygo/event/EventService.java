@@ -76,11 +76,7 @@ public class EventService {
     /** 演出详情：场次 + 票档 + 实时余票 */
     @Transactional(readOnly = true)
     public EventDetail detail(Long id) {
-        LiveEvent e = eventRepository.findById(id)
-                .orElseThrow(() -> new BizException(40401, "演出不存在"));
-        if ("DRAFT".equals(e.getStatus())) {
-            throw new BizException(40401, "演出不存在");   // 草稿对前台不可见
-        }
+        LiveEvent e = visibleEvent(id);
 
         String bandName = bandRepository.findById(e.getBandId()).map(Band::getName).orElse(null);
         List<LiveSession> sessionList = sessionRepository.findByEventIdOrderByStartTimeAsc(id);
@@ -111,9 +107,17 @@ public class EventService {
         return list.stream().collect(Collectors.groupingBy(key));
     }
 
+    private LiveEvent visibleEvent(Long id) {
+        return eventRepository.findById(id).filter(event -> !"DRAFT".equals(event.getStatus()))
+                .orElseThrow(() -> new BizException(40401, "演出不存在"));
+    }
+
     /** 某场次的演出歌单：setlist 关联 song 取标题/时长，安可曲排最后由 order_no 天然保证 */
     @Transactional(readOnly = true)
     public List<SetlistItemView> setlist(Long sessionId) {
+        LiveSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BizException(40401, "场次不存在"));
+        visibleEvent(session.getEventId());
         List<SetlistItem> items = setlistItemRepository.findBySessionIdOrderByOrderNoAsc(sessionId);
         if (items.isEmpty()) {
             return List.of();
