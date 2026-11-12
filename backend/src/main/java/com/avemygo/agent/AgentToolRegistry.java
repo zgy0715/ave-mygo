@@ -59,51 +59,14 @@ public class AgentToolRegistry {
                         "keyword", Map.of("type", "string", "description", "歌名或乐队名关键词，可省略"),
                         "limit", Map.of("type", "integer", "description", "返回条数，默认 5，最大 10")
                 ), List.of()),
-                args -> {
-                    String keyword = optStr(args, "keyword");
-                    int limit = Math.min((int) optLong(args, "limit", 5L), 10);
-                    var page = songRepository.search(null, blankToNull(keyword), null,
-                            PageRequest.of(0, limit, Sort.by("id")));
-                    if (page.isEmpty()) return "没有找到匹配的歌曲。";
-                    Map<Short, String> bands = bandNames();
-                    List<String> lines = new ArrayList<>();
-                    Map<Long, String> albums = albumNames();
-                    for (Song s : page.getContent()) {
-                        lines.add("- id=%d 《%s》 %s / 专辑《%s》 MV=%s".formatted(
-                                s.getId(), s.getTitle(),
-                                bands.getOrDefault(s.getBandId(), ""),
-                                s.getAlbumId() == null ? "未归档" : albums.getOrDefault(s.getAlbumId(), "未归档"),
-                                s.getMvUrl() == null || s.getMvUrl().isBlank() ? "无" : "有"));
-                    }
-                    return "共 %d 首：\n%s".formatted(page.getNumberOfElements(), String.join("\n", lines));
-                }));
+                args -> searchSongs(args, true)));
 
         register(new AgentTool("get_song",
                 "查看单首歌曲的完整信息（乐队、发行日期、标签、音源与 MV 地址）。",
                 AgentTool.Risk.READ,
                 schema(Map.of("songId", Map.of("type", "integer", "description", "歌曲 id")),
                         List.of("songId")),
-                args -> {
-                    long id = reqLong(args, "songId");
-                    Song s = songRepository.findById(id)
-                            .orElseThrow(() -> new IllegalArgumentException("歌曲 id=" + id + " 不存在"));
-                    String albumName = s.getAlbumId() == null ? "（未归档）"
-                            : albumRepository.findById(s.getAlbumId())
-                                    .map(Album::getName).orElse("（未归档）");
-                    return """
-                            id=%d 《%s》
-                            乐队：%s
-                            专辑：《%s》
-                            发行：%s
-                            标签：%s
-                            音源：%s
-                            MV：%s""".formatted(s.getId(), s.getTitle(),
-                            bandNames().getOrDefault(s.getBandId(), ""), albumName,
-                            s.getReleaseDate() == null ? "未知" : s.getReleaseDate(),
-                            s.getTags() == null || s.getTags().isBlank() ? "无" : s.getTags(),
-                            s.getAudioUrl() == null ? "无" : s.getAudioUrl(),
-                            s.getMvUrl() == null ? "无" : s.getMvUrl());
-                }));
+                args -> songSummary(reqLong(args, "songId"), true)));
 
         // 刻意不提供 status 参数：8B 模型会把「所有演出」自作主张加成 status=PUBLISHED，
         // 漏掉已结束的场次。去掉参数 = 结构上不可能过滤错（每条记录自带状态，用户自己看）
@@ -377,11 +340,49 @@ public class AgentToolRegistry {
         AgentTool tool = get(name);
         if (tool == null || tool.isWrite()) throw new IllegalArgumentException("不可用的只读工具");
         return switch (name) {
+            case "search_songs" -> searchSongs(args, admin);
+            case "get_song" -> songSummary(reqLong(args, "songId"), admin);
             case "list_events" -> listEvents(admin);
             case "list_sessions" -> listSessions(reqLong(args, "eventId"), admin);
             case "get_event" -> eventSummary(reqLong(args, "eventId"), admin);
             default -> tool.handler().execute(args);
         };
+    }
+
+    private String searchSongs(Map<String, Object> args, boolean admin) {
+        String keyword = blankToNull(optStr(args, "keyword"));
+        int limit = (int) Math.max(1, Math.min(optLong(args, "limit", 5L), 10));
+        var pageable = PageRequest.of(0, limit, Sort.by("id"));
+        var page = admin ? songRepository.searchAdmin(null, keyword, pageable)
+                : songRepository.search(null, keyword, null, pageable);
+        if (page.isEmpty()) return "没有找到匹配的歌曲。";
+        Map<Short, String> bands = bandNames();
+        Map<Long, String> albums = albumNames();
+        List<String> lines = page.stream().map(song -> "- id=%d 《%s》 %s / 专辑《%s》 MV=%s".formatted(
+                song.getId(), song.getTitle(), bands.getOrDefault(song.getBandId(), ""),
+                song.getAlbumId() == null ? "未归档" : albums.getOrDefault(song.getAlbumId(), "未归档"),
+                song.getMvUrl() == null || song.getMvUrl().isBlank() ? "无" : "有")).toList();
+        return "共 %d 首：\n%s".formatted(page.getNumberOfElements(), String.join("\n", lines));
+    }
+
+    private String songSummary(long id, boolean admin) {
+        Song song = (admin ? songRepository.findById(id) : songRepository.findByIdAndStatus(id, (byte) 1))
+                .orElseThrow(() -> new IllegalArgumentException("歌曲不存在"));
+        String albumName = song.getAlbumId() == null ? "（未归档）"
+                : albumRepository.findById(song.getAlbumId()).map(Album::getName).orElse("（未归档）");
+        return """
+                id=%d 《%s》
+                乐队：%s
+                专辑：《%s》
+                发行：%s
+                标签：%s
+                音源：%s
+                MV：%s""".formatted(song.getId(), song.getTitle(),
+                bandNames().getOrDefault(song.getBandId(), ""), albumName,
+                song.getReleaseDate() == null ? "未知" : song.getReleaseDate(),
+                song.getTags() == null || song.getTags().isBlank() ? "无" : song.getTags(),
+                song.getAudioUrl() == null ? "无" : song.getAudioUrl(),
+                song.getMvUrl() == null ? "无" : song.getMvUrl());
     }
 
     private String listEvents(boolean admin) {

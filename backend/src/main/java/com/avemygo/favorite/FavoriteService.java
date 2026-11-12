@@ -44,8 +44,8 @@ public class FavoriteService {
         if (favorites.isEmpty()) return List.of();
 
         if ("SONG".equals(type)) {
-            Map<Long, Song> songs = songRepository.findAllById(
-                            favorites.stream().map(Favorite::getTargetId).toList())
+            Map<Long, Song> songs = songRepository.findByIdInAndStatus(
+                            favorites.stream().map(Favorite::getTargetId).toList(), (byte) 1)
                     .stream().collect(Collectors.toMap(Song::getId, Function.identity()));
             Map<Short, String> bandNames = bandRepository.findAllById(
                             songs.values().stream().map(Song::getBandId).distinct().toList())
@@ -60,8 +60,8 @@ public class FavoriteService {
                     .toList();
         }
 
-        Map<Long, LiveEvent> events = eventRepository.findAllById(
-                        favorites.stream().map(Favorite::getTargetId).toList())
+        Map<Long, LiveEvent> events = eventRepository.findByIdInAndStatusNot(
+                        favorites.stream().map(Favorite::getTargetId).toList(), "DRAFT")
                 .stream().collect(Collectors.toMap(LiveEvent::getId, Function.identity()));
         return favorites.stream()
                 .filter(f -> events.containsKey(f.getTargetId()))
@@ -78,7 +78,7 @@ public class FavoriteService {
     public FavoriteItem add(Long userId, String targetType, Long targetId) {
         String type = normalize(targetType);
         if ("SONG".equals(type)) {
-            Song song = songRepository.findById(targetId)
+            Song song = songRepository.findByIdAndStatus(targetId, (byte) 1)
                     .orElseThrow(() -> new BizException(40401, "歌曲不存在或已下架"));
             favoriteRepository.findByUserIdAndTargetTypeAndTargetId(userId, type, targetId)
                     .orElseGet(() -> {

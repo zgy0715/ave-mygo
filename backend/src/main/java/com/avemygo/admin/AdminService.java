@@ -34,8 +34,8 @@ public class AdminService {
     /** 管理视图：全量字段 + 乐队名（两次查询组装，页大小有限无 N+1 之虞） */
     @Transactional(readOnly = true)
     public Page<AdminSongView> songs(Short bandId, String keyword, int page, int pageSize) {
-        Page<Song> songs = songRepository.search(bandId, (keyword == null || keyword.isBlank()) ? null : keyword,
-                null, PageRequest.of(Math.max(page - 1, 0), Math.min(Math.max(pageSize, 1), 50),
+        Page<Song> songs = songRepository.searchAdmin(bandId, (keyword == null || keyword.isBlank()) ? null : keyword,
+                PageRequest.of(Math.max(page - 1, 0), Math.min(Math.max(pageSize, 1), 50),
                         Sort.by(Sort.Direction.ASC, "id")));
         Map<Short, Band> bands = bandRepository.findAllById(
                         songs.map(Song::getBandId).stream().distinct().toList())

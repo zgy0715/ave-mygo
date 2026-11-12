@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import com.avemygo.admin.AdminEventService;
+import com.avemygo.admin.AdminService;
+import com.avemygo.admin.dto.AdminDtos.SongUpsert;
 import com.avemygo.admin.dto.AdminEventDtos.EventUpsert;
 import com.avemygo.admin.dto.AdminEventDtos.SessionUpsert;
 import java.time.LocalDateTime;
@@ -14,6 +16,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -28,6 +31,7 @@ class AssistantVisibilityTest {
 
     @Autowired private AssistantStreamService assistant;
     @Autowired private AdminEventService admin;
+    @Autowired private AdminService adminSongs;
     @MockitoBean private StreamLlm llm;
 
     private Long draftId;
@@ -68,6 +72,22 @@ class AssistantVisibilityTest {
 
     private String replyFromTool(String tool, boolean isAdmin) throws Exception {
         String args = "list_events".equals(tool) ? "{}" : "{\"eventId\":" + draftId + "}";
+        return replyFromTool(tool, args, isAdmin);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"get_song, false", "get_song, true", "search_songs, false", "search_songs, true"})
+    void unlistedSongsAreOnlyVisibleToAdmin(String tool, boolean isAdmin) throws Exception {
+        String title = "[TEST] private-song";
+        Long songId = adminSongs.create(new SongUpsert(title, (short) 1, null, null, null,
+                180, null, null, null, null, "", (byte) 0)).id();
+        String args = "get_song".equals(tool) ? "{\"songId\":" + songId + "}" : "{\"keyword\":\"private-song\"}";
+        String reply = replyFromTool(tool, args, isAdmin);
+        if (isAdmin) assertThat(reply).contains(title);
+        else assertThat(reply).doesNotContain(title);
+    }
+
+    private String replyFromTool(String tool, String args, boolean isAdmin) throws Exception {
         when(llm.stream(anyList(), anyList(), any()))
                 .thenReturn(new StreamLlm.Turn("", List.of(new StreamLlm.ToolCall("c1", tool, args))))
                 .thenAnswer(invocation -> {

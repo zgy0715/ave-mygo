@@ -55,7 +55,7 @@ public class SongService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public java.util.List<SongItem> itemsByIds(java.util.List<Long> ids) {
         if (ids == null || ids.isEmpty()) return java.util.List.of();
-        Map<Long, Song> byId = songRepository.findAllById(ids).stream()
+        Map<Long, Song> byId = songRepository.findByIdInAndStatus(ids, (byte) 1).stream()
                 .collect(java.util.stream.Collectors.toMap(Song::getId, java.util.function.Function.identity()));
         Map<Short, String> bandNames = toMap(bandRepository.findAll(), Band::getId, Band::getName);
         Map<Long, String> albumNames = toMap(albumRepository.findAll(), Album::getId, Album::getName);
@@ -72,11 +72,8 @@ public class SongService {
 
     /** 歌曲详情：下架/不存在一律 40401，不向前台区分 */
     public SongDetail detail(Long id) {
-        Song s = songRepository.findById(id)
+        Song s = songRepository.findByIdAndStatus(id, (byte) 1)
                 .orElseThrow(() -> new BizException(40401, "歌曲不存在"));
-        if (s.getStatus() == 0) {
-            throw new BizException(40401, "歌曲不存在");
-        }
 
         String bandName = bandRepository.findById(s.getBandId()).map(Band::getName).orElse(null);
         var album = s.getAlbumId() == null ? null : albumRepository.findById(s.getAlbumId()).orElse(null);

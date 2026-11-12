@@ -44,7 +44,7 @@ public class ReminderService {
         if (list.isEmpty()) return List.of();
 
         Map<Long, LiveEvent> events = new HashMap<>();
-        eventRepository.findAllById(list.stream().map(EventReminder::getEventId).toList())
+        eventRepository.findByIdInAndStatusNot(list.stream().map(EventReminder::getEventId).toList(), "DRAFT")
                 .forEach(e -> events.put(e.getId(), e));
 
         Map<Long, LocalDateTime> saleStarts = new HashMap<>();

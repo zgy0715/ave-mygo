@@ -122,17 +122,17 @@ public class EventService {
         if (items.isEmpty()) {
             return List.of();
         }
-        Map<Long, Song> songsById = songRepository.findAllById(
-                        items.stream().map(SetlistItem::getSongId).toList())
+        Map<Long, Song> songsById = songRepository.findByIdInAndStatus(
+                        items.stream().map(SetlistItem::getSongId).toList(), (byte) 1)
                 .stream().collect(Collectors.toMap(Song::getId, Function.identity()));
         return items.stream()
+                .filter(item -> songsById.containsKey(item.getSongId()))
                 .map(i -> {
                     Song song = songsById.get(i.getSongId());
                     return new SetlistItemView(
                             i.getOrderNo(), i.getIsEncore() == (byte) 1,
                             i.getSongId(),
-                            song != null ? song.getTitle() : "(未知曲目)",
-                            song != null ? song.getDuration() : null);
+                            song.getTitle(), song.getDuration());
                 })
                 .toList();
     }

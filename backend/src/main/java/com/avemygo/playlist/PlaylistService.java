@@ -3,17 +3,11 @@ package com.avemygo.playlist;
 import com.avemygo.common.BizException;
 import com.avemygo.playlist.PlaylistDtos.PlaylistDetail;
 import com.avemygo.playlist.PlaylistDtos.PlaylistSummary;
-import com.avemygo.song.Song;
 import com.avemygo.song.SongRepository;
 import com.avemygo.song.SongService;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,28 +32,18 @@ public class PlaylistService {
         List<Playlist> playlists = playlistRepository.findByUserIdOrderByUpdatedAtDesc(userId);
         if (playlists.isEmpty()) return List.of();
 
-        // 曲目数：一条分组 SQL
-        Map<Long, Long> counts = itemRepository.countGrouped(
-                        playlists.stream().map(Playlist::getId).toList())
-                .stream().collect(Collectors.toMap(r -> (Long) r[0], r -> (Long) r[1]));
-
-        // 封面：取每个歌单 sort 最小的一首歌的封面
-        Map<Long, Long> firstSongByPlaylist = new HashMap<>();
-        for (Playlist p : playlists) {
-            List<PlaylistItem> items = itemRepository.findByPlaylistIdOrderBySortAscIdAsc(p.getId());
-            if (!items.isEmpty()) firstSongByPlaylist.put(p.getId(), items.get(0).getSongId());
-        }
-        // 注意：不能用 Map.of()（不可变 Map 的 get(null) 会抛 NPE），空歌单没有封面键
+        // 一次批量查询，同时统计可见曲目数和第一首可见曲目的封面。
+        Map<Long, Integer> counts = new HashMap<>();
         Map<Long, String> covers = new HashMap<>();
-        if (!firstSongByPlaylist.isEmpty()) {
-            songRepository.findAllById(new LinkedHashSet<>(firstSongByPlaylist.values()))
-                    .forEach(s -> covers.put(s.getId(), s.getCoverUrl() == null ? "" : s.getCoverUrl()));
+        for (Object[] row : itemRepository.visibleSummaryRows(playlists.stream().map(Playlist::getId).toList())) {
+            Long playlistId = (Long) row[0];
+            counts.merge(playlistId, 1, Integer::sum);
+            if (!covers.containsKey(playlistId)) covers.put(playlistId, (String) row[1]);
         }
 
         return playlists.stream()
                 .map(p -> new PlaylistSummary(p.getId(), p.getName(), p.getDescription(),
-                        counts.getOrDefault(p.getId(), 0L).intValue(),
-                        coverOf(covers, firstSongByPlaylist.get(p.getId())), p.getUpdatedAt()))
+                        counts.getOrDefault(p.getId(), 0), covers.get(p.getId()), p.getUpdatedAt()))
                 .toList();
     }
 
@@ -119,11 +103,8 @@ public class PlaylistService {
     @Transactional
     public PlaylistDetail addSong(Long userId, Long playlistId, Long songId) {
         owned(userId, playlistId);
-        Song song = songRepository.findById(songId)
+        songRepository.findByIdAndStatus(songId, (byte) 1)
                 .orElseThrow(() -> new BizException(40401, "歌曲不存在或已下架"));
-        if (song.getStatus() == null || song.getStatus() != 1) {
-            throw new BizException(40401, "歌曲不存在或已下架");
-        }
         if (itemRepository.findByPlaylistIdAndSongId(playlistId, songId).isEmpty()) {
             Integer max = itemRepository.maxSort(playlistId);
             PlaylistItem item = new PlaylistItem();
@@ -141,12 +122,6 @@ public class PlaylistService {
         owned(userId, playlistId);
         itemRepository.deleteByPlaylistIdAndSongId(playlistId, songId);
         return detail(userId, playlistId);
-    }
-
-    private String coverOf(Map<Long, String> covers, Long songId) {
-        if (songId == null) return null;
-        String cover = covers.get(songId);
-        return (cover == null || cover.isEmpty()) ? null : cover;
     }
 
     private Playlist owned(Long userId, Long playlistId) {

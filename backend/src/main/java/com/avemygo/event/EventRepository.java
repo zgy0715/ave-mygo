@@ -3,6 +3,8 @@ package com.avemygo.event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 /** 演出数据访问。DRAFT 永远不出现在前台查询结果里。 */
 public interface EventRepository extends JpaRepository<LiveEvent, Long> {
+
+    List<LiveEvent> findByIdInAndStatusNot(Collection<Long> ids, String status);
 
     /** 前台演出列表：状态/乐队可选筛选 + 分页 */
     @Query("""

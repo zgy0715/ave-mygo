@@ -1,5 +1,8 @@
 package com.avemygo.song;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,6 +34,21 @@ public interface SongRepository extends JpaRepository<Song, Long> {
                       @Param("keyword") String keyword,
                       @Param("tag") String tag,
                       Pageable pageable);
+
+    /** 管理列表包含下架歌曲；软删除仍由实体限制过滤。 */
+    @Query("""
+            SELECT s FROM Song s
+            WHERE (:bandId IS NULL OR s.bandId = :bandId)
+              AND (:keyword IS NULL
+                   OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR EXISTS (SELECT 1 FROM Band b WHERE b.id = s.bandId
+                              AND LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%'))))
+            """)
+    Page<Song> searchAdmin(@Param("bandId") Short bandId, @Param("keyword") String keyword, Pageable pageable);
+
+    List<Song> findByIdInAndStatus(Collection<Long> ids, Byte status);
+
+    Optional<Song> findByIdAndStatus(Long id, Byte status);
 
     /** 按乐队统计上架歌曲数（AI 助手知识问答用） */
     long countByBandIdAndStatus(Short bandId, Byte status);
