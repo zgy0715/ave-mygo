@@ -39,8 +39,8 @@ Windows 中文路径下，非交互 `mvnw.cmd` 有定位问题。检查入口依
 新配置先执行 `systemd-analyze verify` 和独立的 `nginx -t`；等待数据库 `/api/v1/ready`，超时或代理探针失败返回非零。构建时会替换jar/dist，部署前需保留上一发布版本，脚本不提供自动回滚。
 可在本地只生成配置用于审查：`APP_DIR=/opt/ave-mygo bash scripts/deploy-ubuntu.sh --render-config backup/oneoff/deploy-review`，此模式不安装依赖、不写系统目录。真实部署须在Ubuntu上验证。
 
-Hero 上传目录为 `$APP_DIR/var/hero-assets/`（不入库），首次部署从 `frontend/public/assets/`
-复制缺失的默认视频，后续保留已有上传。systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL
+Hero 上传目录为 `$APP_DIR/var/hero-assets/`（不入库），仅在确认素材使用权并显式传 `INCLUDE_LOCAL_ASSETS=1` 时从 `frontend/public/assets/`
+初始化缺失的视频，后续保留已有上传。systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL
 指向同一目录，前端重新构建不会覆盖它。备份站点时一并备份此目录；本地开发仍默认写入
 `frontend/public/assets/`。文件上限100MB，请求体上限110MB，上传等待上限5分钟。
 Linux 上传目录使用0755、发布视频使用0644，使 Nginx 可以读取；原子替换不可用时上传失败，保留原视频。

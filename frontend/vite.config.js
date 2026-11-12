@@ -7,6 +7,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 默认构建/开发不提供本地未授权素材；仅在确认拥有素材使用权后显式开启。
+  publicDir: process.env.INCLUDE_LOCAL_ASSETS === '1' ? 'public' : false,
   plugins: [
     vue(),
     vueDevTools(),

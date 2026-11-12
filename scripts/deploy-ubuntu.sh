@@ -142,7 +142,7 @@ install -d -m 0755 "$APP_DIR/var"
 install -d -m 0755 -o "$SERVICE" -g "$SERVICE" "$HERO_ASSETS"
 for hero_slot in mygo mujica; do
   hero_video="band-$hero_slot-720p.mp4"
-  if [[ ! -f "$HERO_ASSETS/$hero_video" && -f "$FRONTEND/public/assets/$hero_video" ]]; then
+  if [[ "$(printenv INCLUDE_LOCAL_ASSETS || true)" == 1 && ! -f "$HERO_ASSETS/$hero_video" && -f "$FRONTEND/public/assets/$hero_video" ]]; then
     install -m 0644 -o "$SERVICE" -g "$SERVICE" "$FRONTEND/public/assets/$hero_video" "$HERO_ASSETS/$hero_video"
   elif [[ -f "$HERO_ASSETS/$hero_video" ]]; then
     chmod 0644 "$HERO_ASSETS/$hero_video"

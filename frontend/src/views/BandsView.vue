@@ -51,6 +51,7 @@ const gradientOf = (slug) =>
             :alt="b.name"
             class="zoomable absolute inset-0 h-full w-full object-cover"
             loading="lazy"
+            @error="$event.target.style.display = 'none'"
           >
           <div v-if="b.logoUrl" class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           <p class="display absolute bottom-5 left-5 text-3xl tracking-wide text-white" style="text-shadow: 0 1px 12px rgba(0,0,0,.5)">{{ b.name }}</p>

@@ -44,8 +44,12 @@ backups/
 # 本地素材（OP 视频 / 原图 / 参考图，不入库，避免仓库膨胀）
 assets-src/
 
-# Hero 轮播视频曾移出版本库，2026-11-03 加回：CloudStudio 工作区被回收重拉后
-# 视频丢失导致首页 MV 404，55MB 换部署永带视频更划算（仍远小于常规前端仓库）
+# 未核实分发授权的素材仅保留本地；来源与哈希见 docs/assets-manifest.csv
+/frontend/public/assets/*.mp4
+/frontend/public/assets/*-poster.jpg
+/frontend/public/img/
+/frontend/public/favicon.ico
+/docs/img/
 
 # 私人过程记录（本地保留，不入库）
 .workbuddy/

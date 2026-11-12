@@ -12,8 +12,8 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![ECharts](https://img.shields.io/badge/ECharts-%E7%9C%8B%E6%9D%BF-AA344D?logo=apacheecharts&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-qwen3:8b-000000?logo=ollama&logoColor=white)
-![JUnit](https://img.shields.io/badge/JUnit-5%20%C2%B7%20168%E7%94%A8%E4%BE%8B-25A162?logo=junit5&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-82%E7%94%A8%E4%BE%8B-6E9F18?logo=vitest&logoColor=white)
+![JUnit](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-Tests-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-%E5%90%8C%E6%BA%90%E5%8F%8D%E4%BB%A3-009639?logo=nginx&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
@@ -25,15 +25,10 @@
 
 ---
 
-## 项目截图
+## 页面与素材
 
-| 首页 | 歌曲库 |
-|---|---|
-| ![首页](docs/img/home.png) | ![歌曲库](docs/img/songs.png) |
-
-| 歌曲详情（播放器 + MV） | 管理端数据看板 |
-|---|---|
-| ![歌曲详情](docs/img/song-detail.png) | ![管理端](docs/img/admin-stats.png) |
+项目包含首页、曲库、歌曲详情、票务和管理看板。含未核实授权素材的旧截图仅保留本地，
+默认克隆和构建使用渐变、文字降级；素材路径、清单与替换方式见 [开源许可与素材](docs/20-开源许可与素材.md)。
 
 ---
 
@@ -160,9 +155,8 @@ npm run dev                     # http://localhost:5173（代理已配）
 > 请在维护期间单进程执行：已有演出域记录（含软删行）保持原样，新票档已售数为 0，
 > 不覆盖库存、订单或限购配额；此文件不用于恢复交易数据。使用边界见 [脚本说明](scripts/README.md)。
 >
-> 首页 Hero 背景素材随仓库分发：`frontend/public/assets/band-mygo-720p.mp4`、`band-mujica-720p.mp4`
-> （各 8.4MB，1280×720、无音轨）与两张 `*-poster.jpg` 首帧图。1080P 原片**不入库**，保留在本地
-> `assets-src/video/`，需要重新压制时从那里取。体积与带宽的取舍见 [移动端与素材](#移动端与素材)。
+> 默认不分发本地视频、封面和立绘，缺失时界面使用渐变与文字降级。本机旧素材保留但不纳入默认构建；
+> 仅在确认使用权后显式设置 `INCLUDE_LOCAL_ASSETS=1`，路径与替换方式见 [素材说明](docs/20-开源许可与素材.md)。
 
 管理端可替换两个首页背景视频（MP4，最多100MB，上传超时5分钟）。播放、上传和检测统一使用
 `/assets/band-{slot}-720p.mp4`；本地默认写入 `frontend/public/assets`。Ubuntu 部署脚本将上传内容
@@ -175,9 +169,9 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 | 层 | 命令 | 规模 |
 |---|---|---|
-| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | **168 用例 / 35 个测试类**，含并发购票/支付取消/确认抢占、SSE 流式、限流、权限负例、令牌吊销、LLM 客户端鉴权与分片拼接、小灯复读治理 |
-| 前端单测 | `npm run test`（Vitest + jsdom） | **82 用例 / 10 个文件**（请求封装 / 播放器 / 表单校验 / 小灯事件流 / 首页区块） |
-| E2E 旅程 | `npm run test:e2e`（Playwright，本机用 Edge） | **20 用例 / 8 个 spec**：游客浏览 / 歌单 / 购票 / **管理端删除全链路** |
+| 后端集成测试 | `./mvnw test`（真实 MySQL 测试库） | 并发购票、订单流转、权限、SSE、限流等；数量见 [metrics](docs/metrics.md) |
+| 前端单测 | `npm run test`（Vitest + jsdom） | 请求、账户隔离、评论、助手与页面回归；数量见 [metrics](docs/metrics.md) |
+| E2E 旅程 | `npm run test:e2e`（Playwright，本机用 Edge） | 游客、歌单、购票和管理端；本轮未运行，历史数量见 [metrics](docs/metrics.md) |
 
 E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
 
@@ -232,10 +226,10 @@ sudo bash scripts/deploy-ubuntu.sh
 
 | 素材 | 位置 | 规格 | 入库 |
 |---|---|---|---|
-| Hero 视频（网页用） | `frontend/public/assets/band-*-720p.mp4` | 1280×720 · 89s/88s · 各 8.4MB | ✅ |
-| 首帧 poster | `frontend/public/assets/band-*-poster.jpg` | 1280 宽 · 58KB/45KB | ✅ |
+| Hero 视频（网页用） | `frontend/public/assets/band-*-720p.mp4` | 自备已授权 MP4 | ❌ |
+| 首帧 poster | `frontend/public/assets/band-*-poster.jpg` | 自备已授权图片 | ❌ |
 | OP 原片 | `assets-src/video/*_1080P.mp4` | 1920×1080 · 26MB/30MB | ❌ gitignore |
-| 封面图 | `frontend/public/img/covers/` | 700×700 · JPEG q82 | ✅ |
+| 封面图 | `frontend/public/img/covers/` | 自备已授权图片 | ❌ |
 
 压制参数（ffmpeg 免安装版即可）：
 
@@ -246,7 +240,7 @@ ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
 ```
 
 `-an` 是因为页面 `<video muted autoplay loop>` 本来就不出声；`+faststart` 让 moov 前置，边下边播。
-`dist` 约 29MB（视频占 17MB）。1Mbps 量级的公网带宽下 8.4MB 需约 2 分钟缓冲，**所以移动端选择点播而非自动播放**——自动播放在窄带下等于让访客对着空画面等待。
+默认构建不包含本机 public 素材。启用已授权视频后，实际包体与加载耗时取决于该文件；移动端采用点播以控制带宽。逐文件来源核验状态与哈希见 [素材清单](docs/assets-manifest.csv)。
 
 ---
 
@@ -256,10 +250,10 @@ ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
 ├── backend/              # Spring Boot 后端
 │   └── src/main/resources/db/migration/   # V1–V55 Flyway 迁移（已冻结，新结构从 V56 起）
 ├── frontend/              # Vue 3 前端
-│   ├── public/assets/     # Hero 视频(720p) 与 poster 首帧（随仓库分发）
+│   ├── public/assets/     # 可选本地视频与首帧（默认不分发）
 │   └── e2e/               # Playwright E2E
 ├── db/seed/reference.sql  # 目录元数据更新 + 演出域按业务键补录（保留交易数据）
-├── docs/                  # 现行设计文档 + 截图（docs/img/）
+├── docs/                  # 现行设计、许可与素材清单；旧截图仅本地保留
 │   └── archive/           # 历史任务书、审计报告、开发纪实
 ├── scripts/               # 本地开发、数据审计、备份、Ubuntu 部署（见 scripts/README.md）
 ├── assets-src/            # 本地素材（video/ 放 OP 1080P 原片，images/ 放原图；不入库）
@@ -283,6 +277,7 @@ ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
 | [docs/17-后续演进计划.md](docs/17-后续演进计划.md) | 产品演进：来源基座 / 演出档案闭环 / 个人空间 / AI 引用 |
 | [docs/18-工程深度与体量方案.md](docs/18-工程深度与体量方案.md) | 七个 L3 模块、可量化证明与落地可行性 |
 | [docs/19-未完成事项清单.md](docs/19-未完成事项清单.md) | 未完成项与已知风险（P0/P1 分级） |
+| [docs/20-开源许可与素材.md](docs/20-开源许可与素材.md) | MIT 授权范围、素材排除、来源清单与替换说明 |
 | [docs/metrics.md](docs/metrics.md) | 项目度量快照（规模/测试/数据的**唯一数字口径**） |
 
 历史文档（一次性任务书、数据审计、演出数据核验、开发纪实）统一放在

@@ -1,4 +1,8 @@
-首页 Hero 背景视频（网页用 720p 版本）
+首页 Hero 背景视频（可选本地素材，默认不提供或打包）
+
+本目录历史视频与首帧未核实公开分发授权，当前不由Git跟踪；旧文件保留本地。
+仅在确认拥有使用权后，通过 INCLUDE_LOCAL_ASSETS=1 显式启用。
+替换路径、授权证据记录和历史限制见 docs/20-开源许可与素材.md。
 
 - band-mygo-720p.mp4     壱雫空 MV    89s   20MB   1865 kbps
 - band-mujica-720p.mp4   KiLLKiSS MV  88s   19MB   1748 kbps

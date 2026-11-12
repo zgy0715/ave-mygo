@@ -26,7 +26,7 @@
 | 层 | 规模 | 命令 |
 |---|---|---|
 | 后端测试 | **215 用例 / 41 个测试类** | `./mvnw test` |
-| 前端单测 | **103 用例 / 13 个文件** | `npm run test` |
+| 前端单测 | **111 用例 / 18 个文件** | `npm run test` |
 | E2E | **20 用例 / 8 个 spec** | `npx playwright test --list` |
 
 > E2E 前置：后端 8080 + 前端 5173 都要在跑，否则会大面积 `ERR_CONNECTION_REFUSED`（不是代码问题）。

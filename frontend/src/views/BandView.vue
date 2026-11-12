@@ -21,6 +21,7 @@ const router = useRouter()
 
 const band = ref(null)
 const members = ref([])
+const memberFailed = ref({})
 const albums = ref([])
 const songs = ref([])
 const loading = ref(true)
@@ -197,12 +198,13 @@ watch(() => band.value?.slug, () => {
                立绘锚定：底边 = 文字块顶（7.25rem），left-1/2 + w-auto 保证水平真居中 -->
           <div class="shine absolute inset-0 flex flex-col" :style="{ background: gradientOf }">
             <img
-              v-if="m.avatarUrl"
+              v-if="m.avatarUrl && !memberFailed[m.id]"
               :src="m.avatarUrl"
               :alt="m.nameJa"
+              @error="memberFailed[m.id] = true"
               class="absolute bottom-[7.25rem] left-1/2 z-[1] h-[calc(100%-9rem)] w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
             >
-            <template v-if="!m.avatarUrl">
+            <template v-if="!m.avatarUrl || memberFailed[m.id]">
               <div class="absolute inset-0 opacity-25" style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 60%)" />
               <span class="serif relative mt-auto px-4 pb-24 text-7xl font-semibold text-white/90">
                 {{ lastChar(m.nameJa) }}
