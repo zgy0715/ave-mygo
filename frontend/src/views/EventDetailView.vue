@@ -176,6 +176,7 @@ function requireLogin(action) {
 }
 
 async function buy(tt) {
+  if (ordering.value || orderInfo.value) return
   if (!requireLogin('购票')) return
   ordering.value = true
   buyErr.value = ''
@@ -354,10 +355,10 @@ onBeforeUnmount(() => clearInterval(timer))
 
           <button
             class="btn-primary sm:ml-auto"
-            :disabled="stockLevel(tt) === 'soldout' || event.status !== 'PUBLISHED' || session.status !== 'ONSALE' || remainingAllowance(tt) <= 0"
+            :disabled="ordering || !!orderInfo || stockLevel(tt) === 'soldout' || event.status !== 'PUBLISHED' || session.status !== 'ONSALE' || remainingAllowance(tt) <= 0"
             @click="buy(tt)"
           >
-            {{ session.status !== 'ONSALE'
+            {{ ordering ? '下单中…' : session.status !== 'ONSALE'
               ? (session.status === 'NOT_OPEN' ? '未开售' : '已结束')
               : stockLevel(tt) === 'soldout' ? '已售罄'
               : remainingAllowance(tt) <= 0 ? '已达限购' : '立即购买' }}
