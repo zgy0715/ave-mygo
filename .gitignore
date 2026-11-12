@@ -35,6 +35,7 @@ backups/
 
 # 部署后的 Hero 上传文件独立保存，前端构建不覆盖
 /var/hero-assets/
+/var/build/
 
 # 审计原始产物 / 会话临时目录
 .audit/

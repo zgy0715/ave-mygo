@@ -200,7 +200,7 @@ sudo bash scripts/deploy-ubuntu.sh
 
 部署参数与手动运维命令见 [scripts/README.md](scripts/README.md)。数据库备份脚本将新文件写入 `backup/db/`，不会移动其他本地备份文件。
 
-脚本做的事可按顺序对照排查：`apt` 装 JDK17/MySQL/Nginx/Maven → Node 22 取自 npmmirror 二进制 → 建库建账号（密码随机并复用）→ Maven 走阿里云源构建后端 → `npm ci`（npmmirror）+ `vite build` → 写 `backend/.env` → systemd 常驻（按内存定 `-Xmx`）→ Nginx 同源反代（SSE 300s、静态长缓存）→ 健康检查。
+脚本默认部署当前干净检出；显式设置 `USE_GIT=1` 才进行快进更新。它安装运行依赖、按 `.nvmrc` 准备 Node、创建专用数据库账号、构建前后端、以 `avemygo` 系统账号运行后端，并验证数据库 readiness 和 Nginx 代理。重复执行保留已有凭据；探针失败会返回非零，部署前请保留上一发布版本。配置渲染与权限说明见脚本文档。
 
 **AI 助手（小灯）的环境变量**（不配则助手返回 50301，站内其他功能不受影响）：
 

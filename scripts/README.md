@@ -33,6 +33,12 @@ Windows 中文路径下，非交互 `mvnw.cmd` 有定位问题。检查入口依
 
 `cloudstudio.sh` 已由 `deploy-ubuntu.sh` 取代并移除。首次部署如需启用云端助手，可将 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 传给脚本；配置已写入 `backend/.env` 后，重复部署会保留它们。
 
+部署默认使用当前干净检出，不自动拉取。允许更新时显式传 `USE_GIT=1 BRANCH=main`，只接受当前分支快进；工作区有改动、拉取失败或分支分叉均停止。
+应用由专用 `avemygo` 系统账号运行，仅监听127.0.0.1；只授予上传目录写权限，配置文件为root:avemygo的0640。Nginx直接面向公网时覆盖客户端传入的转发头。
+首次创建随机数据库/JWT凭据；再次部署保留现有配置，不重置数据库密码。已有账号/库配置不匹配时停止并说明，需显式迁移；部署脚本面向本机MySQL，密码需16–128位且符合脚本检查。
+新配置先执行 `systemd-analyze verify` 和独立的 `nginx -t`；等待数据库 `/api/v1/ready`，超时或代理探针失败返回非零。构建时会替换jar/dist，部署前需保留上一发布版本，脚本不提供自动回滚。
+可在本地只生成配置用于审查：`APP_DIR=/opt/ave-mygo bash scripts/deploy-ubuntu.sh --render-config backup/oneoff/deploy-review`，此模式不安装依赖、不写系统目录。真实部署须在Ubuntu上验证。
+
 Hero 上传目录为 `$APP_DIR/var/hero-assets/`（不入库），首次部署从 `frontend/public/assets/`
 复制缺失的默认视频，后续保留已有上传。systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL
 指向同一目录，前端重新构建不会覆盖它。备份站点时一并备份此目录；本地开发仍默认写入
