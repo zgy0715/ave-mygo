@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { login as apiLogin } from '@/api/auth'
+import { usePlaylistStore } from '@/stores/playlists'
 
 /**
  * 登录态仓库：token + 用户信息。
@@ -17,12 +18,14 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(username, password) {
       const data = await apiLogin({ username, password })
+      usePlaylistStore().clear()
       this.token = data.token
       this.user = data.user
       sessionStorage.setItem('token', data.token)
       sessionStorage.setItem('user', JSON.stringify(data.user))
     },
     logout() {
+      usePlaylistStore().clear()
       this.token = ''
       this.user = null
       sessionStorage.removeItem('token')

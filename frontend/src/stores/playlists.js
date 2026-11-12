@@ -10,39 +10,51 @@ export const usePlaylistStore = defineStore('playlists', {
     items: [],
     loaded: false,
     loading: false,
+    generation: 0,
+    pendingLoad: null,
   }),
 
   actions: {
     async load(force = false) {
-      if (this.loading || (this.loaded && !force)) return this.items
+      if (this.loading) return this.pendingLoad
+      if (this.loaded && !force) return this.items
+      const generation = this.generation
       this.loading = true
-      try {
-        this.items = await listPlaylists()
-        this.loaded = true
-      } catch {
-        this.items = this.items || []
-      } finally {
-        this.loading = false
-      }
-      return this.items
+      this.pendingLoad = (async () => {
+        try {
+          const items = await listPlaylists()
+          if (generation === this.generation) { this.items = items; this.loaded = true }
+        } catch { /* 保留当前账户已有缓存，下次仍可重试 */ }
+        finally {
+          if (generation === this.generation) { this.loading = false; this.pendingLoad = null }
+        }
+        return generation === this.generation ? this.items : []
+      })()
+      return this.pendingLoad
     },
 
     async create(name, description) {
+      const generation = this.generation
       const created = await createPlaylist({ name, description })
+      if (generation !== this.generation) throw new Error('登录状态已变化，请重试')
       this.items = [created, ...this.items]      // 新建排在最前
       this.loaded = true
       return created
     },
 
     async update(id, body) {
+      const generation = this.generation
       const updated = await updatePlaylist(id, body)
+      if (generation !== this.generation) throw new Error('登录状态已变化，请重试')
       const i = this.items.findIndex((p) => p.id === id)
       if (i >= 0) this.items[i] = { ...this.items[i], ...updated }
       return updated
     },
 
     async remove(id) {
+      const generation = this.generation
       await deletePlaylist(id)
+      if (generation !== this.generation) throw new Error('登录状态已变化，请重试')
       this.items = this.items.filter((p) => p.id !== id)
     },
 
@@ -60,8 +72,11 @@ export const usePlaylistStore = defineStore('playlists', {
     },
 
     clear() {
+      this.generation++
       this.items = []
       this.loaded = false
+      this.loading = false
+      this.pendingLoad = null
     },
   },
 })
