@@ -6,9 +6,10 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
-  // 默认构建/开发不提供本地未授权素材；仅在确认拥有素材使用权后显式开启。
-  publicDir: process.env.INCLUDE_LOCAL_ASSETS === '1' ? 'public' : false,
+export default defineConfig(({ command }) => ({
+  // 本地开发读取现有素材；构建默认不打包，可用 1/0 显式开启或关闭。
+  publicDir: process.env.INCLUDE_LOCAL_ASSETS === '1'
+    || (command === 'serve' && process.env.INCLUDE_LOCAL_ASSETS !== '0') ? 'public' : false,
   plugins: [
     vue(),
     vueDevTools(),
@@ -26,4 +27,4 @@ export default defineConfig({
     include: ['src/**/__tests__/**/*.spec.js'],
     restoreMocks: true,
   },
-})
+}))
