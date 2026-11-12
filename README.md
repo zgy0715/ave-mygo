@@ -183,6 +183,10 @@ E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForRespons
 
 一键跑后端 + 前端基线：`scripts\check.bat`（E2E 加参数：`scripts\check.bat e2e`）。
 
+GitHub Actions 在 push、PR 和手动触发时运行：Java 17 + 临时 MySQL 8.0 执行后端测试及打包，
+Node 24 执行 `npm ci`、前端单测与构建。测试库每次独立创建，CI 使用的公开测试口令不用于部署。
+工作流只授予读取仓库权限，第三方 Action 固定到完整提交哈希，由 Dependabot 跟踪更新。
+
 ---
 
 ## 部署
