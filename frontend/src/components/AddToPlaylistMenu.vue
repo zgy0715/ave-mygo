@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlaylistStore } from '@/stores/playlists'
 import { addSongToPlaylist } from '@/api/playlist'
@@ -33,6 +33,7 @@ const gateOpen = ref(false)
 const creating = ref(false)
 const newName = ref('')
 let msgTimer = null
+let opening = 0
 
 const PANEL_W = 224
 const items = computed(() => store.items)
@@ -69,16 +70,19 @@ async function toggle(e) {
   if (!auth.isLogin) { gateOpen.value = true; return }
   if (open.value) { close(); return }
   open.value = true
+  const request = ++opening
   creating.value = false
   newName.value = ''
-  await store.load()
+  await store.load(true)
   await nextTick()
+  if (!open.value || request !== opening) return
   placePanel()
   window.addEventListener('scroll', onScrollClose, true)
   window.addEventListener('resize', close)
 }
 
 function close() {
+  opening++
   open.value = false
   window.removeEventListener('scroll', onScrollClose, true)
   window.removeEventListener('resize', close)
@@ -107,6 +111,7 @@ async function pick(p) {
 }
 
 async function createAndAdd() {
+  if (busy.value) return
   const name = newName.value.trim()
   if (!name) return flash('先给歌单起个名字')
   busy.value = true
@@ -139,6 +144,7 @@ function onDocDown(e) {
   close()
 }
 onMounted(() => document.addEventListener('pointerdown', onDocDown))
+watch(() => [auth.token, props.songId], close)
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocDown)
