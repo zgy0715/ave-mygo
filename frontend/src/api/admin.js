@@ -9,7 +9,7 @@ export const listAdminSongs = (params) => request.get('/admin/songs', { params }
 /** 新建歌曲：body 全量字段，albumId/trackNo 等可缺省 */
 export const createAdminSong = (body) => request.post('/admin/songs', body)
 
-/** 更新歌曲：null 字段后端不更新 */
+/** 更新歌曲：null/省略不更新；可选文本传空串清除，返回服务端规范化后的歌曲。 */
 export const updateAdminSong = (id, body) => request.patch(`/admin/songs/${id}`, body)
 
 /** 软删除 */

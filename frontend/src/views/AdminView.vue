@@ -136,19 +136,14 @@ async function saveRow(row) {
   savingId.value = row.id
   rowErr.value[row.id] = ''
   try {
-    await updateAdminSong(row.id, {
-      mvUrl: draft.value.mvUrl || null,
-      mvPlatform: draft.value.mvPlatform || null,
-      audioUrl: draft.value.audioUrl || null,
-      tags: draft.value.tags || null,
+    const updated = await updateAdminSong(row.id, {
+      mvUrl: draft.value.mvUrl.trim(),
+      mvPlatform: draft.value.mvPlatform.trim(),
+      audioUrl: draft.value.audioUrl.trim(),
+      tags: draft.value.tags.trim(),
       status: draft.value.status,
     })
-    // 就地更新：空值发的是 null（后端不更新），本地同样保留旧值
-    if (draft.value.mvUrl) row.mvUrl = draft.value.mvUrl
-    if (draft.value.mvPlatform) row.mvPlatform = draft.value.mvPlatform
-    if (draft.value.audioUrl) row.audioUrl = draft.value.audioUrl
-    if (draft.value.tags) row.tags = draft.value.tags
-    row.status = draft.value.status
+    Object.assign(row, updated)
     editingId.value = null
   } catch (e) {
     rowErr.value[row.id] = e.message

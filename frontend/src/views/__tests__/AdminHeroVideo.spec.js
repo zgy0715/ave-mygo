@@ -65,4 +65,22 @@ describe('管理页 Hero 视频', () => {
     expect(wrapper.text()).toContain('只支持 MP4 格式')
     expect(api.uploadHeroVideo).not.toHaveBeenCalled()
   })
+
+  it('行内编辑清空链接发送空串，并使用服务端结果更新表格', async () => {
+    const row = { id: 1, title: '测试歌曲', bandId: 1, status: 1, mvUrl: 'https://player.bilibili.com/player.html?bvid=BV1xx411c7mD', mvPlatform: 'BILIBILI', audioUrl: 'https://example.test/old', tags: '旧标签' }
+    api.listAdminSongs.mockResolvedValueOnce({ content: [row], totalElements: 1, totalPages: 1 })
+    api.updateAdminSong.mockResolvedValueOnce({ ...row, mvUrl: null, mvPlatform: null, audioUrl: null, tags: null })
+    await showAdmin()
+    await wrapper.findAll('button').find((b) => b.text() === '编辑').trigger('click')
+    await wrapper.find('input[placeholder="B 站链接"]').setValue('')
+    await wrapper.find('input[placeholder="音源外链"]').setValue('  ')
+    await wrapper.find('input[placeholder="逗号分隔"]').setValue('')
+    await wrapper.find('tbody select').setValue('')
+    await wrapper.findAll('button').find((b) => b.text() === '保存').trigger('click')
+    await flushPromises()
+    expect(api.updateAdminSong).toHaveBeenLastCalledWith(1, { mvUrl: '', mvPlatform: '', audioUrl: '', tags: '', status: 1 })
+    expect(wrapper.find('tbody').text()).not.toContain('已配置')
+    expect(wrapper.find('tbody').text()).not.toContain('旧标签')
+    expect(wrapper.find('tbody [title*="bilibili"]').exists()).toBe(false)
+  })
 })
