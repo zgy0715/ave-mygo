@@ -68,6 +68,8 @@ jobs:
           npm test
           npm run build
       - name: Check deployment script syntax
-        run: bash -n scripts/deploy-ubuntu.sh
+        run: |
+          bash -n scripts/deploy-ubuntu.sh
+          bash -n scripts/preserve-assets.sh
       - name: Check default asset distribution
         run: python3 scripts/check-assets.py --dist

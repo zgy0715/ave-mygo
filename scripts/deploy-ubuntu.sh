@@ -7,6 +7,7 @@ if [[ -z "$APP_DIR" ]]; then APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"; fi
 BACKEND="$APP_DIR/backend"
 FRONTEND="$APP_DIR/frontend"
 HERO_ASSETS="$APP_DIR/var/hero-assets"
+SITE_ASSETS="$APP_DIR/var/site-assets"
 ENV_FILE="$BACKEND/.env"
 SERVICE=avemygo
 BRANCH="$(printenv BRANCH || true)"; [[ -n "$BRANCH" ]] || BRANCH=main
@@ -61,6 +62,18 @@ server {
         alias $HERO_ASSETS/\$1;
         add_header Cache-Control "no-cache" always;
     }
+    location ~ ^/assets/(band-(mygo|mujica)-poster[.]jpg)$ {
+        alias $SITE_ASSETS/assets/\$1;
+        add_header Cache-Control "no-cache" always;
+    }
+    location /img/ {
+        alias $SITE_ASSETS/img/;
+        add_header Cache-Control "no-cache" always;
+    }
+    location = /favicon.ico {
+        alias $SITE_ASSETS/favicon.ico;
+        add_header Cache-Control "no-cache" always;
+    }
     location /assets/ {
         try_files \$uri =404;
         add_header Cache-Control "public, max-age=2592000";
@@ -102,8 +115,13 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 say '[1/8] Verify source checkout'
 cd "$APP_DIR"
-if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null || true)" == true ]]; then
+source_is_git="$(git rev-parse --is-inside-work-tree 2>/dev/null || true)"
+if [[ "$source_is_git" == true ]]; then
   [[ -z "$(git status --porcelain)" ]] || die 'Working tree has changes; save or commit them before deploying.'
+fi
+# Capture media before a fast-forward removes old tracked public files or Vite clears dist.
+bash "$APP_DIR/scripts/preserve-assets.sh" "$APP_DIR"
+if [[ "$source_is_git" == true ]]; then
   if [[ "$(printenv USE_GIT || true)" == 1 ]]; then
     git check-ref-format --branch "$BRANCH" >/dev/null || die 'Invalid BRANCH.'
     [[ "$(git branch --show-current)" == "$BRANCH" ]] || die 'Check out BRANCH before deployment.'
@@ -142,9 +160,7 @@ install -d -m 0755 "$APP_DIR/var"
 install -d -m 0755 -o "$SERVICE" -g "$SERVICE" "$HERO_ASSETS"
 for hero_slot in mygo mujica; do
   hero_video="band-$hero_slot-720p.mp4"
-  if [[ "$(printenv INCLUDE_LOCAL_ASSETS || true)" == 1 && ! -f "$HERO_ASSETS/$hero_video" && -f "$FRONTEND/public/assets/$hero_video" ]]; then
-    install -m 0644 -o "$SERVICE" -g "$SERVICE" "$FRONTEND/public/assets/$hero_video" "$HERO_ASSETS/$hero_video"
-  elif [[ -f "$HERO_ASSETS/$hero_video" ]]; then
+  if [[ -f "$HERO_ASSETS/$hero_video" ]]; then
     chmod 0644 "$HERO_ASSETS/$hero_video"
     chown "$SERVICE:$SERVICE" "$HERO_ASSETS/$hero_video"
   fi

@@ -30,6 +30,7 @@ Windows 中文路径下，非交互 `mvnw.cmd` 有定位问题。检查入口依
 | 脚本 | 用途 | 用法 |
 |---|---|---|
 | `deploy-ubuntu.sh` | **当前服务器部署入口**：Ubuntu 上安装运行依赖，本地构建前后端，配置 systemd 和 Nginx；可重复执行更新 | `sudo bash scripts/deploy-ubuntu.sh` |
+| `preserve-assets.sh` | 部署前从 public / 旧 dist 补齐持久素材目录，已有文件不覆盖；不修改系统配置 | `bash scripts/preserve-assets.sh "$PWD"` |
 
 `cloudstudio.sh` 已由 `deploy-ubuntu.sh` 取代并移除。首次部署如需启用云端助手，可将 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 传给脚本；配置已写入 `backend/.env` 后，重复部署会保留它们。
 
@@ -39,10 +40,13 @@ Windows 中文路径下，非交互 `mvnw.cmd` 有定位问题。检查入口依
 新配置先执行 `systemd-analyze verify` 和独立的 `nginx -t`；等待数据库 `/api/v1/ready`，超时或代理探针失败返回非零。构建时会替换jar/dist，部署前需保留上一发布版本，脚本不提供自动回滚。
 可在本地只生成配置用于审查：`APP_DIR=/opt/ave-mygo bash scripts/deploy-ubuntu.sh --render-config backup/oneoff/deploy-review`，此模式不安装依赖、不写系统目录。真实部署须在Ubuntu上验证。
 
-Hero 上传目录为 `$APP_DIR/var/hero-assets/`（不入库），仅在确认素材使用权并显式传 `INCLUDE_LOCAL_ASSETS=1` 时从 `frontend/public/assets/`
-初始化缺失的视频，后续保留已有上传。systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL
-指向同一目录，前端重新构建不会覆盖它。备份站点时一并备份此目录；本地开发仍默认写入
-`frontend/public/assets/`。文件上限100MB，请求体上限110MB，上传等待上限5分钟。
+部署脚本在自动拉取与构建前，调用 `preserve-assets.sh` 从 `frontend/public/` 和旧 `frontend/dist/`
+补齐 `var/site-assets/`（图片、poster、图标）与 `var/hero-assets/`（视频），已有文件不覆盖。
+这些目录均不入库，由 Nginx 独立提供；前端构建不会清空它们。首次更新旧站前先备份 public、dist、
+backend/.env 和已有 var 素材目录，不要在保留素材前手动重建 dist。新服务器要单独上传素材；
+公开使用前须确认使用权。替换已有素材时直接更新持久目录中的对应文件。
+systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL 指向同一目录，保留管理端已有上传。
+本地开发默认加载 `frontend/public/`，上传仍写入其中的 assets。文件上限100MB，请求体上限110MB，上传等待上限5分钟。
 Linux 上传目录使用0755、发布视频使用0644，使 Nginx 可以读取；原子替换不可用时上传失败，保留原视频。
 
 `gen_seed.py` 依赖 `pymysql`（`pip install pymysql`），连接参数用环境变量覆盖：`DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`（默认 `127.0.0.1:3306`、`root`、`bandori_live`）。
@@ -65,7 +69,7 @@ Linux 上传目录使用0755、发布视频使用0644，使 Nginx 可以读取�
 
 ## 部署相关（服务器侧）
 
-线上部署走 `deploy-ubuntu.sh`，从仓库根目录执行；脚本会尝试更新 Git 工作区，失败时使用当前目录代码。
+线上部署走 `deploy-ubuntu.sh`，从仓库根目录执行；默认部署当前干净检出。显式传 USE_GIT=1 才更新 Git，失败即停止。
 国内服务器到 GitHub / npmjs / Maven Central 通常不通，脚本已内置对策：
 
 - Maven：`/root/.m2/settings.xml` → `maven.aliyun.com/repository/public`
