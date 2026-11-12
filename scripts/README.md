@@ -1,7 +1,8 @@
 # scripts —— 项目脚本说明
 
 所有脚本都从**仓库根目录**出发（脚本内部自己 `cd` 到根，双击运行也可以）。
-仓库路径含中文（`D:\全栈`），凡涉及 Maven 的脚本都直接调用 `%USERPROFILE%\.m2\wrapper\dists\…\bin\mvn.cmd`，不要用 `mvnw.cmd`（非交互 cmd 下会报 `Cannot start maven from wrapper`）。
+Windows 中文路径下，非交互 `mvnw.cmd` 有定位问题。检查入口依次使用 `MVN` 指定的可执行文件、PATH 中的 Maven、用户目录中的 wrapper 缓存；首次可在交互终端执行 `backend\mvnw.cmd -v` 初始化缓存。
+`JAVA_HOME` 已设置时使用该 JDK，否则从 PATH 查找 Java/Javac；检查脚本不会修改系统环境变量。Node 要求见 `frontend/package.json`，CI 固定版本见 `.nvmrc`。
 
 ### 本地开发与检查
 
@@ -14,6 +15,8 @@
 | `check.bat` / `check.ps1` | 检查入口及其 PowerShell 实现；`e2e` 模式要求后端和前端已启动 | `scripts\check.bat`、`scripts\check.bat e2e` |
 
 ### 数据维护与审计
+
+跨平台检查：Linux/macOS 执行 `bash scripts/check.sh`；PowerShell 7 可执行 `./scripts/check.ps1`。各入口支持 `unit`（默认）、`e2e` 与 `tools`（只验证工具）模式。
 
 | 脚本 | 用途 | 用法 |
 |---|---|---|

@@ -182,6 +182,7 @@ npm run dev                     # http://localhost:5173（代理已配）
 E2E 中引入了 **DELETE 探针**模式：删除类断言前先 `waitForResponse` 打印 HTTP 状态与响应体，区分「接口失败」与「成功但 UI 未刷新」两类问题。
 
 一键跑后端 + 前端基线：`scripts\check.bat`（E2E 加参数：`scripts\check.bat e2e`）。
+Linux/macOS 使用 `bash scripts/check.sh`；PowerShell 7 也可执行 `./scripts/check.ps1`。追加 `tools` 只验证本机工具，发现规则见 [scripts/README.md](scripts/README.md)。
 
 GitHub Actions 在 push、PR 和手动触发时运行：Java 17 + 临时 MySQL 8.0 执行后端测试及打包，
 Node 24 执行 `npm ci`、前端单测与构建。测试库每次独立创建，CI 使用的公开测试口令不用于部署。
