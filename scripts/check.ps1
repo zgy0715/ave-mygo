@@ -1,4 +1,4 @@
-﻿# Bandori Live —— 一键基线检查（后端 149 / 前端 82）
+﻿# Bandori Live —— 一键基线检查（测试数量见 docs/metrics.md）
 # 用法：scripts\check.bat          （或本文件图右键"使用 PowerShell 运行"）
 #       scripts\check.bat e2e      （E2E，需 8080 与 5173 已启动）
 param([string]$Mode = "unit")
@@ -16,7 +16,7 @@ $mvn = Get-ChildItem -Path "$env:USERPROFILE\.m2\wrapper\dists" -Recurse -Filter
 if (-not $mvn) { $mvn = Join-Path $root "backend\mvnw.cmd" }
 
 if ($Mode -eq "e2e") {
-    Write-Host "E2E（Playwright 21 例，需 8080 与 5173 已启动）..."
+    Write-Host "E2E（Playwright，需 8080 与 5173 已启动）..."
     Push-Location (Join-Path $root "frontend")
     & npm run test:e2e
     if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "E2E 失败" }
@@ -39,5 +39,5 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "前端测试失败" }
 Pop-Location
 
 Write-Host ""
-Write-Host "基线检查通过：后端 149 / 前端 82" -ForegroundColor Green
+Write-Host "基线检查通过：后端测试 / 前端单测" -ForegroundColor Green
 exit 0
