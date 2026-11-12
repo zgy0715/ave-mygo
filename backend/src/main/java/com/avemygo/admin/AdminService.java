@@ -4,6 +4,7 @@ import com.avemygo.admin.dto.AdminDtos.AdminSongView;
 import com.avemygo.admin.dto.AdminDtos.SongPatch;
 import com.avemygo.admin.dto.AdminDtos.SongUpsert;
 import com.avemygo.common.BizException;
+import com.avemygo.common.MvUrls;
 import com.avemygo.song.Band;
 import com.avemygo.song.BandRepository;
 import com.avemygo.song.Song;
@@ -89,7 +90,7 @@ public class AdminService {
         if (duration != null) song.setDuration(duration);
         if (coverUrl != null) song.setCoverUrl(blankToNull(coverUrl));
         if (audioUrl != null) song.setAudioUrl(blankToNull(audioUrl));
-        if (mvUrl != null) song.setMvUrl(blankToNull(mvUrl));
+        if (mvUrl != null) song.setMvUrl(MvUrls.normalize(mvUrl));
         if (mvPlatform != null) song.setMvPlatform(blankToNull(mvPlatform));
         if (tags != null) song.setTags(blankToNull(tags));
         if (status != null) song.setStatus(status);

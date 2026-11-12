@@ -30,7 +30,7 @@ public class AdminDtos {
             @Min(value = 1, message = "时长必须大于 0") Integer duration,
             @Size(max = 255) String coverUrl,
             @Size(max = 512) String audioUrl,
-            @Size(max = 512) String mvUrl,
+            @Size(max = 255) String mvUrl,
             @Size(max = 20) String mvPlatform,
             @Size(max = 255) String tags,
             @Min(value = 0, message = "状态只能是 0/1") @Max(value = 1) Byte status
@@ -46,7 +46,7 @@ public class AdminDtos {
             @Min(value = 1, message = "时长必须大于 0") Integer duration,
             @Size(max = 255) String coverUrl,
             @Size(max = 512) String audioUrl,
-            @Size(max = 512) String mvUrl,
+            @Size(max = 255) String mvUrl,
             @Size(max = 20) String mvPlatform,
             @Size(max = 255) String tags,
             @Min(value = 0, message = "状态只能是 0/1") @Max(value = 1) Byte status

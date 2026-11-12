@@ -10,6 +10,7 @@ import PageBack from '@/components/PageBack.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { getSong, listSongs } from '@/api/song'
+import { parseMvUrl } from '@/utils/mv-url'
 
 /**
  * 歌曲详情（需求 3.3）——真接口版。
@@ -30,37 +31,10 @@ const errMsg = ref('')
 
 const tags = computed(() => (song.value?.tags || '').split(',').filter(Boolean))
 
-/**
- * MV 链接解析（三种来源）：
- * - player.html?bvid=… → 可内嵌 iframe
- * - mvPlatform='BILIBILI_PAGE' 或 player.html?ep_id=… → 番剧播放页，B 站禁止第三方嵌入，
- *   一律降级为跳转（ep_id 形式自动改写成 bangumi/play/epX）
- * - youtu.be / 其他外链 → 直接跳转
- */
-const mvIsBangumi = computed(
-  () => song.value?.mvPlatform === 'BILIBILI_PAGE' || /[?&]ep_id=/.test(song.value?.mvUrl || ''),
-)
-const mvEmbedUrl = computed(() => {
-  const u = song.value?.mvUrl || ''
-  if (song.value?.mvPlatform === 'BILIBILI_PAGE') return '' // 番剧页永不 iframe
-  if (!(/player\.bilibili\.com/.test(u) && /[?&]bvid=/.test(u))) return ''
-  // 内嵌播放器默认画质偏低（游客常落到 360/480P），显式要高画质 + 关弹幕 + 宽屏
-  const url = new URL(u)
-  url.searchParams.set('high_quality', '1')
-  url.searchParams.set('danmaku', '0')
-  url.searchParams.set('as_wide', '1')
-  url.searchParams.set('autoplay', '0')
-  return url.toString()
-})
-const mvExternalUrl = computed(() => {
-  const u = song.value?.mvUrl || ''
-  if (!u) return ''
-  const ep = u.match(/[?&]ep_id=(\d+)/)
-  if (ep) return `https://www.bilibili.com/bangumi/play/ep${ep[1]}`
-  const bv = u.match(/[?&]bvid=([A-Za-z0-9]+)/)
-  if (bv) return `https://www.bilibili.com/video/${bv[1]}`
-  return u
-})
+const mv = computed(() => parseMvUrl(song.value?.mvUrl, song.value?.mvPlatform))
+const mvIsBangumi = computed(() => mv.value.isBangumi)
+const mvEmbedUrl = computed(() => mv.value.embedUrl)
+const mvExternalUrl = computed(() => mv.value.externalUrl)
 const mvLinkLabel = computed(() => {
   if (song.value?.mvPlatform === 'BILIBILI_PAGE') return '前往 B 站番剧观看'
   if (song.value?.mvPlatform === 'YOUTUBE') return '在 YouTube 观看 MV'

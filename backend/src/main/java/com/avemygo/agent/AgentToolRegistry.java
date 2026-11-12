@@ -2,6 +2,7 @@ package com.avemygo.agent;
 
 import com.avemygo.admin.AdminEventService;
 import com.avemygo.admin.dto.AdminEventDtos.TicketTypePatch;
+import com.avemygo.common.MvUrls;
 import com.avemygo.event.EventRepository;
 import com.avemygo.event.LiveEvent;
 import com.avemygo.event.LiveSession;
@@ -127,14 +128,11 @@ public class AgentToolRegistry {
                 AgentTool.Risk.WRITE,
                 schema(Map.of(
                         "songId", Map.of("type", "integer", "description", "歌曲 id"),
-                        "mvUrl", Map.of("type", "string", "description", "新的 MV 地址，http(s) 开头")
+                        "mvUrl", Map.of("type", "string", "description", "B 站或 YouTube 的 http(s) MV 地址，需核实官方来源")
                 ), List.of("songId", "mvUrl")),
                 args -> {
                     long id = reqLong(args, "songId");
-                    String mvUrl = reqStr(args, "mvUrl").trim();
-                    if (!(mvUrl.startsWith("http://") || mvUrl.startsWith("https://"))) {
-                        throw new IllegalArgumentException("mvUrl 必须是 http(s) 链接");
-                    }
+                    String mvUrl = MvUrls.normalize(reqStr(args, "mvUrl"));
                     Song s = songRepository.findById(id)
                             .orElseThrow(() -> new IllegalArgumentException("歌曲 id=" + id + " 不存在"));
                     String old = s.getMvUrl();

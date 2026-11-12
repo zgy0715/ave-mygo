@@ -133,7 +133,7 @@ public record AgentTool(
       "type": "object",
       "properties": {
         "songId": { "type": "integer", "description": "歌曲 ID" },
-        "mvUrl":  { "type": "string",  "description": "新的 MV 地址，必须是 http(s) 链接" }
+        "mvUrl":  { "type": "string",  "description": "B 站或 YouTube 的 http(s) MV 地址，需核实官方来源" }
       },
       "required": ["songId", "mvUrl"]
     }
@@ -147,7 +147,7 @@ LLM 可能：传不存在字段、类型错（`"1"` vs `1`）、缺必填、传�
 
 1. **必填检查**：缺参数 → 返回结构化错误字符串给 LLM，让它修正后重试（不中断循环）；
 2. **类型转换**：数字型参数接受 `Integer/Long/String 数字`；
-3. **业务校验**：`mvUrl` 必须 `http(s)://` 开头；`status ∈ {0,1}`；ID 必须存在（由服务层抛业务异常并转为工具错误）；
+3. **业务校验**：`mvUrl` 解析后必须为 http(s)，完整域名限定为 `bilibili.com`、`www.bilibili.com`、`player.bilibili.com`、`youtube.com`、`www.youtube.com`、`youtu.be`，最长 255 字符（与数据库列一致），不含账号或非标准端口；管理 CRUD 与确认执行共用校验，前端同样校验历史地址。仅可信 `player.bilibili.com/player.html?bvid=…` 可构造 iframe，番剧页保持外跳。域名可信不等于官方上传，仍需人工核实来源；`status ∈ {0,1}`；ID 必须存在（由服务层抛业务异常并转为工具错误）；
 4. **工具不存在**：返回「未知工具」错误给 LLM，不执行任何动作。
 
 **工具执行的错误一律转成字符串回填给 LLM**，让它自己决定重试/换方案/放弃——这是 Agent 比固定流程强的地方。
