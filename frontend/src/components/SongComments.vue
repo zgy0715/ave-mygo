@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { createComment, deleteComment, listComments } from '@/api/comment'
 import { useAuthStore } from '@/stores/auth'
 import LoginGate from '@/components/LoginGate.vue'
@@ -24,22 +24,36 @@ const posting = ref(false)
 const gateOpen = ref(false)
 const deletingId = ref(0)
 const PAGE_SIZE = 10
+let context = 0
+let loadRequest = 0
 
 async function load() {
+  const request = ++loadRequest
   loading.value = true
   errMsg.value = ''
   try {
     const data = await listComments(props.songId, page.value, PAGE_SIZE)
+    if (request !== loadRequest) return
     items.value = data.content
     total.value = data.totalElements
     totalPages.value = data.totalPages
   } catch (e) {
-    errMsg.value = e.message
+    if (request === loadRequest) errMsg.value = e.message
   } finally {
-    loading.value = false
+    if (request === loadRequest) loading.value = false
   }
 }
-onMounted(load)
+watch(() => [props.songId, auth.token], () => {
+  context++
+  items.value = []
+  total.value = totalPages.value = 0
+  page.value = 1
+  content.value = ''
+  posting.value = false
+  deletingId.value = 0
+  load()
+}, { immediate: true })
+onBeforeUnmount(() => { context++; loadRequest++ })
 
 const canSubmit = computed(() => content.value.trim().length > 0 && content.value.trim().length <= 500)
 
@@ -48,30 +62,34 @@ async function submit() {
   const text = content.value.trim()
   if (!text || posting.value) return
   if (text.length > 500) { errMsg.value = '评论最多 500 字'; return }
+  const submittedContext = context
   posting.value = true
   errMsg.value = ''
   try {
     const created = await createComment(props.songId, text)
+    if (submittedContext !== context) return
     items.value = [created, ...items.value]
     total.value += 1
     content.value = ''
   } catch (e) {
-    errMsg.value = e.message
+    if (submittedContext === context) errMsg.value = e.message
   } finally {
-    posting.value = false
+    if (submittedContext === context) posting.value = false
   }
 }
 
 async function remove(c) {
+  const removedContext = context
   deletingId.value = c.id
   try {
     await deleteComment(c.id)
+    if (removedContext !== context) return
     items.value = items.value.filter((x) => x.id !== c.id)
     total.value = Math.max(0, total.value - 1)
   } catch (e) {
-    errMsg.value = e.message
+    if (removedContext === context) errMsg.value = e.message
   } finally {
-    deletingId.value = 0
+    if (removedContext === context) deletingId.value = 0
   }
 }
 
