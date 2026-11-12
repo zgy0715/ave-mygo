@@ -154,8 +154,11 @@ npm run dev                     # http://localhost:5173（代理已配）
 
 管理员账号：将 `user` 表目标用户 `role` 改为 `ADMIN`（参考迁移 `V22__admin_user.sql`）。
 
-> 参考数据（乐队/曲目/专辑/演出/票档/歌单）由迁移自带；如需把数据恢复到当前基线，直接执行
-> `db/seed/reference.sql`（幂等，可重复跑）：`mysql -u root -p bandori_live < db/seed/reference.sql`。
+> 参考数据由迁移自带，新环境完整运行 Flyway 即可。可选执行
+> `mysql --default-character-set=utf8mb4 -u root -p bandori_live < db/seed/reference.sql`
+> 更新乐队/成员/专辑/歌曲元数据，并按业务键补齐缺失的演出、场次、票档与曲目单。
+> 请在维护期间单进程执行：已有演出域记录（含软删行）保持原样，新票档已售数为 0，
+> 不覆盖库存、订单或限购配额；此文件不用于恢复交易数据。使用边界见 [脚本说明](scripts/README.md)。
 >
 > 首页 Hero 背景素材随仓库分发：`frontend/public/assets/band-mygo-720p.mp4`、`band-mujica-720p.mp4`
 > （各 8.4MB，1280×720、无音轨）与两张 `*-poster.jpg` 首帧图。1080P 原片**不入库**，保留在本地
@@ -245,7 +248,7 @@ ffmpeg -i 原片.mp4 -t 89 -vf "scale=-2:720:flags=lanczos" \
 ├── frontend/              # Vue 3 前端
 │   ├── public/assets/     # Hero 视频(720p) 与 poster 首帧（随仓库分发）
 │   └── e2e/               # Playwright E2E
-├── db/seed/reference.sql  # 参考数据幂等基线（乐队/曲目/专辑/演出/票档/歌单）
+├── db/seed/reference.sql  # 目录元数据更新 + 演出域按业务键补录（保留交易数据）
 ├── docs/                  # 现行设计文档 + 截图（docs/img/）
 │   └── archive/           # 历史任务书、审计报告、开发纪实
 ├── scripts/               # 本地开发、数据审计、备份、Ubuntu 部署（见 scripts/README.md）

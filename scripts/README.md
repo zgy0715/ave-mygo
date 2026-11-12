@@ -18,7 +18,7 @@
 | 脚本 | 用途 | 用法 |
 |---|---|---|
 | `backup-db.bat` | 用 `mysqldump` 备份 `bandori_live` 到 `backup\db\`，保留 7 天；失败会删掉半截文件。凭据读 `DB_USERNAME`/`DB_PASSWORD`；`MYSQL_BIN` 指向 **MySQL 的 bin 目录**（不设则用 PATH 里的 `mysqldump`） | `scripts\backup-db.bat` |
-| `gen_seed.py` | 从开发库导出幂等参考数据到 `db/seed/reference.sql`（只读查询） | `$env:DB_PASSWORD="…"; python scripts\gen_seed.py` |
+| `gen_seed.py` | 从开发库只读导出参考数据；目录元数据更新，演出域按业务键仅补缺失行 | `$env:DB_PASSWORD="…"; python scripts\gen_seed.py` |
 | `audit_data.py` | 只读数据完整性及音频/MV 链接审计；按需运行 | `python scripts\audit_data.py` |
 | `audit_mv.py` | 只读 B 站 MV 标题、UP 主和视频状态核查；按需运行 | `python scripts\audit_mv.py` |
 
@@ -31,6 +31,18 @@
 `cloudstudio.sh` 已由 `deploy-ubuntu.sh` 取代并移除。首次部署如需启用云端助手，可将 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 传给脚本；配置已写入 `backend/.env` 后，重复部署会保留它们。
 
 `gen_seed.py` 依赖 `pymysql`（`pip install pymysql`），连接参数用环境变量覆盖：`DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`（默认 `127.0.0.1:3306`、`root`、`bandori_live`）。
+
+参考种子使用规则：
+
+- 新环境先完整运行 Flyway，种子为可选补录；请先备份，在维护期间单进程执行。
+- 乐队/成员/专辑/歌曲沿用冻结迁移中的 ID，重复执行会更新这些目录元数据。
+- 演出按乐队与标题、场次按演出与名称、票档按场次与名称、曲目单按场次与曲序匹配，
+  主键由目标库生成，避免开发库自增 ID 与新环境冲突。标题或名称已被改动时视为不同业务记录，执行前核对。
+- 演出域仅插入缺失行；已有配置、已售数、上下架及软删除保持原样，软删记录不会被种子复活。
+- 新票档使用数据库默认已售数 0；用户、订单、配额不导出，不能用本文件修复已有交易差异。
+- 脚本用一致性只读快照导出；导入文件有事务边界，执行失败应回滚排查，不要加客户端 `--force`。
+- 回归检查：后端 `ReferenceSeedReplayTest` 在独立随机测试库回放全部迁移，再重复导入，
+  验证没有重复演出、错挂票档或库存/订单/配额覆盖；测试账号需有创建和删除测试库的权限。
 
 两份审计脚本**不走 pymysql**，而是调用本机 `mysql` 客户端：路径硬编码在各自第 15 行的常量 `M`（当前为 `D:/MySQL/MySQL Server 8.0/bin/mysql.exe`），换机器需要改这一行。审计过程会访问外部音频或 B 站接口，需联网。
 
