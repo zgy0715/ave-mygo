@@ -203,20 +203,16 @@ public class AdminEventService {
 
     @Transactional
     public TicketTypeView updateTicketType(Long id, TicketTypePatch req) {
-        TicketType t = ticketTypeRepository.findById(id)
+        String name = req.name() == null || req.name().isBlank() ? null : req.name().trim();
+        Byte maxPerUser = req.maxPerUser() == null ? null : req.maxPerUser().byteValue();
+        int rows = ticketTypeRepository.updateDetails(id, name, req.price(), req.totalStock(),
+                maxPerUser, req.status());
+        TicketType current = ticketTypeRepository.findById(id)
                 .orElseThrow(() -> new BizException(40004, "票档不存在"));
-        if (req.name() != null && !req.name().isBlank()) t.setName(req.name().trim());
-        if (req.price() != null) t.setPrice(req.price());
-        if (req.totalStock() != null) {
-            if (req.totalStock() < t.getSoldCount()) {
-                throw new BizException(40001,
-                        "库存不能小于已售数量（已售 " + t.getSoldCount() + " 张）");
-            }
-            t.setTotalStock(req.totalStock());
+        if (rows == 0) {
+            throw new BizException(40001, "库存不能小于已售数量，请刷新后重试");
         }
-        if (req.maxPerUser() != null) t.setMaxPerUser((byte) req.maxPerUser().intValue());
-        if (req.status() != null) t.setStatus(req.status());
-        return toView(ticketTypeRepository.save(t));
+        return toView(current);
     }
 
     // ---------------- 私有工具 ----------------

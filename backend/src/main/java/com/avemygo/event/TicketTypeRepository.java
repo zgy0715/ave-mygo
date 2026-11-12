@@ -1,5 +1,6 @@
 package com.avemygo.event;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +19,26 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
 
     /** 批量取多场次的票档（列表页防 N+1） */
     List<TicketType> findBySessionIdIn(Collection<Long> sessionIds);
+
+    /**
+     * 管理员只更新票档配置，不写 soldCount。库存下限与编辑在同一条 UPDATE 中校验，
+     * 避免整行保存把并发下单/退款后的已售数覆盖成旧快照。
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE TicketType t
+            SET t.name = COALESCE(:name, t.name),
+                t.price = COALESCE(:price, t.price),
+                t.totalStock = COALESCE(:totalStock, t.totalStock),
+                t.maxPerUser = COALESCE(:maxPerUser, t.maxPerUser),
+                t.status = COALESCE(:status, t.status),
+                t.updatedAt = CURRENT_TIMESTAMP
+            WHERE t.id = :id
+              AND (:totalStock IS NULL OR :totalStock >= t.soldCount)
+            """)
+    int updateDetails(@Param("id") Long id, @Param("name") String name,
+                      @Param("price") BigDecimal price, @Param("totalStock") Integer totalStock,
+                      @Param("maxPerUser") Byte maxPerUser, @Param("status") Byte status);
 
     /**
      * 防超卖核心：单条原子 UPDATE，检查与扣减一次完成。
