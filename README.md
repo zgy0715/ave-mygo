@@ -16,12 +16,12 @@
 ![Vitest](https://img.shields.io/badge/Vitest-82%E7%94%A8%E4%BE%8B-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-%E5%90%8C%E6%BA%90%E5%8F%8D%E4%BB%A3-009639?logo=nginx&logoColor=white)
-![License](https://img.shields.io/badge/%E7%94%A8%E9%80%94-%E4%BB%85%E4%BE%9B%E5%AD%A6%E4%B9%A0%E5%8F%82%E8%80%83-blueviolet)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
 > 一个面向 BanG Dream! 粉丝的全栈 Web 应用：曲库试听、B 站 MV、演出票务（防超卖）、收藏与歌单、评论与开售提醒、管理端、AI 助手。
-> 由个人独立完成前后端、数据库、测试与部署，**仅供学习参考，不做任何商业目的**。
+> 由个人独立完成前后端、数据库、测试与部署，用于学习与作品展示；原创代码采用 MIT 许可。
 
-**声明**：本项目为非商业性粉丝学习项目。BanG Dream!（バンドリ！）及 MyGO!!!!!、Ave Mujica 等相关名称、角色、音乐、图像著作权归 **株式会社ブシロード（Bushiroad Inc.）** 及各权利方所有；本项目不存储任何版权音频与官方素材，试听均为 Apple iTunes 官方 30 秒预览外链，MV 为 Bilibili 官方账号内嵌播放。如有侵权请联系删除。
+**许可**：原创代码、脚本和文档见 [MIT LICENSE](LICENSE)；第三方音乐、视频、图片、字体与商标不纳入该授权，见 [NOTICE](NOTICE.md)。本站使用官方外链试听与播放器嵌入，具体内容的使用和分发仍须遵守权利方要求。
 
 ---
 
