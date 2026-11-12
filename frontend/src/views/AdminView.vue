@@ -3,6 +3,7 @@ import { defineAsyncComponent, onMounted, reactive, ref, watch } from 'vue'
 import CoverArt from '@/components/CoverArt.vue'
 import { listAlbums, listBands } from '@/api/song'
 import { createAdminSong, deleteAdminSong, listAdminSongs, updateAdminSong, uploadHeroVideo } from '@/api/admin'
+import { HERO_VIDEOS } from '@/config/hero-videos'
 import AdminEventsPanel from './AdminEventsPanel.vue'
 import AdminOrdersPanel from './AdminOrdersPanel.vue'
 import AdminUsersPanel from './AdminUsersPanel.vue'
@@ -64,23 +65,19 @@ async function load() {
   }
 }
 
-/* ---- 首页 Hero 背景视频管理（两支 MV，覆盖 /assets/band-{slot}.mp4） ---- */
-const HERO_SLOTS = [
-  { id: 'mygo', label: 'MyGO!!!!! MV（壱雫空）', path: '/assets/band-mygo.mp4' },
-  { id: 'mujica', label: 'Ave Mujica MV（KiLLKiSS）', path: '/assets/band-mujica.mp4' },
-]
+/* ---- 首页 Hero 背景视频管理（播放与检测共用同一组路径） ---- */
+const HERO_SLOTS = HERO_VIDEOS
 const heroStatus = reactive({})
 const heroUploading = reactive({})
 const heroErr = reactive({})
 
-// 就绪检测：GET 该路径，SPA fallback 会把缺失文件回成 200+text/html，
-// 所以按 content-type 判断而非状态码
+// 只检查响应头，避免每次打开管理页都下载两份视频；SPA fallback 的 HTML 也视为缺失。
 async function checkHero(slot) {
   const s = HERO_SLOTS.find((h) => h.id === slot)
   heroStatus[slot] = 'checking'
   try {
-    const r = await fetch(s.path)
-    heroStatus[slot] = (r.headers.get('content-type') || '').includes('video') ? 'ok' : 'missing'
+    const r = await fetch(s.src, { method: 'HEAD', cache: 'no-store' })
+    heroStatus[slot] = r.ok && (r.headers.get('content-type') || '').startsWith('video/') ? 'ok' : 'missing'
   } catch {
     heroStatus[slot] = 'missing'
   }
@@ -90,7 +87,9 @@ async function uploadHero(slot, e) {
   const file = e.target.files?.[0]
   e.target.value = ''
   if (!file) return
-  if (file.type !== 'video/mp4') { heroErr[slot] = '只支持 MP4 格式'; return }
+  if (!/\.mp4$/i.test(file.name) || !['', 'video/mp4', 'application/octet-stream'].includes(file.type)) {
+    heroErr[slot] = '只支持 MP4 格式'; return
+  }
   if (file.size > 100 * 1024 * 1024) { heroErr[slot] = '文件超过 100MB'; return }
   heroErr[slot] = ''
   heroUploading[slot] = true
@@ -378,7 +377,7 @@ async function submitCreate() {
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <div v-for="s in HERO_SLOTS" :key="s.id" class="rounded-lg border border-line p-4">
           <div class="flex items-center justify-between gap-2">
-            <p class="text-sm font-semibold">{{ s.label }}</p>
+            <p class="text-sm font-semibold">{{ s.adminLabel }}</p>
             <span
               class="micro"
               :class="heroStatus[s.id] === 'ok' ? '!text-green-700' : heroStatus[s.id] === 'missing' ? '!text-red-500' : ''"

@@ -68,6 +68,9 @@ request.interceptors.response.use(
     if (status === 403) {
       return Promise.reject(new Error('没有权限执行该操作（需要管理员账号）'))
     }
+    if (status === 413) {
+      return Promise.reject(new Error('上传请求过大，视频不能超过 100MB'))
+    }
     if (err.code === 'ECONNABORTED' || String(err.message).includes('timeout')) {
       return Promise.reject(new Error('请求超时，请检查网络后重试'))
     }

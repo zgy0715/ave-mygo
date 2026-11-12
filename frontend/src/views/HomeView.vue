@@ -6,6 +6,7 @@ import PastEventCard from '@/components/PastEventCard.vue'
 import SongCard from '@/components/SongCard.vue'
 import { listEvents, getEvent } from '@/api/event'
 import { listSongs, listBands } from '@/api/song'
+import { HERO_VIDEOS } from '@/config/hero-videos'
 
 /**
  * 首页 v4.1：满屏视频 Hero（保留）+ 数据区全部接真接口。
@@ -78,10 +79,6 @@ const marqueeItems = ['MYGO!!!!!', 'Ave Mujica', 'LIVE HOUSE', 'prima aurora', '
 const logoErr = reactive({})
 
 /** 首页 Hero 双 MV：可切换；当前支失效自动跳另一支；全失效回退 aurora */
-const HERO_VIDEOS = [
-  { id: 'mygo', label: '壱雫空 MV', src: '/assets/band-mygo-720p.mp4', poster: '/assets/band-mygo-poster.jpg' },
-  { id: 'mujica', label: 'KiLLKiSS MV', src: '/assets/band-mujica-720p.mp4', poster: '/assets/band-mujica-poster.jpg' },
-]
 const activeVideoId = ref('mygo')
 const videoErr = reactive({})
 const posterErr = reactive({})

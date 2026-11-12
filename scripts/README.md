@@ -30,6 +30,12 @@
 
 `cloudstudio.sh` 已由 `deploy-ubuntu.sh` 取代并移除。首次部署如需启用云端助手，可将 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 传给脚本；配置已写入 `backend/.env` 后，重复部署会保留它们。
 
+Hero 上传目录为 `$APP_DIR/var/hero-assets/`（不入库），首次部署从 `frontend/public/assets/`
+复制缺失的默认视频，后续保留已有上传。systemd 的 `--hero.assets-dir` 与 Nginx 的两个视频 URL
+指向同一目录，前端重新构建不会覆盖它。备份站点时一并备份此目录；本地开发仍默认写入
+`frontend/public/assets/`。文件上限100MB，请求体上限110MB，上传等待上限5分钟。
+Linux 上传目录使用0755、发布视频使用0644，使 Nginx 可以读取；原子替换不可用时上传失败，保留原视频。
+
 `gen_seed.py` 依赖 `pymysql`（`pip install pymysql`），连接参数用环境变量覆盖：`DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`（默认 `127.0.0.1:3306`、`root`、`bandori_live`）。
 
 参考种子使用规则：

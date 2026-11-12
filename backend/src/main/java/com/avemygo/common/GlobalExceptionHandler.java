@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 全局异常处理器：所有 Controller 抛出的异常在此统一翻译成
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .orElse("参数错误");
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.error(40001, detail));
+    }
+
+    /** multipart 在进入 Controller 前即可超限，统一返回可理解的参数错误。 */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadSize(MaxUploadSizeExceededException e) {
+        log.warn("上传请求超过 multipart 大小限制");
+        return ResponseEntity.ok(ApiResponse.error(40001, "上传请求过大，视频不能超过 100MB"));
     }
 
     /** 兜底：未知异常。堆栈只进日志，不泄露给前端 */

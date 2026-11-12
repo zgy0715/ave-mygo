@@ -32,6 +32,7 @@ DB_NAME="${DB_NAME:-bandori_live}"
 DB_USER="${DB_USER:-bandori}"
 BACKEND="$APP_DIR/backend"
 FRONTEND="$APP_DIR/frontend"
+HERO_ASSETS="$APP_DIR/var/hero-assets"
 ENV_FILE="$BACKEND/.env"
 SERVICE=avemygo
 NODE_VER="${NODE_VER:-v22.18.0}"
@@ -156,6 +157,15 @@ fi
 chmod 600 "$ENV_FILE"
 
 # ---------------------------------------------------------------- 6. 构建
+# 上传内容独立于 public/dist；首次部署复制默认视频，之后构建和更新不覆盖管理员上传。
+install -d -m 0755 "$APP_DIR/var" "$HERO_ASSETS"
+for hero_slot in mygo mujica; do
+  hero_video="band-${hero_slot}-720p.mp4"
+  if [ ! -f "$HERO_ASSETS/$hero_video" ] && [ -f "$FRONTEND/public/assets/$hero_video" ]; then
+    install -m 0644 "$FRONTEND/public/assets/$hero_video" "$HERO_ASSETS/$hero_video"
+  fi
+done
+
 if [ "${SKIP_BUILD:-0}" = "1" ]; then
   say "[6/8] 跳过构建（SKIP_BUILD=1）"
 else
@@ -203,7 +213,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=$BACKEND
 EnvironmentFile=$ENV_FILE
-ExecStart=/usr/bin/java -Xmx${HEAP}m -jar $JAR_ABS
+ExecStart=/usr/bin/java -Xmx${HEAP}m -jar $JAR_ABS "--hero.assets-dir=$HERO_ASSETS"
 SuccessExitStatus=143
 Restart=always
 RestartSec=5
@@ -229,12 +239,20 @@ server {
     gzip_types text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
 
+    # 两个固定 URL 对应上传目录，每次访问重新验证，避免继续命中旧视频的长缓存。
+    location ~ ^/assets/(band-(mygo|mujica)-720p[.]mp4)$ {
+        alias $HERO_ASSETS/\$1;
+        add_header Cache-Control "no-cache" always;
+    }
+
     location /assets/ {
         try_files \$uri =404;
         add_header Cache-Control "public, max-age=2592000";
     }
 
     location /api/ {
+        client_max_body_size 110m;
+        client_body_timeout 300s;
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
@@ -242,6 +260,7 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
         proxy_buffering off;
     }
 

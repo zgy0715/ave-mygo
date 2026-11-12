@@ -17,13 +17,13 @@ export const deleteAdminSong = (id) => request.delete(`/admin/songs/${id}`)
 
 /**
  * 首页 Hero 背景视频上传（multipart：slot=mygo|mujica，file=mp4）
- * ⚠️ 后端接口由全栈智能体实现（POST /admin/hero-videos，覆盖 frontend/public/assets/band-{slot}.mp4）
+ * 后端替换首页读取的 band-{slot}-720p.mp4，允许慢速连接上传最多100MB。
  */
 export const uploadHeroVideo = (slot, file) => {
   const fd = new FormData()
   fd.append('slot', slot)
   fd.append('file', file)
-  return request.post('/admin/hero-videos', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  return request.post('/admin/hero-videos', fd, { timeout: 300_000 })
 }
 
 /* ===== 演出 / 场次 / 票档（管理端）===== */
